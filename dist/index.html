@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Pokémon GO Raid Simulator</title>
+    <link rel="stylesheet" href="styles.css?v=8d7b42b63dc6">
+    <script src="client.js?v=8d7b42b63dc6" defer></script>
+    <script src="pokemon_code.js?v=8d7b42b63dc6" defer></script>
+    <script src="app.js?v=8d7b42b63dc6" defer></script>
+    <script src="playback.js?v=8d7b42b63dc6" defer></script>
+    <script src="replay.js?v=8d7b42b63dc6" defer></script>
+    <script src="turns.js?v=8d7b42b63dc6" defer></script>
+  </head>
+  <body>
+    <header>
+      <div>
+        <p class="eyebrow">Great Goose Pokémon GO</p>
+        <h1>Pokémon GO Raid Simulator</h1>
+      </div>
+      <p class="header-note">Simulate a raid or work with a compact battle replay.</p>
+    </header>
+
+    <main>
+      <nav class="view-tabs" aria-label="Raid tools">
+        <button class="view-tab active" type="button" data-view="simulator-view" aria-selected="true">
+          Raid simulator
+        </button>
+        <button class="view-tab" type="button" data-view="replay-view" aria-selected="false">
+          Battle replay
+        </button>
+        <button class="view-tab" type="button" data-view="turn-view" aria-selected="false">
+          Turn-by-turn
+        </button>
+      </nav>
+
+      <section id="simulator-view" class="app-view">
+      <form id="simulator-form">
+        <section class="panel">
+          <h2>1. Choose the raid boss</h2>
+          <div class="field-grid boss-grid">
+            <label>
+              Raid difficulty
+              <select id="raid-difficulty">
+                <option>Tier 1</option>
+                <option>Tier 3</option>
+                <option>Tier 4</option>
+                <option selected>Tier 5</option>
+                <option>Mega</option>
+                <option>Mega Legendary</option>
+                <option>Super Mega</option>
+                <option>Elite</option>
+                <option>Primal</option>
+                <option>Tier 1 Shadow</option>
+                <option>Tier 3 Shadow</option>
+                <option>Tier 5 Shadow</option>
+              </select>
+            </label>
+            <label>
+              Boss
+              <span class="pokemon-search">
+                <input
+                  id="boss"
+                  type="text"
+                  placeholder="Type a Pokémon name"
+                  autocomplete="off"
+                  role="combobox"
+                  aria-autocomplete="list"
+                  aria-expanded="false"
+                  aria-controls="boss-matches"
+                  required
+                >
+                <span id="boss-matches" class="pokemon-matches" role="listbox" hidden></span>
+              </span>
+            </label>
+            <label>
+              Fast move
+              <select id="boss-fast-move" required></select>
+            </label>
+            <label>
+              Charged move
+              <select id="boss-charged-move" required></select>
+            </label>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="section-heading">
+            <div>
+              <h2>2. Build your team</h2>
+              <p>Pokémon are used from left to right. Add up to six.</p>
+            </div>
+            <button type="button" class="secondary" id="add-pokemon">+ Add Pokémon</button>
+          </div>
+          <div id="team" class="team"></div>
+        </section>
+
+        <section class="panel">
+          <h2>3. Battle settings</h2>
+          <div class="field-grid settings-grid">
+            <label>
+              Dodge strategy
+              <select id="dodge-strategy">
+                <option value="none">Dodge nothing</option>
+                <option value="all_survivable">Dodge every survivable charged move</option>
+                <option value="super_effective">Dodge super-effective moves</option>
+                <option value="non_resisted">Dodge every non-resisted move</option>
+                <option value="lethal_only">Dodge only lethal charged moves</option>
+                <option value="downtime_saver">Dodge when it saves time</option>
+              </select>
+            </label>
+            <label>
+              Player strategy
+              <select id="player-strategy">
+                <option value="no_strategy">No voluntary swapping</option>
+                <option value="hot_swap_greedy">Hot swap — greedy</option>
+                <option value="hot_swap_cautious">Hot swap — cautious (10% reserve)</option>
+                <option value="hot_swap_very_cautious">Hot swap — very cautious (15% reserve)</option>
+                <option value="catch_tank">Catch tank</option>
+              </select>
+            </label>
+            <label>
+              Weather
+              <select id="weather">
+                <option value="">None</option>
+                <option>Sunny/Clear</option>
+                <option>Rainy</option>
+                <option>Partly Cloudy</option>
+                <option>Cloudy</option>
+                <option>Windy</option>
+                <option>Snow</option>
+                <option>Fog</option>
+              </select>
+            </label>
+            <label>
+              Friendship
+              <select id="friendship">
+                <option value="1">None</option>
+                <option value="1.03">Good Friends</option>
+                <option value="1.05">Great Friends</option>
+                <option value="1.07">Ultra Friends</option>
+                <option value="1.10">Best Friends</option>
+                <option value="1.12">Seasonal Best Friends (1.12×)</option>
+              </select>
+            </label>
+            <label>
+              Adventure Effect
+              <select id="adventure-effect">
+                <option value="none" selected>None</option>
+                <option value="behemoth_blade">Behemoth Blade (1.1× Attack)</option>
+                <option value="behemoth_bash">Behemoth Bash (1.1× Defense)</option>
+                <option value="dynamic_punch">Dynamic Punch+ (1.15× Attack vs Mega)</option>
+              </select>
+            </label>
+            <label>
+              Battle log
+              <select id="battle-log-mode">
+                <option value="none">Do not show</option>
+                <option value="moves" selected>Move starts only</option>
+                <option value="full">Every event</option>
+              </select>
+            </label>
+            <label>
+              Boss movesets
+              <select id="boss-moveset-mode">
+                <option value="selected" selected>Selected moveset only</option>
+                <option value="all">Every legal moveset</option>
+              </select>
+            </label>
+            <label>
+              Games per moveset
+              <input id="simulation-count" type="number" min="1" max="100" step="1" value="1" required>
+            </label>
+            <label>
+              Random seed (optional)
+              <input
+                id="random-seed"
+                type="text"
+                inputmode="numeric"
+                pattern="[0-9]*"
+                placeholder="Blank = new battle"
+              >
+            </label>
+          </div>
+          <p id="strategy-description" class="setting-note"></p>
+          <p class="setting-note">
+            Dynamic Punch+ applies only against an actual Mega boss in Tier 4,
+            Mega, Mega Legendary, or Super Mega raids. It does not apply to
+            Primal Groudon or Primal Kyogre.
+          </p>
+          <p id="simulation-scope-note" class="setting-note"></p>
+          <p class="setting-note">
+            Leave the seed blank for a different battle each time. Reuse a
+            result's seed to reproduce that battle exactly.
+          </p>
+        </section>
+
+        <button id="simulate" class="primary" type="submit">Simulate one raid</button>
+      </form>
+
+      <section id="result" class="panel result" hidden aria-live="polite">
+        <p class="eyebrow">Simulation result</p>
+        <div class="result-heading">
+          <h2 id="result-title">Victory</h2>
+          <div class="result-meta">
+            <span id="result-time"></span>
+            <span id="result-seed"></span>
+          </div>
+        </div>
+        <div id="single-result-stats" class="result-stats">
+          <div><strong id="boss-hp">0</strong><span>Boss HP left</span></div>
+          <div><strong id="faints">0</strong><span>Faints</span></div>
+          <div><strong id="retreats">0</strong><span>Retreats</span></div>
+          <div><strong id="rejoins">0</strong><span>Rejoins</span></div>
+          <div><strong id="catch-tanks">0</strong><span>Catch tanks used</span></div>
+        </div>
+        <div id="batch-result" hidden>
+          <div class="result-stats batch-overview">
+            <div><strong id="batch-battles">0</strong><span>Battles</span></div>
+            <div><strong id="batch-movesets">0</strong><span>Boss movesets</span></div>
+            <div><strong id="batch-wins">0</strong><span>Wins</span></div>
+            <div><strong id="batch-win-rate">0%</strong><span>Overall win rate</span></div>
+          </div>
+          <div class="batch-table-wrap">
+            <table class="batch-table">
+              <thead><tr><th>Fast move</th><th>Charged move</th><th>Games</th><th>Win rate</th><th>Average win time</th><th>Boss HP on losses</th></tr></thead>
+              <tbody id="batch-rows"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="result-actions">
+          <button id="simulate-again" class="secondary" type="button">Simulate again</button>
+          <button id="open-generated-replay" class="secondary single-replay-action" type="button">
+            Open generated replay
+          </button>
+          <button id="download-generated-replay" class="secondary single-replay-action" type="button">
+            Download replay .txt
+          </button>
+        </div>
+        <details id="battle-log-details">
+          <summary id="battle-log-summary">Show battle log</summary>
+          <pre id="battle-log"></pre>
+        </details>
+      </section>
+      </section>
+
+      <section id="turn-view" class="app-view" hidden>
+        <section class="panel turn-panel">
+          <div class="section-heading">
+            <div><h2>Turn-by-turn raid</h2>
+              <p>Use the boss, team and bonuses from Raid simulator. You control one player; the boss acts automatically. Dodge and swap strategies are off here.</p>
+            </div>
+          </div>
+          <div class="turn-toolbar">
+            <button id="turn-settings" class="secondary" type="button">Edit boss &amp; team</button>
+            <button id="turn-start" class="primary" type="button">Start new battle</button>
+            <button id="turn-export" class="secondary" type="button" disabled>Export recording (.txt)</button>
+            <button id="turn-numbers" class="secondary" type="button" aria-pressed="false">Hide meter numbers</button>
+          </div>
+          <div class="turn-toolbar">
+            <label for="turn-saved">Saved battles</label>
+            <select id="turn-saved" aria-label="Saved battles"><option value="">No saved battles</option></select>
+            <button id="turn-restore" class="secondary" type="button" disabled>Restore battle</button>
+          </div>
+          <p id="turn-status" role="status">Choose your raid settings, then start a battle.</p>
+          <div id="turn-battle" hidden>
+            <div class="turn-clock"><strong id="turn-clock">300.0s remaining</strong><span id="turn-elapsed">Turn 0 · 0.0s elapsed</span></div>
+            <div class="turn-combatants"><section id="turn-boss" aria-label="Boss state"></section><section id="turn-player" aria-label="Player state"></section></div>
+            <div class="turn-actions" aria-label="Actions for this turn">
+              <button id="turn-fast" class="primary turn-action-button" type="button">Fast move</button>
+              <button id="turn-charged" class="primary turn-action-button" type="button">Charged move</button>
+              <button id="turn-dodge" class="secondary turn-action-button" type="button">Dodge</button>
+              <div id="turn-switches" class="turn-switch-actions" aria-label="Switch Pokémon"></div>
+              <button id="turn-quit" class="secondary turn-action-button" type="button">Quit to lobby</button>
+              <button id="turn-rejoin" class="secondary turn-action-button" type="button">Rejoin</button>
+              <button id="turn-wait" class="secondary turn-action-button" type="button">Advance time (+0.5s)</button>
+              <button id="turn-stop" class="secondary" type="button">End battle</button>
+            </div>
+            <p class="turn-help">Each button starts that action and advances 0.5s. During a fast move, charged move, dodge, or switch animation, use Advance time until the Pokémon is ready; only Quit remains available as another action.</p>
+            <details><summary>Team HP &amp; energy</summary><div id="turn-team" class="turn-team"></div></details>
+            <h3>Event log</h3>
+            <pre id="turn-log" class="turn-log" aria-label="Recorded battle events"></pre>
+            <p id="turn-recording" class="turn-help"></p>
+          </div>
+        </section>
+      </section>
+
+      <section id="replay-view" class="app-view" hidden>
+      <section id="playback-panel" class="panel playback-panel" hidden aria-label="Animated battle replay">
+        <div class="playback-topline">
+          <h2>Battle replay</h2>
+        </div>
+        <div class="playback-controls">
+          <button id="playback-play" class="primary" type="button">Play</button>
+          <button id="playback-restart" class="secondary" type="button">Restart</button>
+          <button id="playback-step" class="secondary" type="button">+0.5s</button>
+          <button id="playback-numbers" class="secondary" type="button" aria-pressed="false">Hide HP &amp; energy numbers</button>
+          <label>Speed<select id="playback-speed"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option><option value="8">8×</option></select></label>
+          <span id="playback-elapsed">Elapsed 0.0s</span>
+        </div>
+        <label class="playback-seek-label" for="playback-seek">Battle position</label>
+        <input id="playback-seek" type="range" min="0" max="1" value="0" step="1" aria-valuetext="0.0 seconds elapsed">
+        <p id="playback-outcome" class="playback-outcome" aria-live="polite"></p>
+        <div class="battle-stage">
+          <div class="battle-clock" role="timer" aria-label="Time remaining"><strong id="playback-clock">300.0s</strong></div>
+          <div id="playback-boss" class="battle-boss"></div>
+          <div id="playback-players" class="battle-players"></div>
+        </div>
+      </section>
+      <section id="replay-import" class="panel replay-import">
+        <div class="section-heading replay-heading">
+          <div>
+            <p class="eyebrow">Replay player · build 27</p>
+            <h2>Load a battle timeline</h2>
+            <p>
+              Open a generated replay or type your own timeline. Load it to watch
+              the battle, or validate it to check the event order.
+            </p>
+          </div>
+          <label class="file-button secondary">
+            Open .txt file
+            <input id="replay-file" type="file" accept=".txt,text/plain">
+          </label>
+        </div>
+
+        <div class="replay-editor-grid">
+          <label class="replay-text-field">
+            Replay text
+            <textarea
+              id="replay-text"
+              rows="21"
+              spellcheck="false"
+              placeholder="Raid: Tier 4&#10;Boss: STARMIE_MEGA; fast=Water Gun; charged=Hydro Pump&#10;Teams:&#10;p1: your team description&#10;&#10;Friendship: p1=1.10&#10;Zacian effects: p1=false&#10;Behemoth Bash effects: p1=false&#10;Dynamic Punch+ effects: p1=false&#10;Weather: none&#10;Dodge: downtime_saver&#10;Swap: hot_swap_greedy&#10;Catch tanks: p1=-&#10;Party Power: normal; groups=-&#10;Move codes: sc=Shadow Claw&#10;&#10;Events:&#10;t0p1:sc&#10;+0b:f&#10;+4.5b:c&#10;+0p1:d&#10;+1p1:s2&#10;+12p1:q&#10;+3p1:r"
+            ></textarea>
+          </label>
+
+          <aside class="replay-guide" aria-label="Replay shorthand guide">
+            <h3>Timeline shorthand</h3>
+            <p>Team member: <code>Mewtwo / Confusion / Psystrike / L50 / 15-15-15</code>.
+              Separate team members with a semicolon. Generated team lists also work.</p>
+            <dl>
+              <div><dt><code>t9p1:db</code></dt><dd>At 9s, p1 uses move code db.</dd></div>
+              <div><dt><code>+1.5p1,2:db</code></dt><dd>1.5s later, p1 and p2 use db.</dd></div>
+              <div><dt><code>+0p3:s2</code></dt><dd>At the same time, p3 switches to slot 2.</dd></div>
+              <div><dt><code>+0b:c</code></dt><dd>The boss starts its configured charged move.</dd></div>
+              <div><dt><code>+0p1:d</code></dt><dd>p1 dodges the announced charged move.</dd></div>
+              <div><dt><code>t30p1:q</code></dt><dd>p1 voluntarily quits to the lobby.</dd></div>
+              <div><dt><code>+4p1:r</code></dt><dd>p1 rejoins with the same team.</dd></div>
+            </dl>
+            <p>
+              Times are written in seconds but must land on a whole or half
+              second. <code>r2</code> is not supported because party presets do
+              not exist yet.
+            </p>
+          </aside>
+        </div>
+
+        <div class="replay-actions">
+          <button id="load-playback" class="primary" type="button">Load battle replay</button>
+          <button id="validate-replay" class="secondary" type="button">Validate text</button>
+          <button id="insert-replay-example" class="secondary" type="button">Play example</button>
+          <p id="replay-status" class="replay-status" role="status" aria-live="polite">Loading replay controls… If this message remains, restart the updated server and refresh with Ctrl+F5.</p>
+        </div>
+
+        <section id="replay-preview" class="replay-preview" hidden aria-live="polite">
+          <div class="replay-summary" id="replay-summary"></div>
+          <div id="replay-warnings" class="replay-warnings" hidden></div>
+          <div class="replay-table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Tick</th>
+                  <th>Actor</th>
+                  <th>Action</th>
+                  <th>Source line</th>
+                </tr>
+              </thead>
+              <tbody id="replay-events"></tbody>
+            </table>
+          </div>
+          <p class="setting-note">
+            For hand-written timelines, completed hits resolve before new actions
+            on the same tick. Missing moves are not filled in automatically.
+          </p>
+        </section>
+      </section>
+      </section>
+    </main>
+
+    <dialog id="pokemon-code-dialog">
+      <div class="dialog-heading">
+        <div>
+          <p class="eyebrow">Single Pokémon</p>
+          <h2 id="pokemon-code-title">Export Pokémon</h2>
+        </div>
+        <button id="close-code-dialog" class="icon-button" type="button" aria-label="Close">×</button>
+      </div>
+      <p id="pokemon-code-help" class="dialog-help"></p>
+      <textarea
+        id="pokemon-code"
+        rows="4"
+        spellcheck="false"
+        aria-label="Pokémon import or export code"
+      ></textarea>
+      <p id="pokemon-code-status" class="code-status" aria-live="polite"></p>
+      <div class="dialog-actions">
+        <button id="cancel-code-dialog" class="secondary" type="button">Cancel</button>
+        <button id="pokemon-code-action" class="primary" type="button">Copy code</button>
+      </div>
+    </dialog>
+  </body>
+</html>

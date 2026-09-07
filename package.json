@@ -1,0 +1,19 @@
+{
+  "name": "pokemon-go-raid-simulator",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node scripts/build.mjs && node scripts/validate-dist.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "start": "node scripts/serve.mjs",
+    "test": "npm run build && node --test tests/typescript/*.test.mjs",
+    "test:parity": "npm run build && node scripts/parity.mjs"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  },
+  "engines": {
+    "node": ">=20.19"
+  }
+}

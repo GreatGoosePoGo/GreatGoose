@@ -1,0 +1,11 @@
+Pokémon GO type icon sprite atlas
+
+Source:
+https://github.com/ZeChrales/PogoAssets/blob/master/static_assets/png/SpriteAtlasTexture-TypeIcons-512x256-fmt47.png
+
+The Soloable Raids Google Sheet did not expose its embedded icon files through
+the public document view available during this update. This atlas was selected
+as the fallback because it contains the original Pokémon GO type symbols in a
+single local asset. Pokémon and Pokémon GO are trademarks of their respective
+owners. This fan project is not affiliated with Niantic, Nintendo, Creatures,
+or The Pokémon Company.
