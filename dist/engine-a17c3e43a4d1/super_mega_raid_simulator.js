@@ -2,114 +2,113 @@
 import * as py from "./compatibility.js";
 import { PythonRandom } from "./random.js";
 import { re } from "./text.js";
-import type { RaidConfig, CalculatorEntry } from "./types.js";
-export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) {
-    const config: any = structuredClone(input);
-    let TRIALS_PER_MOVESET: any;
-    let RANDOM_SEED: bigint;
-    let RAID_DIFFICULTIES: any;
-    let RAID_DIFFICULTY: any;
-    let RAID_RULES: any;
-    let RAID_SECONDS: number;
-    let BOSS_HP: number;
-    let BOSS_CPM: number;
-    let SUPER_MEGA_ENRAGE: any;
-    let SHADOW_RAID: any;
-    let ENRAGE_HP: any;
-    let SHADOW_UNENRAGE_HP: any;
-    let FAST_MOVE_DELAY: any;
-    let BOSS_CHARGED_CHANCE: any;
-    let BOSS_MAX_ENERGY: any;
-    let ENRAGE_ATTACK_MULTIPLIER: any;
-    let SHADOW_ENRAGE_DEFENSE_BONUS: number;
-    let SHADOW_ENRAGE_ATTACK_BONUS: number;
-    let USE_PURIFIED_GEMS: boolean;
-    let PURIFIED_GEM_COOLDOWN: number;
-    let PURIFIED_GEM_LIMIT_PER_PLAYER: number;
-    let PURIFIED_GEMS_TO_SUBDUE: number;
-    let DODGE_SECONDS: any;
-    let DODGED_DAMAGE_FRACTION: any;
-    let SWITCH_SECONDS: any;
-    let REJOIN_TIMES: any;
-    let PLAYER_ENERGY_FROM_DAMAGE: any;
-    let PLAYER_TEAMS: any;
-    let PARTY_POWER_GROUPS: any;
-    let BOOSTED_PARTY_POWER: any;
-    let NORMAL_PARTY_POWER_THRESHOLDS: any;
-    let BOOSTED_PARTY_POWER_THRESHOLDS: any;
-    let FRIENDSHIP_MULTIPLIERS: any;
-    let ZACIAN_ADVENTURE_EFFECT: any;
-    let BEHEMOTH_BASH_ADVENTURE_EFFECT: any;
-    let DYNAMIC_PUNCH_ADVENTURE_EFFECT: any;
-    let WEATHER: any;
-    let SAME_TYPE_MEGA_ALLY_MULTIPLIER: any;
-    let OTHER_TYPE_MEGA_ALLY_MULTIPLIER: any;
-    let ZACIAN_MULTIPLIER: any;
-    let BEHEMOTH_BASH_DEFENSE_MULTIPLIER: any;
-    let DYNAMIC_PUNCH_ATTACK_MULTIPLIER: any;
-    let DYNAMIC_PUNCH_RAID_DIFFICULTIES: any;
-    let WEATHER_MULTIPLIER: any;
-    let BOSS_FORM_ID: any;
-    let BOSS_MANUAL_PROFILE: any;
-    let BOSS_FAST_MOVE_NAMES: any;
-    let BOSS_CHARGED_MOVE_NAMES: any;
-    let BOSS_MOVE_DISPLAY_NAMES: any;
-    let DODGE_STRATEGY: any;
-    let DODGE_STRATEGIES: any;
-    let PLAYER_STRATEGY: any;
-    let PLAYER_STRATEGIES: any;
-    let BATTLE_LOG_MODE: any;
-    let BATTLE_LOG_MODES: any;
-    let HOT_SWAP_CHARGED_DAMAGE_RESERVES: any;
-    let CATCH_TANK_TEAM_INDICES: any;
-    let _team: any;
-    let CALCULATOR_DATA_PATH: any;
-    let STAB: any;
-    let SUPER_EFFECTIVE: any;
-    let NOT_VERY_EFFECTIVE: any;
-    let IMMUNITY_AS_DOUBLE_RESISTANCE: any;
-    let TYPES: any;
-    let HIDDEN_POWER_TYPES: string[];
-    let move_type: any;
-    let WEATHER_BOOSTED_TYPES: any;
-    let CPM_BY_HALF_LEVEL: any;
-    let TYPE_RELATIONSHIPS: any;
-    let CALCULATOR_DATA: any;
-    let BOSS_DATA: any;
-    let _boss_stats: any;
-    let _manual: any;
-    let BOSS_NAME: string;
-    let BOSS_ATTACK_BASE: any;
-    let BOSS_DEFENSE_BASE: any;
-    let BOSS_TYPES: string[];
-    let BOSS_ATTACK: any;
-    let BOSS_DEFENSE: any;
-    let MUD_SHOT: any;
-    let PRECIPICE_BLADES: any;
-    let SANDSEAR_STORM: any;
-    let EARTH_POWER: any;
-    let EARTHQUAKE: any;
-    let DRAGON_TAIL: any;
-    let DYNAMAX_CANNON: any;
-    let ACID_SPRAY_PLUS: any;
-    let LIQUIDATION_PLUS: any;
-    let OUTRAGE_PLUS: any;
-    let DRILL_PECK_PLUS: any;
-    let SEED_BOMB_PLUS: any;
-    let MYSTICAL_FIRE_PLUS: any;
-    let SURF_PLUS: any;
-    let PSYBEAM_PLUS: any;
-    let BRICK_BREAK_PLUS: any;
-    let VOLT_TACKLE_PLUS: any;
-    let DYNAMIC_PUNCH_PLUS: any;
-    let ZAP_CANNON_PLUS: any;
-    let FUTURE_SIGHT_PLUS: any;
-    let PLUS_MOVE_FORM_IDS: any;
-    let MOVES: Record<string, Move>;
-    let move: any;
-    let SPECIES: Record<string, Species>;
-    let BOSS_FAST_MOVES: Record<string, Move>;
-    let BOSS_CHARGED_MOVES: Record<string, Move>;
+export function createRaidEngine(input, catalog) {
+    const config = structuredClone(input);
+    let TRIALS_PER_MOVESET;
+    let RANDOM_SEED;
+    let RAID_DIFFICULTIES;
+    let RAID_DIFFICULTY;
+    let RAID_RULES;
+    let RAID_SECONDS;
+    let BOSS_HP;
+    let BOSS_CPM;
+    let SUPER_MEGA_ENRAGE;
+    let SHADOW_RAID;
+    let ENRAGE_HP;
+    let SHADOW_UNENRAGE_HP;
+    let FAST_MOVE_DELAY;
+    let BOSS_CHARGED_CHANCE;
+    let BOSS_MAX_ENERGY;
+    let ENRAGE_ATTACK_MULTIPLIER;
+    let SHADOW_ENRAGE_DEFENSE_BONUS;
+    let SHADOW_ENRAGE_ATTACK_BONUS;
+    let USE_PURIFIED_GEMS;
+    let PURIFIED_GEM_COOLDOWN;
+    let PURIFIED_GEM_LIMIT_PER_PLAYER;
+    let PURIFIED_GEMS_TO_SUBDUE;
+    let DODGE_SECONDS;
+    let DODGED_DAMAGE_FRACTION;
+    let SWITCH_SECONDS;
+    let REJOIN_TIMES;
+    let PLAYER_ENERGY_FROM_DAMAGE;
+    let PLAYER_TEAMS;
+    let PARTY_POWER_GROUPS;
+    let BOOSTED_PARTY_POWER;
+    let NORMAL_PARTY_POWER_THRESHOLDS;
+    let BOOSTED_PARTY_POWER_THRESHOLDS;
+    let FRIENDSHIP_MULTIPLIERS;
+    let ZACIAN_ADVENTURE_EFFECT;
+    let BEHEMOTH_BASH_ADVENTURE_EFFECT;
+    let DYNAMIC_PUNCH_ADVENTURE_EFFECT;
+    let WEATHER;
+    let SAME_TYPE_MEGA_ALLY_MULTIPLIER;
+    let OTHER_TYPE_MEGA_ALLY_MULTIPLIER;
+    let ZACIAN_MULTIPLIER;
+    let BEHEMOTH_BASH_DEFENSE_MULTIPLIER;
+    let DYNAMIC_PUNCH_ATTACK_MULTIPLIER;
+    let DYNAMIC_PUNCH_RAID_DIFFICULTIES;
+    let WEATHER_MULTIPLIER;
+    let BOSS_FORM_ID;
+    let BOSS_MANUAL_PROFILE;
+    let BOSS_FAST_MOVE_NAMES;
+    let BOSS_CHARGED_MOVE_NAMES;
+    let BOSS_MOVE_DISPLAY_NAMES;
+    let DODGE_STRATEGY;
+    let DODGE_STRATEGIES;
+    let PLAYER_STRATEGY;
+    let PLAYER_STRATEGIES;
+    let BATTLE_LOG_MODE;
+    let BATTLE_LOG_MODES;
+    let HOT_SWAP_CHARGED_DAMAGE_RESERVES;
+    let CATCH_TANK_TEAM_INDICES;
+    let _team;
+    let CALCULATOR_DATA_PATH;
+    let STAB;
+    let SUPER_EFFECTIVE;
+    let NOT_VERY_EFFECTIVE;
+    let IMMUNITY_AS_DOUBLE_RESISTANCE;
+    let TYPES;
+    let HIDDEN_POWER_TYPES;
+    let move_type;
+    let WEATHER_BOOSTED_TYPES;
+    let CPM_BY_HALF_LEVEL;
+    let TYPE_RELATIONSHIPS;
+    let CALCULATOR_DATA;
+    let BOSS_DATA;
+    let _boss_stats;
+    let _manual;
+    let BOSS_NAME;
+    let BOSS_ATTACK_BASE;
+    let BOSS_DEFENSE_BASE;
+    let BOSS_TYPES;
+    let BOSS_ATTACK;
+    let BOSS_DEFENSE;
+    let MUD_SHOT;
+    let PRECIPICE_BLADES;
+    let SANDSEAR_STORM;
+    let EARTH_POWER;
+    let EARTHQUAKE;
+    let DRAGON_TAIL;
+    let DYNAMAX_CANNON;
+    let ACID_SPRAY_PLUS;
+    let LIQUIDATION_PLUS;
+    let OUTRAGE_PLUS;
+    let DRILL_PECK_PLUS;
+    let SEED_BOMB_PLUS;
+    let MYSTICAL_FIRE_PLUS;
+    let SURF_PLUS;
+    let PSYBEAM_PLUS;
+    let BRICK_BREAK_PLUS;
+    let VOLT_TACKLE_PLUS;
+    let DYNAMIC_PUNCH_PLUS;
+    let ZAP_CANNON_PLUS;
+    let FUTURE_SIGHT_PLUS;
+    let PLUS_MOVE_FORM_IDS;
+    let MOVES;
+    let move;
+    let SPECIES;
+    let BOSS_FAST_MOVES;
+    let BOSS_CHARGED_MOVES;
     /** Each engine owns its configuration and catalogs. Simulation instances own
      * HP, energy, event queues and RNG state. Keep custom battle rules in a separate
      * ruleset when they diverge from this supplied vanilla reference.
@@ -160,7 +159,7 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
     ZACIAN_MULTIPLIER = 1.1;
     BEHEMOTH_BASH_DEFENSE_MULTIPLIER = 1.1;
     DYNAMIC_PUNCH_ATTACK_MULTIPLIER = 1.15;
-    DYNAMIC_PUNCH_RAID_DIFFICULTIES = py.set(new Set<any>(["Tier 4", "Mega", "Mega Legendary", "Super Mega"]));
+    DYNAMIC_PUNCH_RAID_DIFFICULTIES = py.set(new Set(["Tier 4", "Mega", "Mega Legendary", "Super Mega"]));
     WEATHER_MULTIPLIER = 1.2;
     BOSS_FORM_ID = "KYOGRE";
     BOSS_MANUAL_PROFILE = null;
@@ -174,7 +173,7 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
     BATTLE_LOG_MODE = "full";
     BATTLE_LOG_MODES = ["none", "moves", "full"];
     HOT_SWAP_CHARGED_DAMAGE_RESERVES = py.dict([["hot_swap_greedy", 0.0], ["hot_swap_cautious", 0.1], ["hot_swap_very_cautious", 0.15]]);
-    CATCH_TANK_TEAM_INDICES = py.iter(PLAYER_TEAMS).map((_team: any) => ([]));
+    CATCH_TANK_TEAM_INDICES = py.iter(PLAYER_TEAMS).map((_team) => ([]));
     CALCULATOR_DATA_PATH = py.dict([["name", "calculator_data.json"]]);
     TRIALS_PER_MOVESET = py.int(py.get(config, "trials", TRIALS_PER_MOVESET));
     RANDOM_SEED = BigInt(py.parseSeed(py.get(config, "random_seed", RANDOM_SEED)));
@@ -218,16 +217,16 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
     NOT_VERY_EFFECTIVE = 0.625;
     IMMUNITY_AS_DOUBLE_RESISTANCE = 0.390625;
     TYPES = ["Normal", "Fire", "Water", "Electric", "Grass", "Ice", "Fighting", "Poison", "Ground", "Flying", "Psychic", "Bug", "Rock", "Ghost", "Dragon", "Dark", "Steel", "Fairy"];
-    HIDDEN_POWER_TYPES = py.iter(py.iter(TYPES).filter((move_type: any) => py.truth(((!py.has(new Set<any>(["Normal", "Fairy"]), move_type))))).map((move_type: any) => (move_type)));
-    WEATHER_BOOSTED_TYPES = py.dict([[null, py.set()], ["Sunny/Clear", py.set(new Set<any>(["Grass", "Fire", "Ground"]))], ["Rainy", py.set(new Set<any>(["Water", "Electric", "Bug"]))], ["Partly Cloudy", py.set(new Set<any>(["Normal", "Rock"]))], ["Cloudy", py.set(new Set<any>(["Fairy", "Fighting", "Poison"]))], ["Windy", py.set(new Set<any>(["Flying", "Dragon", "Psychic"]))], ["Snow", py.set(new Set<any>(["Ice", "Steel"]))], ["Fog", py.set(new Set<any>(["Dark", "Ghost"]))]]);
+    HIDDEN_POWER_TYPES = py.iter(py.iter(TYPES).filter((move_type) => py.truth(((!py.has(new Set(["Normal", "Fairy"]), move_type))))).map((move_type) => (move_type)));
+    WEATHER_BOOSTED_TYPES = py.dict([[null, py.set()], ["Sunny/Clear", py.set(new Set(["Grass", "Fire", "Ground"]))], ["Rainy", py.set(new Set(["Water", "Electric", "Bug"]))], ["Partly Cloudy", py.set(new Set(["Normal", "Rock"]))], ["Cloudy", py.set(new Set(["Fairy", "Fighting", "Poison"]))], ["Windy", py.set(new Set(["Flying", "Dragon", "Psychic"]))], ["Snow", py.set(new Set(["Ice", "Steel"]))], ["Fog", py.set(new Set(["Dark", "Ghost"]))]]);
     CPM_BY_HALF_LEVEL = py.dict(py.zip(py.range(2, 111), [0.094, 0.135137432, 0.16639787, 0.192650919, 0.21573247, 0.236572661, 0.25572005, 0.273530381, 0.29024988, 0.306057377, 0.3210876, 0.335445036, 0.34921268, 0.362457751, 0.37523559, 0.387592406, 0.39956728, 0.411193551, 0.42250001, 0.432926419, 0.44310755, 0.453059958, 0.46279839, 0.472336083, 0.48168495, 0.4908558, 0.49985844, 0.508701765, 0.51739395, 0.525942511, 0.53435433, 0.542635767, 0.55079269, 0.558830576, 0.56675452, 0.574569153, 0.58227891, 0.589887917, 0.59740001, 0.604818814, 0.61215729, 0.619399365, 0.62656713, 0.633644533, 0.64065295, 0.647576426, 0.65443563, 0.661214806, 0.667934, 0.674577537, 0.68116492, 0.687680648, 0.69414365, 0.700538673, 0.70688421, 0.713164996, 0.71939909, 0.725571552, 0.7317, 0.734741009, 0.73776948, 0.740785574, 0.74378943, 0.746781211, 0.74976104, 0.752729087, 0.75568551, 0.758630378, 0.76156384, 0.764486065, 0.76739717, 0.770297266, 0.7731865, 0.776064962, 0.77893275, 0.781790055, 0.78463697, 0.787473578, 0.79030001, 0.792803968, 0.79530001, 0.797803921, 0.8003, 0.802803892, 0.8053, 0.807803863, 0.81029999, 0.812803834, 0.81529999, 0.817803806, 0.82029999, 0.822803778, 0.82529999, 0.82780375, 0.83029999, 0.832803753, 0.83529999, 0.837803755, 0.84029999, 0.842803697870388, 0.84529999, 0.847803676002882, 0.85029999, 0.852803654391795, 0.85529999, 0.857803633032642, 0.86029999, 0.862803611921044, 0.86529999]));
-    TYPE_RELATIONSHIPS = py.dict([["Normal", [py.dict([]), new Set<any>(["Rock", "Steel"]), new Set<any>(["Ghost"])]], ["Fire", [new Set<any>(["Grass", "Ice", "Bug", "Steel"]), new Set<any>(["Fire", "Water", "Rock", "Dragon"]), py.dict([])]], ["Water", [new Set<any>(["Fire", "Ground", "Rock"]), new Set<any>(["Water", "Grass", "Dragon"]), py.dict([])]], ["Electric", [new Set<any>(["Water", "Flying"]), new Set<any>(["Electric", "Grass", "Dragon"]), new Set<any>(["Ground"])]], ["Grass", [new Set<any>(["Water", "Ground", "Rock"]), new Set<any>(["Fire", "Grass", "Poison", "Flying", "Bug", "Dragon", "Steel"]), py.dict([])]], ["Ice", [new Set<any>(["Grass", "Ground", "Flying", "Dragon"]), new Set<any>(["Fire", "Water", "Ice", "Steel"]), py.dict([])]], ["Fighting", [new Set<any>(["Normal", "Ice", "Rock", "Dark", "Steel"]), new Set<any>(["Poison", "Flying", "Psychic", "Bug", "Fairy"]), new Set<any>(["Ghost"])]], ["Poison", [new Set<any>(["Grass", "Fairy"]), new Set<any>(["Poison", "Ground", "Rock", "Ghost"]), new Set<any>(["Steel"])]], ["Ground", [new Set<any>(["Fire", "Electric", "Poison", "Rock", "Steel"]), new Set<any>(["Grass", "Bug"]), new Set<any>(["Flying"])]], ["Flying", [new Set<any>(["Grass", "Fighting", "Bug"]), new Set<any>(["Electric", "Rock", "Steel"]), py.dict([])]], ["Psychic", [new Set<any>(["Fighting", "Poison"]), new Set<any>(["Psychic", "Steel"]), new Set<any>(["Dark"])]], ["Bug", [new Set<any>(["Grass", "Psychic", "Dark"]), new Set<any>(["Fire", "Fighting", "Poison", "Flying", "Ghost", "Steel", "Fairy"]), py.dict([])]], ["Rock", [new Set<any>(["Fire", "Ice", "Flying", "Bug"]), new Set<any>(["Fighting", "Ground", "Steel"]), py.dict([])]], ["Ghost", [new Set<any>(["Psychic", "Ghost"]), new Set<any>(["Dark"]), new Set<any>(["Normal"])]], ["Dragon", [new Set<any>(["Dragon"]), new Set<any>(["Steel"]), new Set<any>(["Fairy"])]], ["Dark", [new Set<any>(["Psychic", "Ghost"]), new Set<any>(["Fighting", "Dark", "Fairy"]), py.dict([])]], ["Steel", [new Set<any>(["Ice", "Rock", "Fairy"]), new Set<any>(["Fire", "Water", "Electric", "Steel"]), py.dict([])]], ["Fairy", [new Set<any>(["Fighting", "Dragon", "Dark"]), new Set<any>(["Fire", "Poison", "Steel"]), py.dict([])]]]);
-    function type_effectiveness(move_type: string, defender_types: (string)[]): number {
-        let super_types: any;
-        let resisted_types: any;
-        let immune_types: any;
-        let result: any;
-        let defender_type: any;
+    TYPE_RELATIONSHIPS = py.dict([["Normal", [py.dict([]), new Set(["Rock", "Steel"]), new Set(["Ghost"])]], ["Fire", [new Set(["Grass", "Ice", "Bug", "Steel"]), new Set(["Fire", "Water", "Rock", "Dragon"]), py.dict([])]], ["Water", [new Set(["Fire", "Ground", "Rock"]), new Set(["Water", "Grass", "Dragon"]), py.dict([])]], ["Electric", [new Set(["Water", "Flying"]), new Set(["Electric", "Grass", "Dragon"]), new Set(["Ground"])]], ["Grass", [new Set(["Water", "Ground", "Rock"]), new Set(["Fire", "Grass", "Poison", "Flying", "Bug", "Dragon", "Steel"]), py.dict([])]], ["Ice", [new Set(["Grass", "Ground", "Flying", "Dragon"]), new Set(["Fire", "Water", "Ice", "Steel"]), py.dict([])]], ["Fighting", [new Set(["Normal", "Ice", "Rock", "Dark", "Steel"]), new Set(["Poison", "Flying", "Psychic", "Bug", "Fairy"]), new Set(["Ghost"])]], ["Poison", [new Set(["Grass", "Fairy"]), new Set(["Poison", "Ground", "Rock", "Ghost"]), new Set(["Steel"])]], ["Ground", [new Set(["Fire", "Electric", "Poison", "Rock", "Steel"]), new Set(["Grass", "Bug"]), new Set(["Flying"])]], ["Flying", [new Set(["Grass", "Fighting", "Bug"]), new Set(["Electric", "Rock", "Steel"]), py.dict([])]], ["Psychic", [new Set(["Fighting", "Poison"]), new Set(["Psychic", "Steel"]), new Set(["Dark"])]], ["Bug", [new Set(["Grass", "Psychic", "Dark"]), new Set(["Fire", "Fighting", "Poison", "Flying", "Ghost", "Steel", "Fairy"]), py.dict([])]], ["Rock", [new Set(["Fire", "Ice", "Flying", "Bug"]), new Set(["Fighting", "Ground", "Steel"]), py.dict([])]], ["Ghost", [new Set(["Psychic", "Ghost"]), new Set(["Dark"]), new Set(["Normal"])]], ["Dragon", [new Set(["Dragon"]), new Set(["Steel"]), new Set(["Fairy"])]], ["Dark", [new Set(["Psychic", "Ghost"]), new Set(["Fighting", "Dark", "Fairy"]), py.dict([])]], ["Steel", [new Set(["Ice", "Rock", "Fairy"]), new Set(["Fire", "Water", "Electric", "Steel"]), py.dict([])]], ["Fairy", [new Set(["Fighting", "Dragon", "Dark"]), new Set(["Fire", "Poison", "Steel"]), py.dict([])]]]);
+    function type_effectiveness(move_type, defender_types) {
+        let super_types;
+        let resisted_types;
+        let immune_types;
+        let result;
+        let defender_type;
         /** Multiply the move's effectiveness against each defending type. */
         [super_types, resisted_types, immune_types] = py.at(TYPE_RELATIONSHIPS, move_type);
         result = 1.0;
@@ -250,28 +249,57 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
         return result;
     }
     class Move {
-        constructor(public name: string, public power: number, public duration: number, public energy: number, public move_type: string, public dodge: boolean = false, public plus_powers: [
-            number,
-            number,
-            number,
-            number
-        ] | null = null) { }
+        name;
+        power;
+        duration;
+        energy;
+        move_type;
+        dodge;
+        plus_powers;
+        constructor(name, power, duration, energy, move_type, dodge = false, plus_powers = null) {
+            this.name = name;
+            this.power = power;
+            this.duration = duration;
+            this.energy = energy;
+            this.move_type = move_type;
+            this.dodge = dodge;
+            this.plus_powers = plus_powers;
+        }
     }
     class Species {
-        constructor(public name: string, public attack: number, public defense: number, public stamina: number, public types: (string)[], public shadow: boolean = false, public mega_boost_types: (string)[] = [], public persistent_mega_boost: boolean = false, public form_id: string | null = null) { }
+        name;
+        attack;
+        defense;
+        stamina;
+        types;
+        shadow;
+        mega_boost_types;
+        persistent_mega_boost;
+        form_id;
+        constructor(name, attack, defense, stamina, types, shadow = false, mega_boost_types = [], persistent_mega_boost = false, form_id = null) {
+            this.name = name;
+            this.attack = attack;
+            this.defense = defense;
+            this.stamina = stamina;
+            this.types = types;
+            this.shadow = shadow;
+            this.mega_boost_types = mega_boost_types;
+            this.persistent_mega_boost = persistent_mega_boost;
+            this.form_id = form_id;
+        }
     }
-    function find_calculator_species(data: (Record<string, any>)[], form_id: string): Record<string, any> {
-        let matches: any;
-        let entry: any;
-        matches = py.iter(data).filter((entry: any) => py.truth(((py.equal(py.get(entry, "form_id"), form_id))))).map((entry: any) => (entry));
+    function find_calculator_species(data, form_id) {
+        let matches;
+        let entry;
+        matches = py.iter(data).filter((entry) => py.truth(((py.equal(py.get(entry, "form_id"), form_id))))).map((entry) => (entry));
         if (py.truth(((!py.equal(py.len(matches), 1))))) {
             throw new Error(`BOSS_FORM_ID ${py.repr(form_id)} matched ${py.str(py.len(matches))} records in ${py.str(CALCULATOR_DATA_PATH.name)}; expected exactly one`);
         }
         return py.at(matches, 0);
     }
-    function move_from_calculator(entry: Record<string, any>, dodge: boolean = false): Move {
-        let name: any;
-        let display_name: any;
+    function move_from_calculator(entry, dodge = false) {
+        let name;
+        let display_name;
         /** Convert one calculator-data move, normalizing charged energy to positive. */
         name = py.at(entry, "name");
         display_name = py.get(BOSS_MOVE_DISPLAY_NAMES, name, name);
@@ -284,7 +312,7 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
     BOSS_NAME = py.str(py.get(_manual, "name", py.at(BOSS_DATA, "name")));
     BOSS_ATTACK_BASE = py.int(py.get(_manual, "attack", py.at(_boss_stats, "attack")));
     BOSS_DEFENSE_BASE = py.int(py.get(_manual, "defense", py.at(_boss_stats, "defense")));
-    BOSS_TYPES = py.iter(py.iter(py.get(_manual, "types", py.at(BOSS_DATA, "types"))).map((move_type: any) => (py.title(py.str(move_type)))));
+    BOSS_TYPES = py.iter(py.iter(py.get(_manual, "types", py.at(BOSS_DATA, "types"))).map((move_type) => (py.title(py.str(move_type)))));
     BOSS_ATTACK = py.add(BOSS_ATTACK_BASE, 15);
     BOSS_DEFENSE = py.add(BOSS_DEFENSE_BASE, 15);
     MUD_SHOT = new Move("Mud Shot", 4, 0.5, 6, "Ground");
@@ -308,27 +336,27 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
     ZAP_CANNON_PLUS = new Move("Zap Cannon+", 160, 3.5, 100, "Electric", undefined, [160, 176, 192, 208]);
     FUTURE_SIGHT_PLUS = new Move("Future Sight+", 140, 2.5, 100, "Psychic", undefined, [140, 154, 168, 182]);
     PLUS_MOVE_FORM_IDS = py.dict([["Acid Spray+", "VICTREEBEL_MEGA"], ["Liquidation+", "STARMIE_MEGA"], ["Outrage+", "DRAGONITE_MEGA"], ["Drill Peck+", "SKARMORY_MEGA"], ["Seed Bomb+", "CHESNAUGHT_MEGA"], ["Mystical Fire+", "DELPHOX_MEGA"], ["Surf+", "GRENINJA_MEGA"], ["Psybeam+", "MALAMAR_MEGA"], ["Brick Break+", "FALINKS_MEGA"], ["Volt Tackle+", "RAICHU_MEGA_X"], ["Dynamic Punch+", "MEWTWO_MEGA_X"], ["Zap Cannon+", "RAICHU_MEGA_Y"], ["Future Sight+", "MEWTWO_MEGA_Y"]]);
-    MOVES = py.dict(py.iter([MUD_SHOT, PRECIPICE_BLADES, SANDSEAR_STORM, EARTH_POWER, EARTHQUAKE, DRAGON_TAIL, DYNAMAX_CANNON, ACID_SPRAY_PLUS, LIQUIDATION_PLUS, OUTRAGE_PLUS, DRILL_PECK_PLUS, SEED_BOMB_PLUS, MYSTICAL_FIRE_PLUS, SURF_PLUS, PSYBEAM_PLUS, BRICK_BREAK_PLUS, VOLT_TACKLE_PLUS, DYNAMIC_PUNCH_PLUS, ZAP_CANNON_PLUS, FUTURE_SIGHT_PLUS]).map((move: any) => ([move.name, move])));
+    MOVES = py.dict(py.iter([MUD_SHOT, PRECIPICE_BLADES, SANDSEAR_STORM, EARTH_POWER, EARTHQUAKE, DRAGON_TAIL, DYNAMAX_CANNON, ACID_SPRAY_PLUS, LIQUIDATION_PLUS, OUTRAGE_PLUS, DRILL_PECK_PLUS, SEED_BOMB_PLUS, MYSTICAL_FIRE_PLUS, SURF_PLUS, PSYBEAM_PLUS, BRICK_BREAK_PLUS, VOLT_TACKLE_PLUS, DYNAMIC_PUNCH_PLUS, ZAP_CANNON_PLUS, FUTURE_SIGHT_PLUS]).map((move) => ([move.name, move])));
     SPECIES = py.dict([["Groudon", new Species("Groudon", 270, 228, 205, ["Ground"])], ["Shadow Groudon", new Species("Shadow Groudon", 270, 228, 205, ["Ground"], true)], ["Primal Groudon", new Species("Primal Groudon", 353, 268, 218, ["Ground", "Fire"], undefined, ["Fire", "Ground", "Grass"], true)], ["Landorus Therian", new Species("Landorus Therian", 289, 179, 205, ["Ground", "Flying"])], ["Mega Garchomp", new Species("Mega Garchomp", 339, 222, 239, ["Dragon", "Ground"], undefined, ["Dragon", "Ground"])], ["Eternatus", new Species("Eternatus", 278, 192, 268, ["Poison", "Dragon"])]]);
-    function register_player_form(form_id: string, mega_boost: boolean = false, shadow: boolean = false, mega_boost_types: (string)[] | null = null, persistent_mega_boost: boolean = false): void {
-        let entry: any;
-        let name: any;
-        let stats: any;
-        let types: any;
-        let move_type: any;
+    function register_player_form(form_id, mega_boost = false, shadow = false, mega_boost_types = null, persistent_mega_boost = false) {
+        let entry;
+        let name;
+        let stats;
+        let types;
+        let move_type;
         /** Add one calculator-data form and all of its moves to player catalogs. */
         entry = find_calculator_species(CALCULATOR_DATA, form_id);
         name = py.at(entry, "name");
         stats = py.at(entry, "stats");
-        types = py.iter(py.iter(py.at(entry, "types")).map((move_type: any) => (py.title(py.str(move_type)))));
+        types = py.iter(py.iter(py.at(entry, "types")).map((move_type) => (py.title(py.str(move_type)))));
         SPECIES[py.key(name)] = new Species(name, py.int(py.at(stats, "attack")), py.int(py.at(stats, "defense")), py.int(py.at(stats, "stamina")), types, shadow, (py.truth(((mega_boost_types !== null))) ? mega_boost_types : (py.truth(mega_boost) ? types : [])), persistent_mega_boost, form_id);
         register_player_moves(entry);
     }
-    function register_player_moves(entry: Record<string, any>, preserve_existing: boolean = false): void {
-        let move_data_pool: any;
-        let move_data: any;
-        let move: any;
-        let existing: any;
+    function register_player_moves(entry, preserve_existing = false) {
+        let move_data_pool;
+        let move_data;
+        let move;
+        let existing;
         /** Register ordinary, Elite/legacy, and true-exclusive player moves. */
         move_data_pool = [...py.iter(py.get(entry, "fast_moves", [])), ...py.iter(py.get(entry, "charged_moves", [])), ...py.iter(py.get(entry, "exclusive_fast_moves", [])), ...py.iter(py.get(entry, "exclusive_charged_moves", []))];
         for (const __item of py.iter(move_data_pool)) {
@@ -351,24 +379,20 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
     register_player_form("ZEKROM");
     register_player_form("GARDEVOIR_MEGA", true);
     register_player_form("ZACIAN_CROWNED_SWORD");
-    function register_new_mega_form(form_id: string, name: string, base_form_id: string, stats: [
-        number,
-        number,
-        number
-    ], types: (string)[]): void {
-        let matches: any;
-        let entry: any;
-        let base_entry: any;
-        let attack: any;
-        let defense: any;
-        let stamina: any;
-        let species: any;
+    function register_new_mega_form(form_id, name, base_form_id, stats, types) {
+        let matches;
+        let entry;
+        let base_entry;
+        let attack;
+        let defense;
+        let stamina;
+        let species;
         /** Register a new Mega that is absent from the older calculator export.
          *
          *     Its ordinary moves come from the base species. Once calculator_data.json
          *     contains the Mega form itself, that authoritative record is used instead.
          *      */
-        matches = py.iter(CALCULATOR_DATA).filter((entry: any) => py.truth(((py.equal(py.get(entry, "form_id"), form_id))))).map((entry: any) => (entry));
+        matches = py.iter(CALCULATOR_DATA).filter((entry) => py.truth(((py.equal(py.get(entry, "form_id"), form_id))))).map((entry) => (entry));
         if (py.truth(((py.equal(py.len(matches), 1))))) {
             register_player_form(form_id, true);
             SPECIES[py.key(form_id)] = py.at(SPECIES, py.at(py.at(matches, 0), "name"));
@@ -388,18 +412,18 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
     register_new_mega_form("CHESNAUGHT_MEGA", "Mega Chesnaught", "CHESNAUGHT", [242, 282, 204], ["Grass", "Fighting"]);
     register_new_mega_form("DELPHOX_MEGA", "Mega Delphox", "DELPHOX", [331, 235, 181], ["Fire", "Psychic"]);
     register_new_mega_form("GRENINJA_MEGA", "Mega Greninja", "GRENINJA", [299, 180, 176], ["Water", "Dark"]);
-    function register_configured_player_forms(): void {
-        let weather_trio_boosts: any;
-        let team: any;
-        let setup: any;
-        let configured_name: any;
-        let wanted: any;
-        let matches: any;
-        let entry: any;
-        let form_id: any;
-        let persistent_types: any;
-        let is_ordinary_mega: any;
-        let is_shadow: any;
+    function register_configured_player_forms() {
+        let weather_trio_boosts;
+        let team;
+        let setup;
+        let configured_name;
+        let wanted;
+        let matches;
+        let entry;
+        let form_id;
+        let persistent_types;
+        let is_ordinary_mega;
+        let is_shadow;
         /** Load any configured attacker that is not already in the catalog.
          *
          *     This lets PLAYER_TEAMS use calculator-data display names directly instead
@@ -414,12 +438,12 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
                     continue;
                 }
                 configured_name = py.at(setup, 0);
-                function normalized(value: any): string {
-                    let character: any;
-                    return py.join("", py.iter(py.lower(py.str(value))).filter((character: any) => py.truth(py.isalnum(character))).map((character: any) => (character)));
+                function normalized(value) {
+                    let character;
+                    return py.join("", py.iter(py.lower(py.str(value))).filter((character) => py.truth(py.isalnum(character))).map((character) => (character)));
                 }
                 wanted = normalized(configured_name);
-                matches = py.iter(CALCULATOR_DATA).filter((entry: any) => py.truth(((py.has(new Set<any>([normalized(py.get(entry, "name", "")), normalized(py.get(entry, "form_id", ""))]), wanted))))).map((entry: any) => (entry));
+                matches = py.iter(CALCULATOR_DATA).filter((entry) => py.truth(((py.has(new Set([normalized(py.get(entry, "name", "")), normalized(py.get(entry, "form_id", ""))]), wanted))))).map((entry) => (entry));
                 if (py.truth(((!py.equal(py.len(matches), 1))))) {
                     continue;
                 }
@@ -441,51 +465,65 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
     }
     register_configured_player_forms();
     class BattlePokemon {
-        constructor(public species: Species, public fast_move: Move, public charged_move: Move, public level: number, public attack_iv: number = 15, public defense_iv: number = 15, public stamina_iv: number = 15, public shadow: boolean = false, public mega_level: number = 1, public hp: number = 0, public energy: number = 0) { this.__post_init__(); }
-        __post_init__(): void {
+        species;
+        fast_move;
+        charged_move;
+        level;
+        attack_iv;
+        defense_iv;
+        stamina_iv;
+        shadow;
+        mega_level;
+        hp;
+        energy;
+        constructor(species, fast_move, charged_move, level, attack_iv = 15, defense_iv = 15, stamina_iv = 15, shadow = false, mega_level = 1, hp = 0, energy = 0) {
+            this.species = species;
+            this.fast_move = fast_move;
+            this.charged_move = charged_move;
+            this.level = level;
+            this.attack_iv = attack_iv;
+            this.defense_iv = defense_iv;
+            this.stamina_iv = stamina_iv;
+            this.shadow = shadow;
+            this.mega_level = mega_level;
+            this.hp = hp;
+            this.energy = energy;
+            this.__post_init__();
+        }
+        __post_init__() {
             this.reset();
         }
-        reset(): void {
+        reset() {
             this.hp = this.max_hp;
             this.energy = 0;
         }
-        get cpm(): number {
+        get cpm() {
             return py.at(CPM_BY_HALF_LEVEL, py.round(py.mul(this.level, 2)));
         }
-        get effective_attack(): number {
+        get effective_attack() {
             return py.mul(py.add(this.species.attack, this.attack_iv), this.cpm);
         }
-        get effective_defense(): number {
+        get effective_defense() {
             return py.mul(py.add(this.species.defense, this.defense_iv), this.cpm);
         }
-        get max_hp(): number {
+        get max_hp() {
             return Math.floor(py.mul(py.add(this.species.stamina, this.stamina_iv), this.cpm));
         }
-        get is_shadow(): boolean {
+        get is_shadow() {
             /** Whether this individual or its catalog species is Shadow. */
             return py.or(this.shadow, () => this.species.shadow);
         }
     }
-    function unpack_player_setup(setup: any[] | any[]): [
-        string,
-        string,
-        string,
-        number,
-        number,
-        number,
-        number,
-        boolean,
-        number
-    ] {
-        let species: any;
-        let fast: any;
-        let charged: any;
-        let level: any;
-        let attack_iv: any;
-        let defense_iv: any;
-        let stamina_iv: any;
-        let shadow: any;
-        let mega_level: any;
+    function unpack_player_setup(setup) {
+        let species;
+        let fast;
+        let charged;
+        let level;
+        let attack_iv;
+        let defense_iv;
+        let stamina_iv;
+        let shadow;
+        let mega_level;
         /** Normalize legacy setups and the IV/Shadow/Mega-Level format. */
         if (py.truth(((py.equal(py.len(setup), 4))))) {
             [species, fast, charged, level] = setup;
@@ -504,35 +542,35 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
         }
         return [species, fast, charged, level, attack_iv, defense_iv, stamina_iv, shadow, mega_level];
     }
-    function effective_player_move_power(move: Move, pokemon: BattlePokemon): number {
+    function effective_player_move_power(move, pokemon) {
         /** Return the move's exact integer power at this Pokémon's Mega Level. */
         if (py.truth(((move.plus_powers === null)))) {
             return move.power;
         }
         return py.at(move.plus_powers, py.sub(pokemon.mega_level, 1));
     }
-    function displayed_player_move_name(move: Move, pokemon: BattlePokemon): string {
+    function displayed_player_move_name(move, pokemon) {
         /** Render + through ++++ without creating four separate move objects. */
         if (py.truth(((move.plus_powers === null)))) {
             return move.name;
         }
         return py.add(py.rstrip(move.name, "+"), py.mul("+", pokemon.mega_level));
     }
-    function select_boss_moves(pool_key: string, selected_names: (string)[]): Record<string, Move> {
-        let pool: any;
-        let move: any;
-        let available: any;
-        let entry: any;
-        let wanted: any;
-        let unknown: any;
-        let result: any;
+    function select_boss_moves(pool_key, selected_names) {
+        let pool;
+        let move;
+        let available;
+        let entry;
+        let wanted;
+        let unknown;
+        let result;
         /** Select only ordinary boss moves, retaining calculator-data order.
          *
          *     Elite/legacy moves and true-exclusive player moves are intentionally not
          *     boss moves. The latter are stored outside this base pool entirely.
          *      */
-        pool = py.iter(py.at(BOSS_DATA, pool_key)).filter((move: any) => py.truth(!py.truth(py.get(move, "elite", false)))).map((move: any) => (move));
-        available = new Set(py.iter(pool).map((entry: any) => (py.at(entry, "name"))));
+        pool = py.iter(py.at(BOSS_DATA, pool_key)).filter((move) => py.truth(!py.truth(py.get(move, "elite", false)))).map((move) => (move));
+        available = new Set(py.iter(pool).map((entry) => (py.at(entry, "name"))));
         wanted = (py.truth(selected_names) ? py.set(selected_names) : available);
         unknown = py.sub(wanted, available);
         if (py.truth(unknown)) {
@@ -554,25 +592,36 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
     }
     BOSS_FAST_MOVES = select_boss_moves("fast_moves", BOSS_FAST_MOVE_NAMES);
     BOSS_CHARGED_MOVES = select_boss_moves("charged_moves", BOSS_CHARGED_MOVE_NAMES);
-    function pokemon_go_damage(power: number, attack: number, defense: number, modifier: number): number {
+    function pokemon_go_damage(power, attack, defense, modifier) {
         return py.add(Math.floor(py.mul((py.mul(py.mul(0.5, power), attack) / defense), modifier)), 1);
     }
-    function boss_type_modifier(move: Move, species: Species): number {
-        let stab: any;
+    function boss_type_modifier(move, species) {
+        let stab;
         stab = (py.truth(((py.has(BOSS_TYPES, move.move_type)))) ? STAB : 1.0);
         return py.mul(stab, type_effectiveness(move.move_type, species.types));
     }
-    function weather_move_multiplier(move_type: string): number {
+    function weather_move_multiplier(move_type) {
         return (py.truth(((py.has(py.at(WEATHER_BOOSTED_TYPES, WEATHER), move_type)))) ? WEATHER_MULTIPLIER : 1.0);
     }
     class DodgeProfile {
-        constructor(public full_damage: number, public dodged_damage: number, public is_super_effective: boolean, public is_resisted: boolean, public downtime_saver_is_worthwhile: boolean) { }
+        full_damage;
+        dodged_damage;
+        is_super_effective;
+        is_resisted;
+        downtime_saver_is_worthwhile;
+        constructor(full_damage, dodged_damage, is_super_effective, is_resisted, downtime_saver_is_worthwhile) {
+            this.full_damage = full_damage;
+            this.dodged_damage = dodged_damage;
+            this.is_super_effective = is_super_effective;
+            this.is_resisted = is_resisted;
+            this.downtime_saver_is_worthwhile = downtime_saver_is_worthwhile;
+        }
     }
-    function incoming_damage_for_pokemon(move: Move, pokemon: BattlePokemon, enraged: boolean, dodged: boolean, defense_multiplier: number = 1.0): number {
-        let species: any;
-        let modifier: any;
-        let attack: any;
-        let damage: any;
+    function incoming_damage_for_pokemon(move, pokemon, enraged, dodged, defense_multiplier = 1.0) {
+        let species;
+        let modifier;
+        let attack;
+        let damage;
         /** Calculate boss damage without requiring mutable Simulation state. */
         species = pokemon.species;
         modifier = py.mul(boss_type_modifier(move, species), weather_move_multiplier(move.move_type));
@@ -587,30 +636,30 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
         damage = pokemon_go_damage(move.power, attack, py.mul(pokemon.effective_defense, defense_multiplier), modifier);
         return (py.truth(dodged) ? py.max(1, Math.floor(py.mul(damage, DODGED_DAMAGE_FRACTION))) : damage);
     }
-    function precompute_dodge_profiles(boss_charged: Move): Record<string, DodgeProfile> {
-        let profiles: any;
-        let enrage_states: any;
-        let player_id: any;
-        let team: any;
-        let pokemon_index: any;
-        let setup: any;
-        let species: any;
-        let fast: any;
-        let charged: any;
-        let level: any;
-        let attack_iv: any;
-        let defense_iv: any;
-        let stamina_iv: any;
-        let shadow: any;
-        let mega_level: any;
-        let pokemon: any;
-        let has_next: any;
-        let forced_transition_time: any;
-        let enraged: any;
-        let full_damage: any;
-        let dodged_damage: any;
-        let energy_recovery_time: any;
-        let energy_not_received: any;
+    function precompute_dodge_profiles(boss_charged) {
+        let profiles;
+        let enrage_states;
+        let player_id;
+        let team;
+        let pokemon_index;
+        let setup;
+        let species;
+        let fast;
+        let charged;
+        let level;
+        let attack_iv;
+        let defense_iv;
+        let stamina_iv;
+        let shadow;
+        let mega_level;
+        let pokemon;
+        let has_next;
+        let forced_transition_time;
+        let enraged;
+        let full_damage;
+        let dodged_damage;
+        let energy_recovery_time;
+        let energy_not_received;
         /** Build the shared lookup table once for an aggregate moveset run. */
         profiles = py.dict([]);
         enrage_states = (py.truth(py.or(SUPER_MEGA_ENRAGE, () => SHADOW_RAID)) ? [false, true] : [false]);
@@ -638,64 +687,179 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
         return profiles;
     }
     class Player {
-        constructor(public team: (BattlePokemon)[], public pokemon_index: number = 0, public on_field: boolean = true, public token: number = 0, public generation: number = 0, public next_action_time: number = 0.0, public action_start: number = 0.0, public action_end: number = 0.0, public action_is_charged: boolean = false, public switches: number = 0, public faints: number = 0, public tactical_switches: number = 0, public rejoins: number = 0, public party_power_threshold: number = 0, public party_power_progress: number = 0, public party_power_active: boolean = false, public damage_dealt: number = 0, public damage_taken: number = 0, public fast_moves_used: number = 0, public charged_moves_used: number = 0, public powered_charged_moves: number = 0, public successful_dodges: number = 0, public catch_tank_indices: (number)[] = [], public used_catch_tanks: Set<number> = new Set(), public catch_tank_active: boolean = false, public catch_return_index: number | null = null, public catch_tanks_used: number = 0, public saved_energy_indices: Set<number> = new Set(), public saved_energy_return_after: Record<string, number> = py.dict(), public committed_saved_energy_index: number | null = null, public energy_save_guard_until: number = 0.0, public purified_gems_used: number = 0, public last_purified_gem_time: number | null = null) { }
-        get pokemon(): BattlePokemon {
+        team;
+        pokemon_index;
+        on_field;
+        token;
+        generation;
+        next_action_time;
+        action_start;
+        action_end;
+        action_is_charged;
+        switches;
+        faints;
+        tactical_switches;
+        rejoins;
+        party_power_threshold;
+        party_power_progress;
+        party_power_active;
+        damage_dealt;
+        damage_taken;
+        fast_moves_used;
+        charged_moves_used;
+        powered_charged_moves;
+        successful_dodges;
+        catch_tank_indices;
+        used_catch_tanks;
+        catch_tank_active;
+        catch_return_index;
+        catch_tanks_used;
+        saved_energy_indices;
+        saved_energy_return_after;
+        committed_saved_energy_index;
+        energy_save_guard_until;
+        purified_gems_used;
+        last_purified_gem_time;
+        constructor(team, pokemon_index = 0, on_field = true, token = 0, generation = 0, next_action_time = 0.0, action_start = 0.0, action_end = 0.0, action_is_charged = false, switches = 0, faints = 0, tactical_switches = 0, rejoins = 0, party_power_threshold = 0, party_power_progress = 0, party_power_active = false, damage_dealt = 0, damage_taken = 0, fast_moves_used = 0, charged_moves_used = 0, powered_charged_moves = 0, successful_dodges = 0, catch_tank_indices = [], used_catch_tanks = new Set(), catch_tank_active = false, catch_return_index = null, catch_tanks_used = 0, saved_energy_indices = new Set(), saved_energy_return_after = py.dict(), committed_saved_energy_index = null, energy_save_guard_until = 0.0, purified_gems_used = 0, last_purified_gem_time = null) {
+            this.team = team;
+            this.pokemon_index = pokemon_index;
+            this.on_field = on_field;
+            this.token = token;
+            this.generation = generation;
+            this.next_action_time = next_action_time;
+            this.action_start = action_start;
+            this.action_end = action_end;
+            this.action_is_charged = action_is_charged;
+            this.switches = switches;
+            this.faints = faints;
+            this.tactical_switches = tactical_switches;
+            this.rejoins = rejoins;
+            this.party_power_threshold = party_power_threshold;
+            this.party_power_progress = party_power_progress;
+            this.party_power_active = party_power_active;
+            this.damage_dealt = damage_dealt;
+            this.damage_taken = damage_taken;
+            this.fast_moves_used = fast_moves_used;
+            this.charged_moves_used = charged_moves_used;
+            this.powered_charged_moves = powered_charged_moves;
+            this.successful_dodges = successful_dodges;
+            this.catch_tank_indices = catch_tank_indices;
+            this.used_catch_tanks = used_catch_tanks;
+            this.catch_tank_active = catch_tank_active;
+            this.catch_return_index = catch_return_index;
+            this.catch_tanks_used = catch_tanks_used;
+            this.saved_energy_indices = saved_energy_indices;
+            this.saved_energy_return_after = saved_energy_return_after;
+            this.committed_saved_energy_index = committed_saved_energy_index;
+            this.energy_save_guard_until = energy_save_guard_until;
+            this.purified_gems_used = purified_gems_used;
+            this.last_purified_gem_time = last_purified_gem_time;
+        }
+        get pokemon() {
             return py.at(this.team, this.pokemon_index);
         }
-        get species(): Species {
+        get species() {
             return this.pokemon.species;
         }
-        get hp(): number {
+        get hp() {
             return this.pokemon.hp;
         }
-        set hp(value: number) {
+        set hp(value) {
             this.pokemon.hp = value;
         }
-        get energy(): number {
+        get energy() {
             return this.pokemon.energy;
         }
-        set energy(value: number) {
+        set energy(value) {
             this.pokemon.energy = value;
         }
-        get has_next(): boolean {
+        get has_next() {
             return ((py.add(this.pokemon_index, 1) < py.len(this.team)));
         }
     }
     class TrialResult {
-        constructor(public won: boolean, public finish_time: number, public boss_hp: number, public switches: number, public faints: number, public tactical_switches: number, public rejoins: number, public catch_tanks_used: number, public purified_gems_used: number = 0) { }
+        won;
+        finish_time;
+        boss_hp;
+        switches;
+        faints;
+        tactical_switches;
+        rejoins;
+        catch_tanks_used;
+        purified_gems_used;
+        constructor(won, finish_time, boss_hp, switches, faints, tactical_switches, rejoins, catch_tanks_used, purified_gems_used = 0) {
+            this.won = won;
+            this.finish_time = finish_time;
+            this.boss_hp = boss_hp;
+            this.switches = switches;
+            this.faints = faints;
+            this.tactical_switches = tactical_switches;
+            this.rejoins = rejoins;
+            this.catch_tanks_used = catch_tanks_used;
+            this.purified_gems_used = purified_gems_used;
+        }
     }
     class Simulation {
-        constructor(public boss_fast: Move, public boss_charged: Move, public rng: PythonRandom, public dodge_profiles: Record<string, DodgeProfile> | null = null, public boss_hp: number = BOSS_HP, public boss_energy: number = 0.0, public enraged: boolean = false, public players: (Player)[] = [], public events: (any[])[] = [], public sequence: number = 0, public detailed: boolean = false, public event_log: (string)[] = [], public replay_actions: ([
-            number,
-            number,
-            string,
-            number | null,
-            string,
-            any
-        ])[] = [], public replay_sequence: number = 0, public current_time: number = 0.0, public shadow_subdued: boolean = false, public purified_gems_used: number = 0) { this.__post_init__(); }
-        __post_init__(): void {
-            let species: any;
-            let fast: any;
-            let charged: any;
-            let level: any;
-            let attack_iv: any;
-            let defense_iv: any;
-            let stamina_iv: any;
-            let shadow: any;
-            let mega_level: any;
-            let team: any;
-            let player_id: any;
-            let player: any;
-            let thresholds: any;
-            let group: any;
-            let threshold: any;
+        boss_fast;
+        boss_charged;
+        rng;
+        dodge_profiles;
+        boss_hp;
+        boss_energy;
+        enraged;
+        players;
+        events;
+        sequence;
+        detailed;
+        event_log;
+        replay_actions;
+        replay_sequence;
+        current_time;
+        shadow_subdued;
+        purified_gems_used;
+        constructor(boss_fast, boss_charged, rng, dodge_profiles = null, boss_hp = BOSS_HP, boss_energy = 0.0, enraged = false, players = [], events = [], sequence = 0, detailed = false, event_log = [], replay_actions = [], replay_sequence = 0, current_time = 0.0, shadow_subdued = false, purified_gems_used = 0) {
+            this.boss_fast = boss_fast;
+            this.boss_charged = boss_charged;
+            this.rng = rng;
+            this.dodge_profiles = dodge_profiles;
+            this.boss_hp = boss_hp;
+            this.boss_energy = boss_energy;
+            this.enraged = enraged;
+            this.players = players;
+            this.events = events;
+            this.sequence = sequence;
+            this.detailed = detailed;
+            this.event_log = event_log;
+            this.replay_actions = replay_actions;
+            this.replay_sequence = replay_sequence;
+            this.current_time = current_time;
+            this.shadow_subdued = shadow_subdued;
+            this.purified_gems_used = purified_gems_used;
+            this.__post_init__();
+        }
+        __post_init__() {
+            let species;
+            let fast;
+            let charged;
+            let level;
+            let attack_iv;
+            let defense_iv;
+            let stamina_iv;
+            let shadow;
+            let mega_level;
+            let team;
+            let player_id;
+            let player;
+            let thresholds;
+            let group;
+            let threshold;
             if (py.truth(((py.equal(this.boss_fast.name, "Hidden Power"))))) {
                 this.boss_fast = Object.assign(Object.create(Object.getPrototypeOf(this.boss_fast)), this.boss_fast, { move_type: this.rng.choice(HIDDEN_POWER_TYPES) });
             }
             if (py.truth(((this.dodge_profiles === null)))) {
                 this.dodge_profiles = precompute_dodge_profiles(this.boss_charged);
             }
-            this.players = py.iter(PLAYER_TEAMS).map((team: any) => (new Player(py.iter(py.iter(team).map(unpack_player_setup)).map(([species, fast, charged, level, attack_iv, defense_iv, stamina_iv, shadow, mega_level]: any) => (new BattlePokemon(py.at(SPECIES, species), py.at(MOVES, fast), py.at(MOVES, charged), level, attack_iv, defense_iv, stamina_iv, shadow, mega_level))))));
+            this.players = py.iter(PLAYER_TEAMS).map((team) => (new Player(py.iter(py.iter(team).map(unpack_player_setup)).map(([species, fast, charged, level, attack_iv, defense_iv, stamina_iv, shadow, mega_level]) => (new BattlePokemon(py.at(SPECIES, species), py.at(MOVES, fast), py.at(MOVES, charged), level, attack_iv, defense_iv, stamina_iv, shadow, mega_level))))));
             for (const __item of py.iter(py.enumerate(this.players))) {
                 [player_id, player] = __item;
                 player.catch_tank_indices = (py.truth(((py.equal(PLAYER_STRATEGY, "catch_tank")))) ? py.iter(py.at(CATCH_TANK_TEAM_INDICES, player_id)) : []);
@@ -711,17 +875,17 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
                 }
             }
         }
-        push(time: number, kind: string, data: any[] = []): void {
+        push(time, kind, data = []) {
             this.sequence = py.add(this.sequence, 1);
             py.heappush(this.events, [time, this.sequence, kind, data]);
         }
-        log(time: number, message: string, category: string = "event"): void {
+        log(time, message, category = "event") {
             if (py.truth(py.and(this.detailed, () => py.or(((py.equal(BATTLE_LOG_MODE, "full"))), () => py.and(((py.equal(BATTLE_LOG_MODE, "moves"))), () => ((py.equal(category, "move_start")))))))) {
                 py.append(this.event_log, `${py.format(time, `7.2f`)}s  ${py.str(message)}`);
             }
         }
-        record_replay_action(time: number, actor_kind: string, actor_id: number | null, action_kind: string, value: any = null): void {
-            let tick: any;
+        record_replay_action(time, actor_kind, actor_id, action_kind, value = null) {
+            let tick;
             /** Record one observable action using exact half-second game ticks. */
             if (py.truth(!py.truth(this.detailed))) {
                 return;
@@ -733,19 +897,19 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
             this.replay_sequence = py.add(this.replay_sequence, 1);
             py.append(this.replay_actions, [tick, this.replay_sequence, actor_kind, actor_id, action_kind, value]);
         }
-        schedule_player(player_id: number, time: number): void {
-            let player: any;
+        schedule_player(player_id, time) {
+            let player;
             player = py.at(this.players, player_id);
             player.token = py.add(player.token, 1);
             player.next_action_time = time;
             this.push(time, "player_ready", [player_id, player.token]);
         }
-        outgoing_damage(move: Move, player_id: number, party_power: boolean = false): number {
-            let player: any;
-            let pokemon: any;
-            let species: any;
-            let defense: any;
-            let modifier: any;
+        outgoing_damage(move, player_id, party_power = false) {
+            let player;
+            let pokemon;
+            let species;
+            let defense;
+            let modifier;
             player = py.at(this.players, player_id);
             pokemon = player.pokemon;
             species = player.species;
@@ -775,12 +939,12 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
             }
             return pokemon_go_damage(effective_player_move_power(move, pokemon), pokemon.effective_attack, defense, modifier);
         }
-        mega_ally_multiplier(move_type: string, player_id: number): number {
-            let boost_types: any;
-            let other_id: any;
-            let other: any;
-            let member: any;
-            let types: any;
+        mega_ally_multiplier(move_type, player_id) {
+            let boost_types;
+            let other_id;
+            let other;
+            let member;
+            let types;
             /** Return the strongest automatic Mega/Primal boost from an ally. */
             boost_types = [];
             for (const __item of py.iter(py.enumerate(this.players))) {
@@ -788,12 +952,12 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
                 if (py.truth(((py.equal(other_id, player_id))))) {
                     continue;
                 }
-                py.extend(boost_types, py.iter(other.team).filter((member: any) => py.truth(member.species.persistent_mega_boost)).map((member: any) => (member.species.mega_boost_types)));
+                py.extend(boost_types, py.iter(other.team).filter((member) => py.truth(member.species.persistent_mega_boost)).map((member) => (member.species.mega_boost_types)));
                 if (py.truth(py.and(other.on_field, () => py.and(((other.hp > 0)), () => py.and(other.species.mega_boost_types, () => !py.truth(other.species.persistent_mega_boost)))))) {
                     py.append(boost_types, other.species.mega_boost_types);
                 }
             }
-            if (py.truth(py.iter(py.iter(boost_types).map((types: any) => (((py.has(types, move_type)))))).some(py.truth))) {
+            if (py.truth(py.iter(py.iter(boost_types).map((types) => (((py.has(types, move_type)))))).some(py.truth))) {
                 return SAME_TYPE_MEGA_ALLY_MULTIPLIER;
             }
             if (py.truth(boost_types)) {
@@ -801,14 +965,14 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
             }
             return 1.0;
         }
-        player_defense_multiplier(player_id: number): number {
+        player_defense_multiplier(player_id) {
             return (py.truth(py.at(BEHEMOTH_BASH_ADVENTURE_EFFECT, player_id)) ? BEHEMOTH_BASH_DEFENSE_MULTIPLIER : 1.0);
         }
-        incoming_damage(move: Move, player_id: number, player: Player, dodged: boolean): number {
+        incoming_damage(move, player_id, player, dodged) {
             return incoming_damage_for_pokemon(move, player.pokemon, this.enraged, dodged, this.player_defense_multiplier(player_id));
         }
-        should_dodge_charged(player_id: number, player: Player): boolean {
-            let profile: any;
+        should_dodge_charged(player_id, player) {
+            let profile;
             /** Apply the configured dodge policy to one player and charged move. */
             if (py.truth(((py.equal(DODGE_STRATEGY, "none"))))) {
                 return false;
@@ -836,11 +1000,11 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
             }
             return profile.downtime_saver_is_worthwhile;
         }
-        predicted_fast_hits_before_charge(pokemon: BattlePokemon, energy: number): number {
-            let fasts: any;
-            let time_to_charge: any;
-            let first_hit: any;
-            let interval: any;
+        predicted_fast_hits_before_charge(pokemon, energy) {
+            let fasts;
+            let time_to_charge;
+            let first_hit;
+            let interval;
             fasts = py.max(0, Math.ceil((py.sub(pokemon.charged_move.energy, energy) / pokemon.fast_move.energy)));
             time_to_charge = py.add(py.mul(fasts, pokemon.fast_move.duration), pokemon.charged_move.duration);
             first_hit = this.boss_fast.duration;
@@ -850,12 +1014,12 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
             }
             return py.add(1, Math.floor((py.sub(time_to_charge, first_hit) / interval)));
         }
-        should_retreat(player_id: number, player: Player): boolean {
-            let hits: any;
-            let predicted: any;
-            let reserve_fraction: any;
-            let profile: any;
-            let charged_damage_reserve: any;
+        should_retreat(player_id, player) {
+            let hits;
+            let predicted;
+            let reserve_fraction;
+            let profile;
+            let charged_damage_reserve;
             hits = this.predicted_fast_hits_before_charge(player.pokemon, player.energy);
             predicted = py.mul(hits, this.incoming_damage(this.boss_fast, player_id, player, false));
             reserve_fraction = py.at(HOT_SWAP_CHARGED_DAMAGE_RESERVES, PLAYER_STRATEGY);
@@ -863,30 +1027,30 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
             charged_damage_reserve = Math.ceil(py.mul(profile.full_damage, reserve_fraction));
             return ((py.add(predicted, charged_damage_reserve) >= player.hp));
         }
-        first_normal_index(player: Player): number {
-            let index: any;
-            return py.next(py.iter(py.range(py.len(player.team))).filter((index: any) => py.truth(((!py.has(player.catch_tank_indices, index))))).map((index: any) => (index)));
+        first_normal_index(player) {
+            let index;
+            return py.next(py.iter(py.range(py.len(player.team))).filter((index) => py.truth(((!py.has(player.catch_tank_indices, index))))).map((index) => (index)));
         }
-        normal_indices_after(player: Player): (number)[] {
-            let index: any;
+        normal_indices_after(player) {
+            let index;
             /** Return later normal-team slots in ordinary party order. */
-            return py.iter(py.iter(py.range(py.add(player.pokemon_index, 1), py.len(player.team))).filter((index: any) => py.truth(((!py.has(player.catch_tank_indices, index))))).map((index: any) => (index)));
+            return py.iter(py.iter(py.range(py.add(player.pokemon_index, 1), py.len(player.team))).filter((index) => py.truth(((!py.has(player.catch_tank_indices, index))))).map((index) => (index)));
         }
-        normal_indices_in_rotation(player: Player): (number)[] {
-            let index: any;
+        normal_indices_in_rotation(player) {
+            let index;
             /** Return every other normal slot, wrapping once from the active slot. */
-            return py.iter(py.iter([...py.iter(py.range(py.add(player.pokemon_index, 1), py.len(player.team))), ...py.iter(py.range(0, player.pokemon_index))]).filter((index: any) => py.truth(((!py.has(player.catch_tank_indices, index))))).map((index: any) => (index)));
+            return py.iter(py.iter([...py.iter(py.range(py.add(player.pokemon_index, 1), py.len(player.team))), ...py.iter(py.range(0, player.pokemon_index))]).filter((index) => py.truth(((!py.has(player.catch_tank_indices, index))))).map((index) => (index)));
         }
-        next_normal_index(player: Player, include_saved: boolean = false): number | null {
-            let index: any;
-            return py.next(py.iter(this.normal_indices_after(player)).filter((index: any) => py.truth(py.and(((py.at(player.team, index).hp > 0)), () => py.or(include_saved, () => ((!py.has(player.saved_energy_indices, index))))))).map((index: any) => (index)), null);
+        next_normal_index(player, include_saved = false) {
+            let index;
+            return py.next(py.iter(this.normal_indices_after(player)).filter((index) => py.truth(py.and(((py.at(player.team, index).hp > 0)), () => py.or(include_saved, () => ((!py.has(player.saved_energy_indices, index))))))).map((index) => (index)), null);
         }
-        best_saved_energy_index(player_id: number, player: Player, time: number): number | null {
-            let candidates: any;
-            let index: any;
-            let pokemon: any;
-            let hits: any;
-            let fast_damage: any;
+        best_saved_energy_index(player_id, player, time) {
+            let candidates;
+            let index;
+            let pokemon;
+            let hits;
+            let fast_damage;
             /** Choose a saved attacker that can now reach and land its charge. */
             candidates = [];
             for (const __item of py.iter(player.saved_energy_indices)) {
@@ -904,21 +1068,21 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
             }
             return (py.truth(candidates) ? py.at(py.max(candidates), -1) : null);
         }
-        replacement_for_announced_charge(player_id: number, player: Player, boss_move: Move): number | null {
-            let candidates: any;
-            let index: any;
+        replacement_for_announced_charge(player_id, player, boss_move) {
+            let candidates;
+            let index;
             /** Prefer the next unused attacker that survives the announced hit. */
-            candidates = py.iter(this.normal_indices_in_rotation(player)).filter((index: any) => py.truth(py.and(((py.at(player.team, index).hp > 0)), () => ((!py.has(player.saved_energy_indices, index)))))).map((index: any) => (index));
+            candidates = py.iter(this.normal_indices_in_rotation(player)).filter((index) => py.truth(py.and(((py.at(player.team, index).hp > 0)), () => ((!py.has(player.saved_energy_indices, index)))))).map((index) => (index));
             if (py.truth(!py.truth(candidates))) {
                 return null;
             }
-            return py.next(py.iter(candidates).filter((index: any) => py.truth(((incoming_damage_for_pokemon(boss_move, py.at(player.team, index), this.enraged, false, this.player_defense_multiplier(player_id)) < py.at(player.team, index).hp)))).map((index: any) => (index)), py.at(candidates, 0));
+            return py.next(py.iter(candidates).filter((index) => py.truth(((incoming_damage_for_pokemon(boss_move, py.at(player.team, index), this.enraged, false, this.player_defense_multiplier(player_id)) < py.at(player.team, index).hp)))).map((index) => (index)), py.at(candidates, 0));
         }
-        announced_charge_prevents_next_charge(player_id: number, player: Player, hit_time: number, damage: number, boss_move: Move): boolean {
-            let hp_after_hit: any;
-            let energy_after_hit: any;
-            let hits: any;
-            let predicted_fast_damage: any;
+        announced_charge_prevents_next_charge(player_id, player, hit_time, damage, boss_move) {
+            let hp_after_hit;
+            let energy_after_hit;
+            let hits;
+            let predicted_fast_damage;
             /** Whether taking an announced hit stops this attacker spending its meter. */
             if (py.truth(((!py.has(HOT_SWAP_CHARGED_DAMAGE_RESERVES, PLAYER_STRATEGY))))) {
                 return false;
@@ -944,16 +1108,16 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
             predicted_fast_damage = py.mul(hits, this.incoming_damage(this.boss_fast, player_id, player, false));
             return ((predicted_fast_damage >= hp_after_hit));
         }
-        next_unused_catch_tank_index(player: Player): number | null {
-            let index: any;
-            return py.next(py.iter(player.catch_tank_indices).filter((index: any) => py.truth(((!py.has(player.used_catch_tanks, index))))).map((index: any) => (index)), null);
+        next_unused_catch_tank_index(player) {
+            let index;
+            return py.next(py.iter(player.catch_tank_indices).filter((index) => py.truth(((!py.has(player.used_catch_tanks, index))))).map((index) => (index)), null);
         }
-        save_energy_for_announced_charge(time: number, hit_time: number, player_id: number, boss_move: Move): boolean {
-            let player: any;
-            let replacement_index: any;
-            let departing_index: any;
-            let departing: any;
-            let saved_energy: any;
+        save_energy_for_announced_charge(time, hit_time, player_id, boss_move) {
+            let player;
+            let replacement_index;
+            let departing_index;
+            let departing;
+            let saved_energy;
             /** Move a threatened attacker off field while preserving its meter. */
             player = py.at(this.players, player_id);
             replacement_index = this.replacement_for_announced_charge(player_id, player, boss_move);
@@ -980,10 +1144,10 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
             this.schedule_player(player_id, py.add(time, SWITCH_SECONDS));
             return true;
         }
-        return_to_saved_energy(time: number, player_id: number): boolean {
-            let player: any;
-            let return_index: any;
-            let departing: any;
+        return_to_saved_energy(time, player_id) {
+            let player;
+            let return_index;
+            let departing;
             /** Bring back a protected attacker once it can safely spend its meter. */
             player = py.at(this.players, player_id);
             if (py.truth(py.or(!py.truth(player.on_field), () => player.catch_tank_active))) {
@@ -1010,20 +1174,20 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
             this.schedule_player(player_id, py.add(time, SWITCH_SECONDS));
             return true;
         }
-        schedule_catch_tank(time: number, hit_time: number, player_id: number, boss_move: Move): boolean {
-            let player: any;
-            let tank_index: any;
-            let tank: any;
-            let incoming_damage: any;
-            let incoming_energy: any;
-            let energy_after_hit: any;
-            let missing_energy: any;
-            let fast_moves_needed: any;
-            let preparation_time: any;
-            let swap_time: any;
-            let available_preparation_time: any;
-            let immediate: any;
-            let timing_text: any;
+        schedule_catch_tank(time, hit_time, player_id, boss_move) {
+            let player;
+            let tank_index;
+            let tank;
+            let incoming_damage;
+            let incoming_energy;
+            let energy_after_hit;
+            let missing_energy;
+            let fast_moves_needed;
+            let preparation_time;
+            let swap_time;
+            let available_preparation_time;
+            let immediate;
+            let timing_text;
             /** Schedule the latest useful catch-tank swap for an announced hit. */
             if (py.truth(((!py.equal(PLAYER_STRATEGY, "catch_tank"))))) {
                 return false;
@@ -1051,9 +1215,9 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
             this.push(swap_time, "catch_tank_swap", [player_id, tank_index]);
             return true;
         }
-        start_catch_tank(time: number, player_id: number, tank_index: number): void {
-            let player: any;
-            let departing: any;
+        start_catch_tank(time, player_id, tank_index) {
+            let player;
+            let departing;
             /** Start a previously scheduled catch-tank switch. */
             player = py.at(this.players, player_id);
             if (py.truth(py.or(!py.truth(player.on_field), () => py.or(player.catch_tank_active, () => py.or(((py.has(player.used_catch_tanks, tank_index))), () => ((!py.has(player.catch_tank_indices, tank_index)))))))) {
@@ -1076,10 +1240,10 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
             this.log(time, `P${py.str(py.add(player_id, 1))} ${py.str(departing)}: catch-tank switch -> ${py.str(player.species.name)}`);
             this.schedule_player(player_id, py.add(time, SWITCH_SECONDS));
         }
-        finish_catch_tank(time: number, player_id: number, reason: string): void {
-            let player: any;
-            let departing: any;
-            let return_index: any;
+        finish_catch_tank(time, player_id, reason) {
+            let player;
+            let departing;
+            let return_index;
             /** Retire the current tank and return to the attacker it replaced. */
             player = py.at(this.players, player_id);
             departing = player.species.name;
@@ -1102,14 +1266,14 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
             this.log(time, `P${py.str(py.add(player_id, 1))} ${py.str(departing)}: catch tank ${py.str(reason)}; retired -> ${py.str(player.species.name)}`);
             this.schedule_player(player_id, py.add(time, SWITCH_SECONDS));
         }
-        switch(time: number, player_id: number, tactical: boolean): void {
-            let player: any;
-            let departing: any;
-            let departing_index: any;
-            let next_index: any;
-            let returning_to_saved_energy: any;
-            let rejoin_seconds: any;
-            let reason: any;
+        switch(time, player_id, tactical) {
+            let player;
+            let departing;
+            let departing_index;
+            let next_index;
+            let returning_to_saved_energy;
+            let rejoin_seconds;
+            let reason;
             player = py.at(this.players, player_id);
             departing = player.species.name;
             departing_index = player.pokemon_index;
@@ -1164,9 +1328,9 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
             this.log(time, `P${py.str(py.add(player_id, 1))} ${py.str(departing)}: ${py.str(reason)} -> ${py.str(player.species.name)}`);
             this.schedule_player(player_id, py.add(time, SWITCH_SECONDS));
         }
-        rejoin(time: number, player_id: number): void {
-            let player: any;
-            let pokemon: any;
+        rejoin(time, player_id) {
+            let player;
+            let pokemon;
             player = py.at(this.players, player_id);
             this.record_replay_action(time, "player", player_id, "rejoin");
             player.generation = py.add(player.generation, 1);
@@ -1186,11 +1350,11 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
             this.log(time, `P${py.str(py.add(player_id, 1))} rejoined with ${py.str(player.species.name)} at ${py.str(player.hp)} HP`);
             this.schedule_player(player_id, time);
         }
-        start_player_action(time: number, player_id: number, token: number): void {
-            let player: any;
-            let pokemon: any;
-            let move: any;
-            let generation: any;
+        start_player_action(time, player_id, token) {
+            let player;
+            let pokemon;
+            let move;
+            let generation;
             player = py.at(this.players, player_id);
             if (py.truth(py.or(((!py.equal(token, player.token))), () => !py.truth(player.on_field)))) {
                 return;
@@ -1216,11 +1380,11 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
             this.push(player.action_end, "player_hit", [player_id, generation, move]);
             this.schedule_player(player_id, player.action_end);
         }
-        apply_player_hit(player_id: number, generation: number, move: Move): void {
-            let player: any;
-            let powered: any;
-            let damage: any;
-            let pp_text: any;
+        apply_player_hit(player_id, generation, move) {
+            let player;
+            let powered;
+            let damage;
+            let pp_text;
             player = py.at(this.players, player_id);
             if (py.truth(py.or(!py.truth(player.on_field), () => ((!py.equal(generation, player.generation)))))) {
                 return;
@@ -1256,7 +1420,7 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
                 this.finish_catch_tank(this.current_time, player_id, "used its charged move");
             }
         }
-        update_enrage_state(): void {
+        update_enrage_state() {
             if (SHADOW_RAID) {
                 if (this.enraged && this.boss_hp <= SHADOW_UNENRAGE_HP) {
                     this.subdue_shadow("HP reached 15%");
@@ -1278,15 +1442,15 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
                 this.log(this.current_time, "BOSS ENRAGED (defense x4, attack x1.8)");
             }
         }
-        subdue_shadow(reason: string): void {
+        subdue_shadow(reason) {
             if (!SHADOW_RAID || !this.enraged)
                 return;
             this.enraged = false;
             this.shadow_subdued = true;
             this.log(this.current_time, `BOSS SUBDUED (${reason})`);
         }
-        use_purified_gem(time: number, player_id: number, strict: boolean = false): boolean {
-            const reject = (message: string): boolean => {
+        use_purified_gem(time, player_id, strict = false) {
+            const reject = (message) => {
                 if (strict)
                     throw new Error(message);
                 return false;
@@ -1318,8 +1482,8 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
                 this.push(time + PURIFIED_GEM_COOLDOWN, "gem_use", [player_id]);
             return true;
         }
-        charge_party_power(player: Player): void {
-            let threshold: any;
+        charge_party_power(player) {
+            let threshold;
             /** Add one completed fast move to the trainer's Party Power meter. */
             threshold = player.party_power_threshold;
             if (py.truth(((threshold <= 0)))) {
@@ -1331,7 +1495,7 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
                 player.party_power_progress = 0;
             }
         }
-        consume_party_power(player: Player): void {
+        consume_party_power(player) {
             /** Consume PP and immediately activate a fully charged queued meter. */
             player.party_power_active = false;
             if (py.truth(((player.party_power_progress >= player.party_power_threshold) && (player.party_power_threshold > 0)))) {
@@ -1339,17 +1503,17 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
                 player.party_power_progress = 0;
             }
         }
-        boss_decision(time: number): void {
-            let can_charge: any;
-            let move: any;
-            let hit_time: any;
-            let dodgers: any;
-            let player_id: any;
-            let player: any;
-            let will_dodge: any;
-            let collision: any;
-            let profile: any;
-            let expected_damage: any;
+        boss_decision(time) {
+            let can_charge;
+            let move;
+            let hit_time;
+            let dodgers;
+            let player_id;
+            let player;
+            let will_dodge;
+            let collision;
+            let profile;
+            let expected_damage;
             can_charge = ((this.boss_energy >= this.boss_charged.energy));
             if (py.truth(py.and(can_charge, () => ((this.rng.random() < BOSS_CHARGED_CHANCE))))) {
                 move = this.boss_charged;
@@ -1400,11 +1564,11 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
                 this.push(py.add(hit_time, FAST_MOVE_DELAY), "boss_decision");
             }
         }
-        apply_boss_hit(move: Move, dodgers: Set<number>): void {
-            let player_id: any;
-            let player: any;
-            let damage: any;
-            let dodge_text: any;
+        apply_boss_hit(move, dodgers) {
+            let player_id;
+            let player;
+            let damage;
+            let dodge_text;
             for (const __item of py.iter(py.enumerate(this.players))) {
                 [player_id, player] = __item;
                 if (py.truth(!py.truth(player.on_field))) {
@@ -1427,17 +1591,17 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
                 }
             }
         }
-        capture_replay_state(): void {
+        capture_replay_state() {
             /** Optional playback observer; ordinary trials do not collect states. */
         }
-        run(): TrialResult {
-            let player_id: any;
-            let last_time: any;
-            let time: any;
-            let _seq: any;
-            let kind: any;
-            let data: any;
-            let p: any;
+        run() {
+            let player_id;
+            let last_time;
+            let time;
+            let _seq;
+            let kind;
+            let data;
+            let p;
             this.capture_replay_state();
             for (const __item of py.iter(py.range(py.len(this.players)))) {
                 player_id = __item;
@@ -1453,18 +1617,11 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
                 this.current_time = time;
                 last_time = time;
                 if (py.truth(((py.equal(kind, "player_ready"))))) {
-                    this.start_player_action(time, ...(data as [
-                        any,
-                        any
-                    ]));
+                    this.start_player_action(time, ...data);
                 }
                 else {
                     if (py.truth(((py.equal(kind, "player_hit"))))) {
-                        this.apply_player_hit(...(data as [
-                            any,
-                            any,
-                            any
-                        ]));
+                        this.apply_player_hit(...data);
                     }
                     else {
                         if (py.truth(((py.equal(kind, "boss_decision"))))) {
@@ -1472,27 +1629,19 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
                         }
                         else {
                             if (py.truth(((py.equal(kind, "boss_hit"))))) {
-                                this.apply_boss_hit(...(data as [
-                                    any,
-                                    any
-                                ]));
+                                this.apply_boss_hit(...data);
                             }
                             else {
                                 if (py.truth(((py.equal(kind, "catch_tank_swap"))))) {
-                                    this.start_catch_tank(time, ...(data as [
-                                        any,
-                                        any
-                                    ]));
+                                    this.start_catch_tank(time, ...data);
                                 }
                                 else {
-                                if (py.truth(((py.equal(kind, "rejoin"))))) {
-                                    this.rejoin(time, ...(data as [
-                                        any
-                                    ]));
-                                }
-                                else if (py.truth(((py.equal(kind, "gem_use"))))) {
-                                    this.use_purified_gem(time, ...(data as [any]));
-                                }
+                                    if (py.truth(((py.equal(kind, "rejoin"))))) {
+                                        this.rejoin(time, ...data);
+                                    }
+                                    else if (py.truth(((py.equal(kind, "gem_use"))))) {
+                                        this.use_purified_gem(time, ...data);
+                                    }
                                 }
                             }
                         }
@@ -1500,27 +1649,27 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
                 }
                 this.capture_replay_state();
             }
-            return new TrialResult(((this.boss_hp <= 0)), (py.truth(((this.boss_hp <= 0))) ? last_time : RAID_SECONDS), py.max(0, this.boss_hp), py.sum(py.iter(this.players).map((p: any) => (p.switches))), py.sum(py.iter(this.players).map((p: any) => (p.faints))), py.sum(py.iter(this.players).map((p: any) => (p.tactical_switches))), py.sum(py.iter(this.players).map((p: any) => (p.rejoins))), py.sum(py.iter(this.players).map((p: any) => (p.catch_tanks_used))), this.purified_gems_used);
+            return new TrialResult(((this.boss_hp <= 0)), (py.truth(((this.boss_hp <= 0))) ? last_time : RAID_SECONDS), py.max(0, this.boss_hp), py.sum(py.iter(this.players).map((p) => (p.switches))), py.sum(py.iter(this.players).map((p) => (p.faints))), py.sum(py.iter(this.players).map((p) => (p.tactical_switches))), py.sum(py.iter(this.players).map((p) => (p.rejoins))), py.sum(py.iter(this.players).map((p) => (p.catch_tanks_used))), this.purified_gems_used);
         }
     }
-    function replay_tick_text(tick: number): string {
-        let whole: any;
-        let half: any;
+    function replay_tick_text(tick) {
+        let whole;
+        let half;
         [whole, half] = py.divmod(tick, 2);
         return (py.truth(half) ? `${py.str(whole)}.5` : py.str(whole));
     }
-    function build_replay_move_codes(move_names: (string)[]): Record<string, string> {
-        let codes_by_name: any;
-        let used_codes: any;
-        let move_name: any;
-        let words: any;
-        let base: any;
-        let word: any;
-        let code: any;
-        let suffix: any;
+    function build_replay_move_codes(move_names) {
+        let codes_by_name;
+        let used_codes;
+        let move_name;
+        let words;
+        let base;
+        let word;
+        let code;
+        let suffix;
         /** Create compact, deterministic aliases and disambiguate collisions. */
         codes_by_name = py.dict([]);
-        used_codes = new Set<any>(["d", "g", "q", "r"]);
+        used_codes = new Set(["d", "g", "q", "r"]);
         for (const __item of py.iter(move_names)) {
             move_name = __item;
             if (py.truth(((py.has(codes_by_name, move_name))))) {
@@ -1535,7 +1684,7 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
                     base = py.lower(py.slice(py.at(words, 0), undefined, 2));
                 }
                 else {
-                    base = py.lower(py.join("", py.iter(words).map((word: any) => (py.at(word, 0)))));
+                    base = py.lower(py.join("", py.iter(words).map((word) => (py.at(word, 0)))));
                 }
             }
             if (py.truth(py.or(((py.has(used_codes, base))), () => re.fullmatch("s\\d+", base)))) {
@@ -1552,40 +1701,40 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
         }
         return codes_by_name;
     }
-    function render_battle_replay(simulation: Simulation, result: TrialResult, actual_seed: number | string | bigint): string {
-        let move_names: any;
-        let _tick: any;
-        let _sequence: any;
-        let actor: any;
-        let _actor_id: any;
-        let kind: any;
-        let value: any;
-        let move_codes: any;
-        let grouped: any;
-        let group_indexes: any;
-        let tick: any;
-        let actor_id: any;
-        let key: any;
-        let group_index: any;
-        let players: any;
-        let lines: any;
-        let player_id: any;
-        let team: any;
-        let multiplier: any;
-        let enabled: any;
-        let index: any;
-        let indexes: any;
-        let party_groups: any;
-        let group: any;
-        let move_name: any;
-        let code: any;
-        let previous_tick: any;
-        let event: any;
-        let time_code: any;
-        let actor_code: any;
-        let action_code: any;
+    function render_battle_replay(simulation, result, actual_seed) {
+        let move_names;
+        let _tick;
+        let _sequence;
+        let actor;
+        let _actor_id;
+        let kind;
+        let value;
+        let move_codes;
+        let grouped;
+        let group_indexes;
+        let tick;
+        let actor_id;
+        let key;
+        let group_index;
+        let players;
+        let lines;
+        let player_id;
+        let team;
+        let multiplier;
+        let enabled;
+        let index;
+        let indexes;
+        let party_groups;
+        let group;
+        let move_name;
+        let code;
+        let previous_tick;
+        let event;
+        let time_code;
+        let actor_code;
+        let action_code;
         /** Render one completed detailed simulation in the compact text format. */
-        move_names = py.iter(simulation.replay_actions).filter(([_tick, _sequence, actor, _actor_id, kind, value]: any) => py.truth(py.and(((py.equal(actor, "player"))), () => ((py.equal(kind, "move")))))).map(([_tick, _sequence, actor, _actor_id, kind, value]: any) => (py.str(value)));
+        move_names = py.iter(simulation.replay_actions).filter(([_tick, _sequence, actor, _actor_id, kind, value]) => py.truth(py.and(((py.equal(actor, "player"))), () => ((py.equal(kind, "move")))))).map(([_tick, _sequence, actor, _actor_id, kind, value]) => (py.str(value)));
         move_codes = build_replay_move_codes(move_names);
         grouped = [];
         group_indexes = py.dict([]);
@@ -1609,12 +1758,12 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
             }
         }
         lines = [`Raid: ${py.str(RAID_DIFFICULTY)}`, `Boss: ${py.str(BOSS_FORM_ID)}; fast=${py.str(simulation.boss_fast.name)}; charged=${py.str(simulation.boss_charged.name)}`, "Teams:"];
-        py.extend(lines, py.iter(py.enumerate(PLAYER_TEAMS, 1)).map(([player_id, team]: any) => (`p${py.str(player_id)}: ${py.repr(team)}`)));
-        py.extend(lines, ["", py.add("Friendship: ", py.join("; ", py.iter(py.enumerate(FRIENDSHIP_MULTIPLIERS, 1)).map(([player_id, multiplier]: any) => (`p${py.str(player_id)}=${py.format(py.float(multiplier), `g`)}`)))), py.add("Zacian effects: ", py.join("; ", py.iter(py.enumerate(ZACIAN_ADVENTURE_EFFECT, 1)).map(([player_id, enabled]: any) => (`p${py.str(player_id)}=${py.str((py.truth(enabled) ? "true" : "false"))}`)))), py.add("Behemoth Bash effects: ", py.join("; ", py.iter(py.enumerate(BEHEMOTH_BASH_ADVENTURE_EFFECT, 1)).map(([player_id, enabled]: any) => (`p${py.str(player_id)}=${py.str((py.truth(enabled) ? "true" : "false"))}`)))), py.add("Dynamic Punch+ effects: ", py.join("; ", py.iter(py.enumerate(DYNAMIC_PUNCH_ADVENTURE_EFFECT, 1)).map(([player_id, enabled]: any) => (`p${py.str(player_id)}=${py.str((py.truth(enabled) ? "true" : "false"))}`)))), `Weather: ${py.str(py.or(WEATHER, () => "none"))}`, `Dodge: ${py.str(DODGE_STRATEGY)}`, `Swap: ${py.str(PLAYER_STRATEGY)}`, `Purified Gems: ${USE_PURIFIED_GEMS ? "use" : "none"}`, py.add("Catch tanks: ", py.join("; ", py.iter(py.enumerate(CATCH_TANK_TEAM_INDICES, 1)).map(([player_id, indexes]: any) => (py.add(`p${py.str(player_id)}=`, (py.truth(indexes) ? py.join(",", py.iter(indexes).map((index: any) => (py.str(py.add(index, 1))))) : "-"))))))]);
-        party_groups = py.or(py.join("|", py.iter(PARTY_POWER_GROUPS).map((group: any) => (py.add("p", py.join(",", py.iter(group).map((player_id: any) => (py.str(py.add(player_id, 1))))))))), () => "-");
+        py.extend(lines, py.iter(py.enumerate(PLAYER_TEAMS, 1)).map(([player_id, team]) => (`p${py.str(player_id)}: ${py.repr(team)}`)));
+        py.extend(lines, ["", py.add("Friendship: ", py.join("; ", py.iter(py.enumerate(FRIENDSHIP_MULTIPLIERS, 1)).map(([player_id, multiplier]) => (`p${py.str(player_id)}=${py.format(py.float(multiplier), `g`)}`)))), py.add("Zacian effects: ", py.join("; ", py.iter(py.enumerate(ZACIAN_ADVENTURE_EFFECT, 1)).map(([player_id, enabled]) => (`p${py.str(player_id)}=${py.str((py.truth(enabled) ? "true" : "false"))}`)))), py.add("Behemoth Bash effects: ", py.join("; ", py.iter(py.enumerate(BEHEMOTH_BASH_ADVENTURE_EFFECT, 1)).map(([player_id, enabled]) => (`p${py.str(player_id)}=${py.str((py.truth(enabled) ? "true" : "false"))}`)))), py.add("Dynamic Punch+ effects: ", py.join("; ", py.iter(py.enumerate(DYNAMIC_PUNCH_ADVENTURE_EFFECT, 1)).map(([player_id, enabled]) => (`p${py.str(player_id)}=${py.str((py.truth(enabled) ? "true" : "false"))}`)))), `Weather: ${py.str(py.or(WEATHER, () => "none"))}`, `Dodge: ${py.str(DODGE_STRATEGY)}`, `Swap: ${py.str(PLAYER_STRATEGY)}`, `Purified Gems: ${USE_PURIFIED_GEMS ? "use" : "none"}`, py.add("Catch tanks: ", py.join("; ", py.iter(py.enumerate(CATCH_TANK_TEAM_INDICES, 1)).map(([player_id, indexes]) => (py.add(`p${py.str(player_id)}=`, (py.truth(indexes) ? py.join(",", py.iter(indexes).map((index) => (py.str(py.add(index, 1))))) : "-"))))))]);
+        party_groups = py.or(py.join("|", py.iter(PARTY_POWER_GROUPS).map((group) => (py.add("p", py.join(",", py.iter(group).map((player_id) => (py.str(py.add(player_id, 1))))))))), () => "-");
         py.extend(lines, [`Party Power: ${py.str((py.truth(BOOSTED_PARTY_POWER) ? "boosted" : "normal"))}; groups=${py.str(party_groups)}`, `Seed: ${py.str(actual_seed)}`, `Result: ${py.str((py.truth(result.won) ? "win" : "loss"))}; time=${py.str(replay_tick_text(py.round(py.mul(result.finish_time, 2))))}; boss_hp=${py.str(result.boss_hp)}`]);
         if (py.truth(move_codes)) {
-            py.append(lines, py.add("Move codes: ", py.join("; ", py.iter(py.items(move_codes)).map(([move_name, code]: any) => (`${py.str(code)}=${py.str(move_name)}`)))));
+            py.append(lines, py.add("Move codes: ", py.join("; ", py.iter(py.items(move_codes)).map(([move_name, code]) => (`${py.str(code)}=${py.str(move_name)}`)))));
         }
         py.extend(lines, ["", "Events:"]);
         previous_tick = null;
@@ -1636,7 +1785,7 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
                 players = py.at(event, "players");
                 if (!py.truth(py.and(py.isinstance(players, "list"), () => players)))
                     throw new Error("Internal assertion failed");
-                actor_code = py.add("p", py.join(",", py.iter(players).map((player_id: any) => (py.str(py.add(player_id, 1))))));
+                actor_code = py.add("p", py.join(",", py.iter(players).map((player_id) => (py.str(py.add(player_id, 1))))));
                 kind = py.at(event, "kind");
                 value = py.at(event, "value");
                 if (py.truth(((py.equal(kind, "move"))))) {
@@ -1673,15 +1822,12 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
         }
         return py.join("\n", lines);
     }
-    function simulate_moveset_details(fast: Move, charged: Move, seed: number | string | bigint): ([
-        TrialResult,
-        string
-    ])[] {
-        let rng: any;
-        let dodge_profiles: any;
-        let details: any;
-        let _: any;
-        let simulation: any;
+    function simulate_moveset_details(fast, charged, seed) {
+        let rng;
+        let dodge_profiles;
+        let details;
+        let _;
+        let simulation;
         rng = new PythonRandom(seed);
         dodge_profiles = precompute_dodge_profiles(charged);
         details = [];
@@ -1692,28 +1838,28 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
         }
         return details;
     }
-    function simulate_moveset(fast: Move, charged: Move, seed: number | string | bigint): (TrialResult)[] {
-        let result: any;
-        let _move_type: any;
-        return py.iter(simulate_moveset_details(fast, charged, seed)).map(([result, _move_type]: any) => (result));
+    function simulate_moveset(fast, charged, seed) {
+        let result;
+        let _move_type;
+        return py.iter(simulate_moveset_details(fast, charged, seed)).map(([result, _move_type]) => (result));
     }
-    function aggregate_summary(): Record<string, any> {
-        let rows: any;
-        let row_seed: any;
-        let total_wins: any;
-        let total_battles: any;
-        let fast: any;
-        let charged: any;
-        let details: any;
-        let results: any;
-        let result: any;
-        let _move_type: any;
-        let wins: any;
-        let losses: any;
-        let type_counts: any;
-        let _result: any;
-        let move_type: any;
-        let r: any;
+    function aggregate_summary() {
+        let rows;
+        let row_seed;
+        let total_wins;
+        let total_battles;
+        let fast;
+        let charged;
+        let details;
+        let results;
+        let result;
+        let _move_type;
+        let wins;
+        let losses;
+        let type_counts;
+        let _result;
+        let move_type;
+        let r;
         /** Return website-friendly aggregate results for every configured moveset. */
         rows = [];
         row_seed = RANDOM_SEED;
@@ -1724,9 +1870,9 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
             for (const __item of py.iter(py.values(BOSS_CHARGED_MOVES))) {
                 charged = __item;
                 details = simulate_moveset_details(fast, charged, row_seed);
-                results = py.iter(details).map(([result, _move_type]: any) => (result));
-                wins = py.iter(results).filter((result: any) => py.truth(result.won)).map((result: any) => (result));
-                losses = py.iter(results).filter((result: any) => py.truth(!py.truth(result.won))).map((result: any) => (result));
+                results = py.iter(details).map(([result, _move_type]) => (result));
+                wins = py.iter(results).filter((result) => py.truth(result.won)).map((result) => (result));
+                losses = py.iter(results).filter((result) => py.truth(!py.truth(result.won))).map((result) => (result));
                 type_counts = py.dict([]);
                 if (py.truth(((py.equal(fast.name, "Hidden Power"))))) {
                     for (const __item of py.iter(details)) {
@@ -1734,7 +1880,7 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
                         type_counts[py.key(move_type)] = py.add(py.get(type_counts, move_type, 0), 1);
                     }
                 }
-                py.append(rows, py.dict([["fast_move", fast.name], ["charged_move", charged.name], ["games", py.len(results)], ["wins", py.len(wins)], ["win_percent", (py.mul(100, py.len(wins)) / py.len(results))], ["average_win_time", (py.truth(wins) ? py.mean(py.iter(wins).map((r: any) => (r.finish_time))) : null)], ["average_boss_hp_on_loss", (py.truth(losses) ? py.mean(py.iter(losses).map((r: any) => (r.boss_hp))) : 0.0)], ["average_switches", py.mean(py.iter(results).map((r: any) => (r.switches)))], ["average_faints", py.mean(py.iter(results).map((r: any) => (r.faints)))], ["average_retreats", py.mean(py.iter(results).map((r: any) => (r.tactical_switches)))], ["average_rejoins", py.mean(py.iter(results).map((r: any) => (r.rejoins)))], ["average_catch_tanks", py.mean(py.iter(results).map((r: any) => (r.catch_tanks_used)))], ["average_purified_gems", py.mean(py.iter(results).map((r: any) => (r.purified_gems_used)))], ["hidden_power_types", type_counts], ["seed", py.str(row_seed)]]));
+                py.append(rows, py.dict([["fast_move", fast.name], ["charged_move", charged.name], ["games", py.len(results)], ["wins", py.len(wins)], ["win_percent", (py.mul(100, py.len(wins)) / py.len(results))], ["average_win_time", (py.truth(wins) ? py.mean(py.iter(wins).map((r) => (r.finish_time))) : null)], ["average_boss_hp_on_loss", (py.truth(losses) ? py.mean(py.iter(losses).map((r) => (r.boss_hp))) : 0.0)], ["average_switches", py.mean(py.iter(results).map((r) => (r.switches)))], ["average_faints", py.mean(py.iter(results).map((r) => (r.faints)))], ["average_retreats", py.mean(py.iter(results).map((r) => (r.tactical_switches)))], ["average_rejoins", py.mean(py.iter(results).map((r) => (r.rejoins)))], ["average_catch_tanks", py.mean(py.iter(results).map((r) => (r.catch_tanks_used)))], ["average_purified_gems", py.mean(py.iter(results).map((r) => (r.purified_gems_used)))], ["hidden_power_types", type_counts], ["seed", py.str(row_seed)]]));
                 total_wins = py.add(total_wins, py.len(wins));
                 total_battles = py.add(total_battles, py.len(results));
                 row_seed = py.add(row_seed, 1);
@@ -1742,15 +1888,19 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
         }
         return py.dict([["mode", "batch"], ["random_seed", py.str(RANDOM_SEED)], ["total_battles", total_battles], ["total_wins", total_wins], ["win_percent", (py.mul(100, total_wins) / total_battles)], ["movesets", rows]]);
     }
-    function moveset_seed(fast_name: string, charged_name: string): number {
-        let combinations: any;
-        let fast: any;
-        let charged: any;
-        combinations = (() => { const result: any[] = []; for (const fast of py.iter(BOSS_FAST_MOVES)) {
-            for (const charged of py.iter(BOSS_CHARGED_MOVES)) {
-                result.push([fast, charged]);
+    function moveset_seed(fast_name, charged_name) {
+        let combinations;
+        let fast;
+        let charged;
+        combinations = (() => {
+            const result = [];
+            for (const fast of py.iter(BOSS_FAST_MOVES)) {
+                for (const charged of py.iter(BOSS_CHARGED_MOVES)) {
+                    result.push([fast, charged]);
+                }
             }
-        } return result; })();
+            return result;
+        })();
         try {
             return py.add(RANDOM_SEED, py.index(combinations, [fast_name, charged_name]));
         }
@@ -1758,54 +1908,54 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
             throw new Error(`Unknown moveset ${py.repr(fast_name)} / ${py.repr(charged_name)}`);
         }
     }
-    function validate_settings(): void {
-        let invalid_boss_types: any;
-        let move_type: any;
-        let player_count: any;
-        let team: any;
-        let conflicting_adventure_effects: any;
-        let player_id: any;
-        let effects: any;
-        let effect: any;
-        let invalid_catch_tanks: any;
-        let indices: any;
-        let index: any;
-        let invalid_setups: any;
-        let setup: any;
-        let normalized_setups: any;
-        let unknown_species: any;
-        let species: any;
-        let _fast: any;
-        let _charged: any;
-        let _level: any;
-        let _ivs: any;
-        let too_many_megas: any;
-        let unknown_moves: any;
-        let _species: any;
-        let fast: any;
-        let charged: any;
-        let move: any;
-        let invalid_levels: any;
-        let level: any;
-        let invalid_ivs: any;
-        let attack_iv: any;
-        let defense_iv: any;
-        let stamina_iv: any;
-        let _shadow: any;
-        let _mega_level: any;
-        let iv: any;
-        let invalid_mega_levels: any;
-        let _attack_iv: any;
-        let _defense_iv: any;
-        let _stamina_iv: any;
-        let mega_level: any;
-        let illegal_plus_moves: any;
-        let invalid_shadow_flags: any;
-        let shadow: any;
-        let invalid_sizes: any;
-        let group: any;
-        let grouped_players: any;
-        let invalid_players: any;
+    function validate_settings() {
+        let invalid_boss_types;
+        let move_type;
+        let player_count;
+        let team;
+        let conflicting_adventure_effects;
+        let player_id;
+        let effects;
+        let effect;
+        let invalid_catch_tanks;
+        let indices;
+        let index;
+        let invalid_setups;
+        let setup;
+        let normalized_setups;
+        let unknown_species;
+        let species;
+        let _fast;
+        let _charged;
+        let _level;
+        let _ivs;
+        let too_many_megas;
+        let unknown_moves;
+        let _species;
+        let fast;
+        let charged;
+        let move;
+        let invalid_levels;
+        let level;
+        let invalid_ivs;
+        let attack_iv;
+        let defense_iv;
+        let stamina_iv;
+        let _shadow;
+        let _mega_level;
+        let iv;
+        let invalid_mega_levels;
+        let _attack_iv;
+        let _defense_iv;
+        let _stamina_iv;
+        let mega_level;
+        let illegal_plus_moves;
+        let invalid_shadow_flags;
+        let shadow;
+        let invalid_sizes;
+        let group;
+        let grouped_players;
+        let invalid_players;
         if (py.truth(((TRIALS_PER_MOVESET <= 0)))) {
             throw new Error("TRIALS_PER_MOVESET must be a positive integer");
         }
@@ -1821,7 +1971,7 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
         if (py.truth(py.or(!py.truth(BOSS_FAST_MOVES), () => !py.truth(BOSS_CHARGED_MOVES)))) {
             throw new Error("The boss must have at least one fast and one charged move");
         }
-        invalid_boss_types = py.iter(BOSS_TYPES).filter((move_type: any) => py.truth(((!py.has(TYPES, move_type))))).map((move_type: any) => (move_type));
+        invalid_boss_types = py.iter(BOSS_TYPES).filter((move_type) => py.truth(((!py.has(TYPES, move_type))))).map((move_type) => (move_type));
         if (py.truth(py.or(!py.truth(BOSS_TYPES), () => invalid_boss_types))) {
             throw new Error(`Invalid boss types ${py.str(BOSS_TYPES)}; expected one or two values from ${py.str(TYPES)}`);
         }
@@ -1829,7 +1979,7 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
             throw new Error("Boss Attack and Defense must both be positive");
         }
         player_count = py.len(PLAYER_TEAMS);
-        if (py.truth(py.or(!py.truth(player_count), () => py.iter(py.iter(PLAYER_TEAMS).map((team: any) => (!py.truth(team)))).some(py.truth)))) {
+        if (py.truth(py.or(!py.truth(player_count), () => py.iter(py.iter(PLAYER_TEAMS).map((team) => (!py.truth(team)))).some(py.truth)))) {
             throw new Error("Every player must have at least one Pokémon");
         }
         if (py.truth(((!py.equal(py.len(FRIENDSHIP_MULTIPLIERS), player_count))))) {
@@ -1844,103 +1994,118 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
         if (py.truth(((!py.equal(py.len(DYNAMIC_PUNCH_ADVENTURE_EFFECT), player_count))))) {
             throw new Error("DYNAMIC_PUNCH_ADVENTURE_EFFECT must contain one value per player");
         }
-        conflicting_adventure_effects = py.iter(py.enumerate(py.zip(ZACIAN_ADVENTURE_EFFECT, BEHEMOTH_BASH_ADVENTURE_EFFECT, DYNAMIC_PUNCH_ADVENTURE_EFFECT))).filter(([player_id, effects]: any) => py.truth(((py.sum(py.iter(effects).map((effect: any) => (py.truth(effect)))) > 1)))).map(([player_id, effects]: any) => (py.add(player_id, 1)));
+        conflicting_adventure_effects = py.iter(py.enumerate(py.zip(ZACIAN_ADVENTURE_EFFECT, BEHEMOTH_BASH_ADVENTURE_EFFECT, DYNAMIC_PUNCH_ADVENTURE_EFFECT))).filter(([player_id, effects]) => py.truth(((py.sum(py.iter(effects).map((effect) => (py.truth(effect)))) > 1)))).map(([player_id, effects]) => (py.add(player_id, 1)));
         if (py.truth(conflicting_adventure_effects)) {
             throw new Error(`Only one Adventure Effect may be active per player; conflicting players: ${py.str(conflicting_adventure_effects)}`);
         }
         if (py.truth(((!py.equal(py.len(CATCH_TANK_TEAM_INDICES), player_count))))) {
             throw new Error("CATCH_TANK_TEAM_INDICES must contain one index list per player");
         }
-        invalid_catch_tanks = py.iter(py.enumerate(py.zip(PLAYER_TEAMS, CATCH_TANK_TEAM_INDICES))).filter(([player_id, [team, indices]]: any) => py.truth(py.or(((!py.equal(py.len(indices), py.len(py.set(indices))))), () => py.or(((py.len(indices) >= py.len(team))), () => py.iter(py.iter(indices).map((index: any) => (py.or(!py.truth(py.isinstance(index, "int")), () => py.or(py.isinstance(index, "bool"), () => !py.truth(((0 <= index) && (index < py.len(team))))))))).some(py.truth))))).map(([player_id, [team, indices]]: any) => ([player_id, indices]));
+        invalid_catch_tanks = py.iter(py.enumerate(py.zip(PLAYER_TEAMS, CATCH_TANK_TEAM_INDICES))).filter(([player_id, [team, indices]]) => py.truth(py.or(((!py.equal(py.len(indices), py.len(py.set(indices))))), () => py.or(((py.len(indices) >= py.len(team))), () => py.iter(py.iter(indices).map((index) => (py.or(!py.truth(py.isinstance(index, "int")), () => py.or(py.isinstance(index, "bool"), () => !py.truth(((0 <= index) && (index < py.len(team))))))))).some(py.truth))))).map(([player_id, [team, indices]]) => ([player_id, indices]));
         if (py.truth(invalid_catch_tanks)) {
             throw new Error(`Each player's catch-tank indexes must be unique valid team positions and leave one normal attacker: ${py.str(invalid_catch_tanks)}`);
         }
-        invalid_setups = (() => { const result: any[] = []; for (const team of py.iter(PLAYER_TEAMS)) {
-            for (const setup of py.iter(team)) {
-                if (!py.truth(py.or(!py.truth(py.isinstance(setup, "(tuple, list)")), () => ((!py.has([4, 7, 8, 9], py.len(setup)))))))
-                    continue;
-                result.push(setup);
+        invalid_setups = (() => {
+            const result = [];
+            for (const team of py.iter(PLAYER_TEAMS)) {
+                for (const setup of py.iter(team)) {
+                    if (!py.truth(py.or(!py.truth(py.isinstance(setup, "(tuple, list)")), () => ((!py.has([4, 7, 8, 9], py.len(setup)))))))
+                        continue;
+                    result.push(setup);
+                }
             }
-        } return result; })();
+            return result;
+        })();
         if (py.truth(invalid_setups)) {
             throw new Error("Each PLAYER_TEAMS entry must contain species, fast move, charged move, and level, optionally followed by attack/defense/stamina IVs, a Shadow flag, and Mega Level");
         }
-        normalized_setups = (() => { const result: any[] = []; for (const team of py.iter(PLAYER_TEAMS)) {
-            for (const setup of py.iter(team)) {
-                result.push(unpack_player_setup(setup));
+        normalized_setups = (() => {
+            const result = [];
+            for (const team of py.iter(PLAYER_TEAMS)) {
+                for (const setup of py.iter(team)) {
+                    result.push(unpack_player_setup(setup));
+                }
             }
-        } return result; })();
-        unknown_species = py.iter(normalized_setups).filter(([species, _fast, _charged, _level, ..._ivs]: any) => py.truth(((!py.has(SPECIES, species))))).map(([species, _fast, _charged, _level, ..._ivs]: any) => (species));
+            return result;
+        })();
+        unknown_species = py.iter(normalized_setups).filter(([species, _fast, _charged, _level, ..._ivs]) => py.truth(((!py.has(SPECIES, species))))).map(([species, _fast, _charged, _level, ..._ivs]) => (species));
         if (py.truth(unknown_species)) {
             throw new Error(`Unknown species in PLAYER_TEAMS: ${py.str(unknown_species)}`);
         }
-        too_many_megas = py.iter(py.enumerate(PLAYER_TEAMS)).filter(([player_id, team]: any) => py.truth(((py.sum(py.iter(team).map((setup: any) => (py.truth(py.at(SPECIES, py.at(unpack_player_setup(setup), 0)).mega_boost_types)))) > 1)))).map(([player_id, team]: any) => (py.add(player_id, 1)));
+        too_many_megas = py.iter(py.enumerate(PLAYER_TEAMS)).filter(([player_id, team]) => py.truth(((py.sum(py.iter(team).map((setup) => (py.truth(py.at(SPECIES, py.at(unpack_player_setup(setup), 0)).mega_boost_types)))) > 1)))).map(([player_id, team]) => (py.add(player_id, 1)));
         if (py.truth(too_many_megas)) {
             throw new Error(`Each player team may contain at most one Mega/Primal Pokémon; invalid players: ${py.str(too_many_megas)}`);
         }
-        unknown_moves = (() => { const result: any[] = []; for (const [_species, fast, charged, _level, ..._ivs] of py.iter(normalized_setups)) {
-            for (const move of py.iter([fast, charged])) {
-                if (!py.truth(((!py.has(MOVES, move)))))
-                    continue;
-                result.push(move);
+        unknown_moves = (() => {
+            const result = [];
+            for (const [_species, fast, charged, _level, ..._ivs] of py.iter(normalized_setups)) {
+                for (const move of py.iter([fast, charged])) {
+                    if (!py.truth(((!py.has(MOVES, move)))))
+                        continue;
+                    result.push(move);
+                }
             }
-        } return result; })();
+            return result;
+        })();
         if (py.truth(unknown_moves)) {
             throw new Error(`Unknown moves in PLAYER_TEAMS: ${py.str(unknown_moves)}`);
         }
-        invalid_levels = py.iter(normalized_setups).filter(([_species, _fast, _charged, level, ..._ivs]: any) => py.truth(py.or(!py.truth(py.isinstance(level, "(int, float)")), () => py.or(py.isinstance(level, "bool"), () => py.or(((!py.has(CPM_BY_HALF_LEVEL, py.round(py.mul(level, 2))))), () => ((Math.abs(py.sub(py.mul(level, 2), py.round(py.mul(level, 2)))) > 1e-09))))))).map(([_species, _fast, _charged, level, ..._ivs]: any) => (level));
+        invalid_levels = py.iter(normalized_setups).filter(([_species, _fast, _charged, level, ..._ivs]) => py.truth(py.or(!py.truth(py.isinstance(level, "(int, float)")), () => py.or(py.isinstance(level, "bool"), () => py.or(((!py.has(CPM_BY_HALF_LEVEL, py.round(py.mul(level, 2))))), () => ((Math.abs(py.sub(py.mul(level, 2), py.round(py.mul(level, 2)))) > 1e-09))))))).map(([_species, _fast, _charged, level, ..._ivs]) => (level));
         if (py.truth(invalid_levels)) {
             throw new Error(`Pokémon levels must be half-levels from 1 through 55: ${py.str(invalid_levels)}`);
         }
-        invalid_ivs = (() => { const result: any[] = []; for (const [_species, _fast, _charged, _level, attack_iv, defense_iv, stamina_iv, _shadow, _mega_level] of py.iter(normalized_setups)) {
-            for (const iv of py.iter([attack_iv, defense_iv, stamina_iv])) {
-                if (!py.truth(py.or(!py.truth(py.isinstance(iv, "int")), () => py.or(py.isinstance(iv, "bool"), () => !py.truth(((0 <= iv) && (iv <= 15)))))))
-                    continue;
-                result.push(iv);
+        invalid_ivs = (() => {
+            const result = [];
+            for (const [_species, _fast, _charged, _level, attack_iv, defense_iv, stamina_iv, _shadow, _mega_level] of py.iter(normalized_setups)) {
+                for (const iv of py.iter([attack_iv, defense_iv, stamina_iv])) {
+                    if (!py.truth(py.or(!py.truth(py.isinstance(iv, "int")), () => py.or(py.isinstance(iv, "bool"), () => !py.truth(((0 <= iv) && (iv <= 15)))))))
+                        continue;
+                    result.push(iv);
+                }
             }
-        } return result; })();
+            return result;
+        })();
         if (py.truth(invalid_ivs)) {
             throw new Error(`Pokémon IVs must be integers from 0 through 15: ${py.str(invalid_ivs)}`);
         }
-        invalid_mega_levels = py.iter(normalized_setups).filter(([_species, _fast, _charged, _level, _attack_iv, _defense_iv, _stamina_iv, _shadow, mega_level]: any) => py.truth(py.or(!py.truth(py.isinstance(mega_level, "int")), () => py.or(py.isinstance(mega_level, "bool"), () => !py.truth(((1 <= mega_level) && (mega_level <= 4))))))).map(([_species, _fast, _charged, _level, _attack_iv, _defense_iv, _stamina_iv, _shadow, mega_level]: any) => (mega_level));
+        invalid_mega_levels = py.iter(normalized_setups).filter(([_species, _fast, _charged, _level, _attack_iv, _defense_iv, _stamina_iv, _shadow, mega_level]) => py.truth(py.or(!py.truth(py.isinstance(mega_level, "int")), () => py.or(py.isinstance(mega_level, "bool"), () => !py.truth(((1 <= mega_level) && (mega_level <= 4))))))).map(([_species, _fast, _charged, _level, _attack_iv, _defense_iv, _stamina_iv, _shadow, mega_level]) => (mega_level));
         if (py.truth(invalid_mega_levels)) {
             throw new Error(`Mega Levels must be integers from 1 through 4: ${py.str(invalid_mega_levels)}`);
         }
-        illegal_plus_moves = py.iter(normalized_setups).filter(([species, _fast, charged, _level, _attack_iv, _defense_iv, _stamina_iv, _shadow, _mega_level]: any) => py.truth(py.and(((py.has(PLUS_MOVE_FORM_IDS, charged))), () => ((!py.equal(py.at(SPECIES, species).form_id, py.at(PLUS_MOVE_FORM_IDS, charged))))))).map(([species, _fast, charged, _level, _attack_iv, _defense_iv, _stamina_iv, _shadow, _mega_level]: any) => ([species, charged, py.at(SPECIES, species).form_id]));
+        illegal_plus_moves = py.iter(normalized_setups).filter(([species, _fast, charged, _level, _attack_iv, _defense_iv, _stamina_iv, _shadow, _mega_level]) => py.truth(py.and(((py.has(PLUS_MOVE_FORM_IDS, charged))), () => ((!py.equal(py.at(SPECIES, species).form_id, py.at(PLUS_MOVE_FORM_IDS, charged))))))).map(([species, _fast, charged, _level, _attack_iv, _defense_iv, _stamina_iv, _shadow, _mega_level]) => ([species, charged, py.at(SPECIES, species).form_id]));
         if (py.truth(illegal_plus_moves)) {
             throw new Error(`Each + move can only be used by its corresponding Mega form: ${py.str(illegal_plus_moves)}`);
         }
-        invalid_shadow_flags = py.iter(normalized_setups).filter(([_species, _fast, _charged, _level, _attack_iv, _defense_iv, _stamina_iv, shadow, _mega_level]: any) => py.truth(!py.truth(py.isinstance(shadow, "bool")))).map(([_species, _fast, _charged, _level, _attack_iv, _defense_iv, _stamina_iv, shadow, _mega_level]: any) => (shadow));
+        invalid_shadow_flags = py.iter(normalized_setups).filter(([_species, _fast, _charged, _level, _attack_iv, _defense_iv, _stamina_iv, shadow, _mega_level]) => py.truth(!py.truth(py.isinstance(shadow, "bool")))).map(([_species, _fast, _charged, _level, _attack_iv, _defense_iv, _stamina_iv, shadow, _mega_level]) => (shadow));
         if (py.truth(invalid_shadow_flags)) {
             throw new Error(`Pokémon Shadow flags must be true or false: ${py.str(invalid_shadow_flags)}`);
         }
         if (py.truth(((!py.has(WEATHER_BOOSTED_TYPES, WEATHER))))) {
             throw new Error(`Unknown WEATHER ${py.repr(WEATHER)}; choose from ${py.str(py.iter(WEATHER_BOOSTED_TYPES))}`);
         }
-        invalid_sizes = py.iter(PARTY_POWER_GROUPS).filter((group: any) => py.truth(((!py.has([2, 3, 4], py.len(group)))))).map((group: any) => (py.len(group)));
+        invalid_sizes = py.iter(PARTY_POWER_GROUPS).filter((group) => py.truth(((!py.has([2, 3, 4], py.len(group)))))).map((group) => (py.len(group)));
         if (py.truth(invalid_sizes)) {
             throw new Error(`Party Power groups must contain 2-4 players: ${py.str(invalid_sizes)}`);
         }
-        grouped_players = (() => { const result: any[] = []; for (const group of py.iter(PARTY_POWER_GROUPS)) {
-            for (const player_id of py.iter(group)) {
-                result.push(player_id);
+        grouped_players = (() => {
+            const result = [];
+            for (const group of py.iter(PARTY_POWER_GROUPS)) {
+                for (const player_id of py.iter(group)) {
+                    result.push(player_id);
+                }
             }
-        } return result; })();
+            return result;
+        })();
         if (py.truth(((!py.equal(py.len(grouped_players), py.len(py.set(grouped_players))))))) {
             throw new Error("A player may appear in only one Party Power group");
         }
-        invalid_players = py.iter(grouped_players).filter((player_id: any) => py.truth(py.or(!py.truth(py.isinstance(player_id, "int")), () => py.or(py.isinstance(player_id, "bool"), () => !py.truth(((0 <= player_id) && (player_id < player_count))))))).map((player_id: any) => (player_id));
+        invalid_players = py.iter(grouped_players).filter((player_id) => py.truth(py.or(!py.truth(py.isinstance(player_id, "int")), () => py.or(py.isinstance(player_id, "bool"), () => !py.truth(((0 <= player_id) && (player_id < player_count))))))).map((player_id) => (player_id));
         if (py.truth(invalid_players)) {
             throw new Error(`Invalid player indexes in PARTY_POWER_GROUPS: ${py.str(invalid_players)}`);
         }
     }
     /** Start an independent attempt; detailed mode records replay actions and logs. */
-    function createSimulation(options: {
-        fast?: string;
-        charged?: string;
-        seed?: number | string | bigint;
-        detailed?: boolean;
-    } = {}): Simulation {
+    function createSimulation(options = {}) {
         validate_settings();
         const fast = BOSS_FAST_MOVES[options.fast ?? Object.keys(BOSS_FAST_MOVES)[0]];
         const charged = BOSS_CHARGED_MOVES[options.charged ?? Object.keys(BOSS_CHARGED_MOVES)[0]];
@@ -1952,8 +2117,4 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
     }
     return { createSimulation, type_effectiveness, Move, Species, find_calculator_species, move_from_calculator, register_player_form, register_player_moves, register_new_mega_form, register_configured_player_forms, BattlePokemon, unpack_player_setup, effective_player_move_power, displayed_player_move_name, select_boss_moves, pokemon_go_damage, boss_type_modifier, weather_move_multiplier, DodgeProfile, incoming_damage_for_pokemon, precompute_dodge_profiles, Player, TrialResult, Simulation, replay_tick_text, build_replay_move_codes, render_battle_replay, simulate_moveset_details, simulate_moveset, aggregate_summary, moveset_seed, validate_settings, RAID_DIFFICULTIES, RAID_DIFFICULTY, RAID_SECONDS, BOSS_HP, BOSS_CPM, BOSS_NAME, BOSS_TYPES, BOSS_FAST_MOVES, BOSS_CHARGED_MOVES, BOSS_MAX_ENERGY, FAST_MOVE_DELAY, SWITCH_SECONDS, DODGE_SECONDS, REJOIN_TIMES, RANDOM_SEED, SHADOW_RAID, SUPER_MEGA_ENRAGE, ENRAGE_HP, SHADOW_UNENRAGE_HP, USE_PURIFIED_GEMS, PURIFIED_GEM_COOLDOWN, PURIFIED_GEM_LIMIT_PER_PLAYER, PURIFIED_GEMS_TO_SUBDUE, SHADOW_ENRAGE_DEFENSE_BONUS, ZACIAN_ADVENTURE_EFFECT, BEHEMOTH_BASH_ADVENTURE_EFFECT, DYNAMIC_PUNCH_ADVENTURE_EFFECT, HIDDEN_POWER_TYPES, MOVES, SPECIES };
 }
-export type RaidEngine = ReturnType<typeof createRaidEngine>;
-export type Simulation = InstanceType<RaidEngine["Simulation"]>;
-export type Move = InstanceType<RaidEngine["Move"]>;
-export type BattlePokemon = InstanceType<RaidEngine["BattlePokemon"]>;
-export type TrialResult = InstanceType<RaidEngine["TrialResult"]>;
+//# sourceMappingURL=super_mega_raid_simulator.js.map

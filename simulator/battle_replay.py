@@ -86,6 +86,8 @@ class ReplayEvent:
             description = f"Move {self.action_code}"
         elif self.action_kind == "dodge":
             description = "Dodge"
+        elif self.action_kind == "gem":
+            description = "Use a Purified Gem"
         elif self.action_kind == "switch":
             description = f"Switch to slot {self.slot}"
         elif self.action_kind == "quit":
@@ -188,7 +190,7 @@ def parse_move_code_assignments(value: str, line_number: int) -> dict[str, str]:
         code = code.lower()
         if not MOVE_CODE_RE.fullmatch(code):
             raise ReplayParseError(line_number, f'Invalid move code "{code}".')
-        if code in {"d", "q", "r"} or re.fullmatch(r"s\d+", code):
+        if code in {"d", "g", "q", "r"} or re.fullmatch(r"s\d+", code):
             raise ReplayParseError(line_number, f'Move code "{code}" is reserved for an action.')
         if not move_name:
             raise ReplayParseError(line_number, f'Move code "{code}" has no move name.')
@@ -298,7 +300,7 @@ def parse_event(line: str, line_number: int, previous_tick: int | None) -> Repla
     if not match:
         raise ReplayParseError(
             line_number,
-            "Expected an event such as t9p1:db, +1.5p1,2:s3, t12b:c, t30p1:q, or +4p1:r.",
+            "Expected an event such as t9p1:db, +1.5p1,2:g, t12b:c, t30p1:q, or +4p1:r.",
         )
 
     time_code = match.group("time")
@@ -344,6 +346,8 @@ def parse_event(line: str, line_number: int, previous_tick: int | None) -> Repla
         return ReplayEvent(tick, players, "rejoin", action, line_number)
     if action == "d":
         return ReplayEvent(tick, players, "dodge", action, line_number)
+    if action == "g":
+        return ReplayEvent(tick, players, "gem", action, line_number)
     switch_match = re.fullmatch(r"s(\d+)", action)
     if switch_match:
         slot = int(switch_match.group(1))
@@ -377,6 +381,7 @@ def parse_replay_text(text: str) -> dict[str, Any]:
         "weather": None,
         "dodge_strategy": None,
         "player_strategy": None,
+        "use_purified_gems": False,
         "party_power": {"mode": "normal", "groups": []},
     }
     warnings: list[str] = []
@@ -551,6 +556,17 @@ def parse_replay_text(text: str) -> dict[str, Any]:
             settings["player_strategy"] = line.removeprefix("Swap: ").strip()
         elif line.startswith("Player strategy: "):
             settings["player_strategy"] = line.removeprefix("Player strategy: ").strip()
+        elif line.startswith("Purified Gems: "):
+            value = line.removeprefix("Purified Gems: ").strip().lower()
+            if value in {"use", "true", "yes", "on", "1"}:
+                settings["use_purified_gems"] = True
+            elif value in {"none", "false", "no", "off", "0"}:
+                settings["use_purified_gems"] = False
+            else:
+                raise ReplayParseError(
+                    line_number,
+                    'Purified Gems must be "use" or "none".',
+                )
         elif line.startswith("Catch tanks: "):
             value = line.removeprefix("Catch tanks: ").strip()
             for player_id, entry in parse_player_assignments(value, line_number).items():

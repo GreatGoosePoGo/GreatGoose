@@ -4,22 +4,17 @@ const byId = new Map();
 const bossInput = document.querySelector("#boss");
 const bossFastSelect = document.querySelector("#boss-fast-move");
 const bossChargedSelect = document.querySelector("#boss-charged-move");
-const teamElement = document.querySelector("#team");
-const addButton = document.querySelector("#add-pokemon");
+const playersElement = document.querySelector("#players");
+const addPlayerButton = document.querySelector("#add-player");
+const clonePlayerButton = document.querySelector("#clone-player");
 const form = document.querySelector("#simulator-form");
 const simulateButton = document.querySelector("#simulate");
 const simulateAgainButton = document.querySelector("#simulate-again");
 const movesetModeSelect = document.querySelector("#boss-moveset-mode");
 const simulationCountInput = document.querySelector("#simulation-count");
+const raidDifficultySelect = document.querySelector("#raid-difficulty");
+const purifiedGemsSelect = document.querySelector("#purified-gems");
 const playerStrategySelect = document.querySelector("#player-strategy");
-const codeDialog = document.querySelector("#pokemon-code-dialog");
-const codeDialogTitle = document.querySelector("#pokemon-code-title");
-const codeHelp = document.querySelector("#pokemon-code-help");
-const codeInput = document.querySelector("#pokemon-code");
-const codeStatus = document.querySelector("#pokemon-code-status");
-const codeAction = document.querySelector("#pokemon-code-action");
-let codeDialogMode = "export";
-let codeDialogRow = null;
 let pokemonRowIdSequence = 0;
 
 const strategyDescriptions = {
@@ -290,23 +285,48 @@ function updateTeamMoves(row) {
   );
 }
 
-function renumberTeam() {
+function playerSections() {
+  return [...playersElement.querySelectorAll(":scope > .player-section")];
+}
+
+function renumberTeam(playerSection) {
+  const teamElement = playerSection.querySelector(".team");
   [...teamElement.children].forEach((row, index) => {
     row.querySelector(".slot-number").textContent = index + 1;
   });
-  addButton.disabled = teamElement.children.length >= 6;
+  playerSection.querySelector(".add-pokemon").disabled = teamElement.children.length >= 6;
   [...teamElement.querySelectorAll(".remove")].forEach(button => {
     button.disabled = teamElement.children.length === 1;
   });
+}
+
+function renumberPlayers() {
+  const sections = playerSections();
+  sections.forEach((section, index) => {
+    section.querySelector(".player-number").textContent = index + 1;
+    section.querySelector(".remove-player").disabled = sections.length === 1;
+    renumberTeam(section);
+  });
+  addPlayerButton.disabled = sections.length >= 20;
+  clonePlayerButton.disabled = sections.length >= 20 || !sections.length;
 }
 
 function updatePlayerStrategy() {
   const isCatchTank = playerStrategySelect.value === "catch_tank";
   document.querySelector("#strategy-description").textContent =
     strategyDescriptions[playerStrategySelect.value];
-  [...teamElement.querySelectorAll(".catch-tank-field")].forEach(field => {
+  [...playersElement.querySelectorAll(".catch-tank-field")].forEach(field => {
     field.hidden = !isCatchTank;
   });
+}
+
+function updatePurifiedGems() {
+  const isShadowRaid = raidDifficultySelect.value.endsWith(" Shadow");
+  purifiedGemsSelect.disabled = !isShadowRaid;
+  if (!isShadowRaid) purifiedGemsSelect.value = "none";
+  document.querySelector("#purified-gems-note").textContent = isShadowRaid
+    ? "Each trainer uses a gem immediately after enrage and then every 5 seconds, up to 5. The boss is subdued at 8 total gems; two or more players can therefore subdue it."
+    : "Purified Gems are available only in Shadow raids.";
 }
 
 function codeConfigForRow(row) {
@@ -341,6 +361,10 @@ function codeConfigForRow(row) {
 
 function applyPokemonCode(row, code) {
   const decoded = PokemonCode.decode(code);
+  applyPokemonConfig(row, decoded);
+}
+
+function applyPokemonConfig(row, decoded) {
   const pokemon = byId.get(decoded.formId);
   if (!pokemon) {
     throw new Error(`Pokémon form "${decoded.formId}" is not in this calculator.`);
@@ -371,52 +395,27 @@ function applyPokemonCode(row, code) {
   row.querySelector(".catch-tank").checked = decoded.catchTank;
 }
 
-async function copyCode() {
+function setCodeStatus(row, message, isError = false) {
+  const status = row.querySelector(".pokemon-code-status");
+  status.textContent = message;
+  status.classList.toggle("error", isError);
+}
+
+async function exportPokemonCode(row) {
+  const input = row.querySelector(".pokemon-code-input");
+  input.value = PokemonCode.encode(codeConfigForRow(row));
   try {
-    await navigator.clipboard.writeText(codeInput.value);
-    codeStatus.textContent = "Copied to clipboard.";
+    await navigator.clipboard.writeText(input.value);
+    setCodeStatus(row, "Copied to clipboard.");
   } catch {
-    codeInput.focus();
-    codeInput.select();
-    codeStatus.textContent = "Press Ctrl+C to copy the selected code.";
+    input.focus();
+    input.select();
+    setCodeStatus(row, "Clipboard access was blocked. Press Ctrl+C to copy the selected code.", true);
   }
 }
 
-function openCodeDialog(row, mode) {
-  codeDialogRow = row;
-  codeDialogMode = mode;
-  codeStatus.textContent = "";
-
-  if (mode === "export") {
-    codeDialogTitle.textContent = "Export Pokémon";
-    codeHelp.textContent =
-      "This code contains the exact form, level, IVs, moves, Mega Level, Shadow status, and catch-tank setting.";
-    codeInput.value = PokemonCode.encode(codeConfigForRow(row));
-    codeInput.readOnly = true;
-    codeAction.textContent = "Copy code";
-  } else {
-    codeDialogTitle.textContent = "Import Pokémon";
-    codeHelp.textContent =
-      "Paste a Great Goose Pokémon code to replace the Pokémon in this slot.";
-    codeInput.value = "";
-    codeInput.readOnly = false;
-    codeAction.textContent = "Import into slot";
-  }
-
-  codeDialog.showModal();
-  codeInput.focus();
-  if (mode === "export") {
-    codeInput.select();
-    copyCode();
-  }
-}
-
-function closeCodeDialog() {
-  codeDialog.close();
-  codeDialogRow = null;
-}
-
-function addPokemon(defaultId = "MEWTWO") {
+function addPokemon(playerSection, defaultId = "MEWTWO", config = null) {
+  const teamElement = playerSection.querySelector(".team");
   if (teamElement.children.length >= 6) return;
   const row = document.createElement("div");
   row.className = "pokemon-row";
@@ -470,8 +469,13 @@ function addPokemon(defaultId = "MEWTWO") {
         <input class="shadow" type="checkbox">
         Shadow <span>(1.2× dealt and taken)</span>
       </label>
+      <label class="pokemon-code-field">
+        Pokémon code
+        <input class="pokemon-code-input" type="text" spellcheck="false" autocomplete="off" placeholder="Paste code here">
+      </label>
       <button class="small-button import-pokemon" type="button">Import</button>
-      <button class="small-button export-pokemon" type="button">Export</button>
+      <button class="small-button export-pokemon" type="button">Export to clipboard</button>
+      <span class="pokemon-code-status" role="status" aria-live="polite"></span>
     </div>
   `;
   const pokemonInput = row.querySelector(".pokemon");
@@ -493,22 +497,70 @@ function addPokemon(defaultId = "MEWTWO") {
   });
   row.querySelector(".remove").addEventListener("click", () => {
     row.remove();
-    renumberTeam();
+    renumberTeam(playerSection);
   });
   row.querySelector(".import-pokemon").addEventListener("click", () => {
-    openCodeDialog(row, "import");
-  });
-  row.querySelector(".export-pokemon").addEventListener("click", () => {
     try {
-      openCodeDialog(row, "export");
+      const code = row.querySelector(".pokemon-code-input").value.trim();
+      if (!code) throw new Error("Paste a Pokémon code into the field first.");
+      applyPokemonCode(row, code);
+      setCodeStatus(row, "Imported into this slot.");
     } catch (error) {
-      alert(error.message);
+      setCodeStatus(row, error.message, true);
+    }
+  });
+  row.querySelector(".export-pokemon").addEventListener("click", async () => {
+    try {
+      await exportPokemonCode(row);
+    } catch (error) {
+      setCodeStatus(row, error.message, true);
     }
   });
   teamElement.append(row);
+  if (config) applyPokemonConfig(row, config);
   updateTeamMoves(row);
-  renumberTeam();
+  renumberTeam(playerSection);
   updatePlayerStrategy();
+}
+
+function addPlayer(configs = null, defaultId = "MEWTWO") {
+  if (playerSections().length >= 20) return;
+  const section = document.createElement("section");
+  section.className = "player-section";
+  section.innerHTML = `
+    <div class="player-heading">
+      <h3>Player <span class="player-number"></span></h3>
+      <div class="player-actions">
+        <button class="small-button add-pokemon" type="button">+ Add Pokémon</button>
+        <button class="small-button remove-player" type="button">Remove player</button>
+      </div>
+    </div>
+    <div class="team"></div>
+  `;
+  playersElement.append(section);
+  section.querySelector(".add-pokemon").addEventListener("click", () => addPokemon(section));
+  section.querySelector(".remove-player").addEventListener("click", () => {
+    section.remove();
+    renumberPlayers();
+  });
+  if (configs?.length) {
+    configs.forEach(config => addPokemon(section, config.formId, config));
+  } else {
+    addPokemon(section, defaultId);
+  }
+  renumberPlayers();
+}
+
+function cloneFirstPlayer() {
+  const first = playerSections()[0];
+  if (!first || playerSections().length >= 20) return;
+  const rows = [...first.querySelectorAll(".pokemon-row")];
+  if (!rows.every(row => row.pokemonSearch.requireSelection())) return;
+  try {
+    addPlayer(rows.map(codeConfigForRow));
+  } catch (error) {
+    alert(error.message);
+  }
 }
 
 async function initialize() {
@@ -526,10 +578,13 @@ async function initialize() {
   );
   bossInput.pokemonSearch = bossSearch;
   bossSearch.selectById(byId.has("KYOGRE") ? "KYOGRE" : catalog[0].form_id);
-  addPokemon("GROUDON_PRIMAL");
+  addPlayer(null, "GROUDON_PRIMAL");
+  addPlayerButton.disabled = false;
+  clonePlayerButton.disabled = false;
 }
 
-function teamPayload() {
+function teamPayload(playerSection) {
+  const teamElement = playerSection.querySelector(".team");
   return [...teamElement.children].map(row => {
     const pokemon = pokemonForInput(row.querySelector(".pokemon"));
     return {
@@ -547,17 +602,21 @@ function teamPayload() {
   });
 }
 
+function playersPayload() {
+  return playerSections().map(section => ({ team: teamPayload(section) }));
+}
+
 function battlePayload() {
   const randomSeed = document.querySelector("#random-seed").value.trim();
   const adventureEffect = document.querySelector("#adventure-effect").value;
   return {
-    raid_difficulty: document.querySelector("#raid-difficulty").value,
+    raid_difficulty: raidDifficultySelect.value,
     boss: pokemonForInput(bossInput).form_id,
     boss_fast_move: bossFastSelect.value,
     boss_charged_move: bossChargedSelect.value,
     boss_moveset_mode: movesetModeSelect.value,
     simulation_count: Number(simulationCountInput.value),
-    team: teamPayload(),
+    players: playersPayload(),
     dodge_strategy: document.querySelector("#dodge-strategy").value,
     player_strategy: playerStrategySelect.value,
     weather: document.querySelector("#weather").value,
@@ -565,22 +624,26 @@ function battlePayload() {
     zacian_adventure_effect: adventureEffect === "behemoth_blade",
     behemoth_bash_adventure_effect: adventureEffect === "behemoth_bash",
     dynamic_punch_adventure_effect: adventureEffect === "dynamic_punch",
+    use_purified_gems: purifiedGemsSelect.value === "use",
     battle_log_mode: document.querySelector("#battle-log-mode").value,
     random_seed: randomSeed || null,
   };
 }
 
 globalThis.RaidSetup = {
-  read() {
-    if (!bossInput.pokemonSearch || !teamElement.children.length) throw new Error("Pokémon data is still loading.");
+  read({ singlePlayer = false } = {}) {
+    const rows = [...playersElement.querySelectorAll(".pokemon-row")];
+    if (!bossInput.pokemonSearch || !playerSections().length || !rows.length) throw new Error("Pokémon data is still loading.");
     if (!bossInput.pokemonSearch.requireSelection()
-        || ![...teamElement.children].every(row => row.pokemonSearch.requireSelection())
+        || !rows.every(row => row.pokemonSearch.requireSelection())
         || !form.checkValidity()) {
       globalThis.ReplayUI?.showView("simulator-view");
       form.reportValidity();
       throw new Error("Check the boss, team and settings in the Raid simulator tab first.");
     }
-    return battlePayload();
+    const payload = battlePayload();
+    if (singlePlayer) payload.players = payload.players.slice(0, 1);
+    return payload;
   },
 };
 
@@ -630,6 +693,7 @@ function showResult(result) {
   document.querySelector("#retreats").textContent = result.retreats;
   document.querySelector("#rejoins").textContent = result.rejoins;
   document.querySelector("#catch-tanks").textContent = result.catch_tanks;
+  document.querySelector("#purified-gems-used").textContent = result.purified_gems_used;
   document.querySelector("#result-seed").textContent = `Seed ${result.random_seed}`
     + (result.boss_fast_type ? ` · Hidden Power: ${result.boss_fast_type}` : "");
   document.querySelector("#battle-log").textContent = result.log.join("\n");
@@ -647,7 +711,7 @@ function showResult(result) {
 
 form.addEventListener("submit", async event => {
   event.preventDefault();
-  const teamRows = [...teamElement.children];
+  const teamRows = [...playersElement.querySelectorAll(".pokemon-row")];
   const selectionsAreValid = bossInput.pokemonSearch.requireSelection()
     && teamRows.every(row => row.pokemonSearch.requireSelection());
   if (!selectionsAreValid) return;
@@ -667,27 +731,13 @@ form.addEventListener("submit", async event => {
   }
 });
 
-addButton.addEventListener("click", () => addPokemon());
+addPlayerButton.addEventListener("click", () => addPlayer());
+clonePlayerButton.addEventListener("click", cloneFirstPlayer);
 simulateAgainButton.addEventListener("click", () => form.requestSubmit());
 playerStrategySelect.addEventListener("change", updatePlayerStrategy);
 movesetModeSelect.addEventListener("change", updateSimulationScope);
 simulationCountInput.addEventListener("input", updateSimulationScope);
-document.querySelector("#close-code-dialog").addEventListener("click", closeCodeDialog);
-document.querySelector("#cancel-code-dialog").addEventListener("click", closeCodeDialog);
-codeDialog.addEventListener("click", event => {
-  if (event.target === codeDialog) closeCodeDialog();
-});
-codeAction.addEventListener("click", async () => {
-  if (codeDialogMode === "export") {
-    await copyCode();
-    return;
-  }
-  try {
-    applyPokemonCode(codeDialogRow, codeInput.value);
-    closeCodeDialog();
-  } catch (error) {
-    codeStatus.textContent = error.message;
-  }
-});
+raidDifficultySelect.addEventListener("change", updatePurifiedGems);
 updatePlayerStrategy();
+updatePurifiedGems();
 initialize().catch(error => alert(error.message));

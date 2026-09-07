@@ -67,11 +67,24 @@ browser inspection.
   strategy prediction. The Python comparison copy mirrors this post-port fix so
   deterministic parity testing remains useful; the supplied source archive remains
   the untouched historical baseline.
+- Shadow raids now enrage at 60% HP and stop at 15% HP. While enraged, boss
+  Attack gains `floor(base Attack × CPM × 0.8)` and Defense gains
+  `floor(base Defense × CPM × SHADOW_ENRAGE_DEFENSE_BONUS)`. The latter constant
+  is defined once near the simulator settings and defaults to `2.2`.
+- Optional automatic Purified Gem use starts at enrage and repeats every five
+  seconds per on-field trainer. Each trainer is capped at five gems and the boss
+  is subdued at eight raid-wide uses. Gem use is atomic—there is no partial stat
+  reduction before the eighth gem—and replay action `g` records each use.
+- The calculator request boundary now accepts up to 20 player teams while retaining
+  the legacy single `team` field. The website provides separate player sections,
+  clones Player 1 on demand, and keeps Pokémon codes inline with immediate
+  clipboard export instead of using a modal dialog.
 
 ## Existing model limits
 
-Parity means agreement with the supplied ZIP, not independent verification of
-current Pokémon GO behavior. Shadow raid modes still do not model Shadow enrage
-or Purified Gems. The bundled data, Adventure Effect assumptions, timings and
-strategy heuristics are intentionally preserved. Future rules updates belong in
-the engine/data, with matching regression cases.
+Parity began as agreement with the supplied ZIP, not independent verification of
+current Pokémon GO behavior. Shadow enrage and Purified Gems are intentional
+post-port additions and therefore differ from that historical baseline. The
+bundled data, Adventure Effect assumptions, other timings and strategy heuristics
+remain preserved. Future rules updates belong in the engine/data, with matching
+regression cases.

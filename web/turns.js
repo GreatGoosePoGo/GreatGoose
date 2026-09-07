@@ -54,14 +54,15 @@
     at("clock").textContent = `${battle.remaining.toFixed(1)}s remaining`;
     at("elapsed").textContent = `Turn ${battle.tick} · ${battle.elapsed.toFixed(1)}s elapsed`;
     const b = battle.boss, p = battle.player;
+    const gemStatus = b.purified_gems_used ? ` · Gems ${b.purified_gems_used}/8` : "";
     meters(at("boss"), b, b.name, b.incoming
-      ? `${b.incoming} incoming · hits at ${b.hits_at.toFixed(1)}s${b.enraged ? " · ENRAGED" : ""}`
-      : b.hp <= 0 ? "Defeated" : "Between moves");
+      ? `${b.incoming} incoming · hits at ${b.hits_at.toFixed(1)}s${b.enraged ? " · ENRAGED" : ""}${gemStatus}`
+      : b.hp <= 0 ? "Defeated" : `${b.subdued ? "Subdued" : b.enraged ? "ENRAGED" : "Between moves"}${gemStatus}`);
     meters(at("player"), p, `Player 1 · ${p.name}`, p.in_lobby
       ? `In lobby · rejoin available at ${p.rejoin_at.toFixed(1)}s`
       : !p.on_field ? "Fainted · choose a surviving slot"
       : p.busy_until > battle.elapsed ? `Slot ${p.slot} · ${p.current_action} · ready at ${p.busy_until.toFixed(1)}s`
-      : `Slot ${p.slot} · ready`);
+      : `Slot ${p.slot} · ready` + (p.purified_gems_used ? ` · Gems ${p.purified_gems_used}/5` : ""));
     setMoveButton(at("fast"), p.fast_type, `${p.fast} · ${p.fast_seconds}s · +${p.fast_energy} energy`);
     setMoveButton(at("charged"), p.charged_type, `${p.charged} · ${p.charged_seconds}s · −${p.charged_energy} energy`);
     at("dodge").textContent = b.incoming ? `Dodge ${b.incoming}` : "Dodge";
@@ -139,7 +140,7 @@
   }
   at("start").addEventListener("click", async () => {
     if (battle?.status === "in_progress" && !window.confirm("Start a new battle? The current battle stays available under Saved battles.")) return;
-    try { await request("start", globalThis.RaidSetup.read()); }
+    try { await request("start", globalThis.RaidSetup.read({ singlePlayer: true })); }
     catch (error) { status(error.message, true); }
   });
   for (const action of ["fast", "charged", "dodge", "quit", "rejoin"]) {

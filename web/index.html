@@ -4,10 +4,10 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Pokémon GO Raid Simulator</title>
-    <link rel="stylesheet" href="styles.css?v=27">
+    <link rel="stylesheet" href="styles.css?v=29">
     <script src="client.js" defer></script>
     <script src="pokemon_code.js" defer></script>
-    <script src="app.js?v=25" defer></script>
+    <script src="app.js?v=29" defer></script>
     <script src="playback.js?v=26" defer></script>
     <script src="replay.js?v=25" defer></script>
     <script src="turns.js?v=23" defer></script>
@@ -87,12 +87,15 @@
         <section class="panel">
           <div class="section-heading">
             <div>
-              <h2>2. Build your team</h2>
-              <p>Pokémon are used from left to right. Add up to six.</p>
+              <h2>2. Build your teams</h2>
+              <p>Add up to 20 players. Each player uses their Pokémon from left to right.</p>
             </div>
-            <button type="button" class="secondary" id="add-pokemon">+ Add Pokémon</button>
+            <div class="player-actions">
+              <button type="button" class="secondary" id="add-player" disabled>+ Add player</button>
+              <button type="button" class="secondary" id="clone-player" disabled>Clone Player 1</button>
+            </div>
           </div>
-          <div id="team" class="team"></div>
+          <div id="players" class="players"></div>
         </section>
 
         <section class="panel">
@@ -152,6 +155,13 @@
                 <option value="dynamic_punch">Dynamic Punch+ (1.15× Attack vs Mega)</option>
               </select>
             </label>
+            <label id="purified-gems-field">
+              Purified Gems
+              <select id="purified-gems">
+                <option value="none" selected>Deliberately use no gems</option>
+                <option value="use">Use gems automatically</option>
+              </select>
+            </label>
             <label>
               Battle log
               <select id="battle-log-mode">
@@ -183,6 +193,7 @@
             </label>
           </div>
           <p id="strategy-description" class="setting-note"></p>
+          <p id="purified-gems-note" class="setting-note"></p>
           <p class="setting-note">
             Dynamic Punch+ applies only against an actual Mega boss in Tier 4,
             Mega, Mega Legendary, or Super Mega raids. It does not apply to
@@ -213,6 +224,7 @@
           <div><strong id="retreats">0</strong><span>Retreats</span></div>
           <div><strong id="rejoins">0</strong><span>Rejoins</span></div>
           <div><strong id="catch-tanks">0</strong><span>Catch tanks used</span></div>
+          <div><strong id="purified-gems-used">0</strong><span>Purified Gems used</span></div>
         </div>
         <div id="batch-result" hidden>
           <div class="result-stats batch-overview">
@@ -310,7 +322,7 @@
       <section id="replay-import" class="panel replay-import">
         <div class="section-heading replay-heading">
           <div>
-            <p class="eyebrow">Replay player · build 27</p>
+            <p class="eyebrow">Replay player · build 28</p>
             <h2>Load a battle timeline</h2>
             <p>
               Open a generated replay or type your own timeline. Load it to watch
@@ -330,7 +342,7 @@
               id="replay-text"
               rows="21"
               spellcheck="false"
-              placeholder="Raid: Tier 4&#10;Boss: STARMIE_MEGA; fast=Water Gun; charged=Hydro Pump&#10;Teams:&#10;p1: your team description&#10;&#10;Friendship: p1=1.10&#10;Zacian effects: p1=false&#10;Behemoth Bash effects: p1=false&#10;Dynamic Punch+ effects: p1=false&#10;Weather: none&#10;Dodge: downtime_saver&#10;Swap: hot_swap_greedy&#10;Catch tanks: p1=-&#10;Party Power: normal; groups=-&#10;Move codes: sc=Shadow Claw&#10;&#10;Events:&#10;t0p1:sc&#10;+0b:f&#10;+4.5b:c&#10;+0p1:d&#10;+1p1:s2&#10;+12p1:q&#10;+3p1:r"
+              placeholder="Raid: Tier 4&#10;Boss: STARMIE_MEGA; fast=Water Gun; charged=Hydro Pump&#10;Teams:&#10;p1: your team description&#10;&#10;Friendship: p1=1.10&#10;Zacian effects: p1=false&#10;Behemoth Bash effects: p1=false&#10;Dynamic Punch+ effects: p1=false&#10;Weather: none&#10;Dodge: downtime_saver&#10;Swap: hot_swap_greedy&#10;Purified Gems: none&#10;Catch tanks: p1=-&#10;Party Power: normal; groups=-&#10;Move codes: sc=Shadow Claw&#10;&#10;Events:&#10;t0p1:sc&#10;+0b:f&#10;+4.5b:c&#10;+0p1:d&#10;+1p1:s2&#10;+12p1:q&#10;+3p1:r"
             ></textarea>
           </label>
 
@@ -344,6 +356,7 @@
               <div><dt><code>+0p3:s2</code></dt><dd>At the same time, p3 switches to slot 2.</dd></div>
               <div><dt><code>+0b:c</code></dt><dd>The boss starts its configured charged move.</dd></div>
               <div><dt><code>+0p1:d</code></dt><dd>p1 dodges the announced charged move.</dd></div>
+              <div><dt><code>+0p1:g</code></dt><dd>p1 uses a Purified Gem during Shadow enrage.</dd></div>
               <div><dt><code>t30p1:q</code></dt><dd>p1 voluntarily quits to the lobby.</dd></div>
               <div><dt><code>+4p1:r</code></dt><dd>p1 rejoins with the same team.</dd></div>
             </dl>
@@ -388,26 +401,5 @@
       </section>
     </main>
 
-    <dialog id="pokemon-code-dialog">
-      <div class="dialog-heading">
-        <div>
-          <p class="eyebrow">Single Pokémon</p>
-          <h2 id="pokemon-code-title">Export Pokémon</h2>
-        </div>
-        <button id="close-code-dialog" class="icon-button" type="button" aria-label="Close">×</button>
-      </div>
-      <p id="pokemon-code-help" class="dialog-help"></p>
-      <textarea
-        id="pokemon-code"
-        rows="4"
-        spellcheck="false"
-        aria-label="Pokémon import or export code"
-      ></textarea>
-      <p id="pokemon-code-status" class="code-status" aria-live="polite"></p>
-      <div class="dialog-actions">
-        <button id="cancel-code-dialog" class="secondary" type="button">Cancel</button>
-        <button id="pokemon-code-action" class="primary" type="button">Copy code</button>
-      </div>
-    </dialog>
   </body>
 </html>

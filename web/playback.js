@@ -139,7 +139,10 @@
         previousBoss && !bossVisible ? "leaving" : null);
       visualStates.set("boss", bossVisible);
       boss.card.classList.toggle("fainted", frame.boss_hp <= 0);
-      boss.state.textContent = frame.boss_hp <= 0 ? "Defeated" : frame.enraged ? "Enraged" : "";
+      boss.state.textContent = frame.boss_hp <= 0 ? "Defeated" : [
+        frame.enraged ? "Enraged" : "",
+        frame.purified_gems_used ? `Gems ${frame.purified_gems_used}/8` : "",
+      ].filter(Boolean).join(" · ");
       for (let i = 0; i < frame.players.length; i++) {
         const player = frame.players[i];
         const metadata = data.players[i];
@@ -165,7 +168,8 @@
         refs.card.classList.toggle("fainted", player.hp <= 0);
         refs.state.textContent = !player.on_field ? "In lobby" : player.hp <= 0 ? "Fainted" :
           `Slot ${player.slot} · Level ${pokemon.level}`
-          + (player.party_power ? " · Next charged damage ×2" : "");
+          + (player.party_power ? " · Next charged damage ×2" : "")
+          + (player.purified_gems_used ? ` · Gems ${player.purified_gems_used}/5` : "");
         [...refs.team.children].forEach((slot, n) => {
           const member = metadata.team[n];
           const state = player.team[n];

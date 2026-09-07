@@ -1,35 +1,33 @@
 /** Native TypeScript port of the supplied Python reference. No Python runtime is used. */
 import * as py from "./compatibility.js";
 import { PythonRandom } from "./random.js";
-import { re } from "./text.js";
 import { parse_replay_text } from "./battle_replay.js";
 import { createRaidEngine } from "./super_mega_raid_simulator.js";
-import type { CalculatorEntry } from "./types.js";
 /** Reconstruct compact raid replays with a private TypeScript battle engine.
  * Generated replays recover original event ordering only when both actions and
  * result verify against the seed. Edited timelines execute their recorded actions
  * with completed hits resolved before new actions on the same game tick.
  */
-function replay_config(document: any): any {
-    let players: any;
-    let mapping: any;
-    let i: any;
-    let p: any;
-    let teams: any;
-    let player: any;
-    let team: any;
-    let member: any;
-    let name: any;
-    let shadow: any;
-    let boss: any;
-    let settings: any;
-    let slot: any;
-    let group: any;
+function replay_config(document) {
+    let players;
+    let mapping;
+    let i;
+    let p;
+    let teams;
+    let player;
+    let team;
+    let member;
+    let name;
+    let shadow;
+    let boss;
+    let settings;
+    let slot;
+    let group;
     players = py.at(document, "players");
     if (py.truth(!py.truth(((1 <= py.len(players)) && (py.len(players) <= 40))))) {
         throw new Error("Playback supports 1–40 players.");
     }
-    mapping = py.dict(py.iter(py.enumerate(players)).map(([i, p]: any) => ([py.at(p, "id"), i])));
+    mapping = py.dict(py.iter(py.enumerate(players)).map(([i, p]) => ([py.at(p, "id"), i])));
     teams = [];
     for (const __item of py.iter(players)) {
         player = __item;
@@ -55,75 +53,73 @@ function replay_config(document: any): any {
     if (py.truth(py.or(((py.at(py.at(document, "summary"), "last_tick") > 7200)), () => ((py.len(py.at(document, "events")) > 20000))))) {
         throw new Error("Replay exceeds the playback limit (3600 seconds or 20,000 events).");
     }
-    return py.dict([["trials", 1], ["random_seed", py.get(settings, "random_seed", 0)], ["raid_difficulty", py.at(py.at(document, "raid"), "difficulty")], ["boss_form_id", py.at(boss, "form_id")], ["boss_fast_move_names", [py.at(boss, "fast_move")]], ["boss_charged_move_names", [py.at(boss, "charged_move")]], ["player_teams", teams], ["friendship_multipliers", py.iter(players).map((p: any) => (py.at(p, "friendship_multiplier")))], ["zacian_adventure_effect", py.iter(players).map((p: any) => (py.at(p, "zacian_adventure_effect")))], ["behemoth_bash_adventure_effect", py.iter(players).map((p: any) => (py.at(p, "behemoth_bash_adventure_effect")))], ["dynamic_punch_adventure_effect", py.iter(players).map((p: any) => (py.at(p, "dynamic_punch_adventure_effect")))], ["weather", py.at(settings, "weather")], ["dodge_strategy", py.or(py.at(settings, "dodge_strategy"), () => "none")], ["player_strategy", py.or(py.at(settings, "player_strategy"), () => "no_strategy")], ["catch_tank_team_indices", py.iter(players).map((p: any) => (py.iter(py.at(p, "catch_tank_slots")).map((slot: any) => (py.sub(slot, 1)))))], ["party_power_groups", py.iter(py.at(py.at(settings, "party_power"), "groups")).map((group: any) => (py.iter(group).map((p: any) => (py.at(mapping, p)))))], ["boosted_party_power", ((py.equal(py.at(py.at(settings, "party_power"), "mode"), "boosted")))], ["use_purified_gems", py.get(settings, "use_purified_gems", false)], ["battle_log_mode", "none"]]);
+    return py.dict([["trials", 1], ["random_seed", py.get(settings, "random_seed", 0)], ["raid_difficulty", py.at(py.at(document, "raid"), "difficulty")], ["boss_form_id", py.at(boss, "form_id")], ["boss_fast_move_names", [py.at(boss, "fast_move")]], ["boss_charged_move_names", [py.at(boss, "charged_move")]], ["player_teams", teams], ["friendship_multipliers", py.iter(players).map((p) => (py.at(p, "friendship_multiplier")))], ["zacian_adventure_effect", py.iter(players).map((p) => (py.at(p, "zacian_adventure_effect")))], ["behemoth_bash_adventure_effect", py.iter(players).map((p) => (py.at(p, "behemoth_bash_adventure_effect")))], ["dynamic_punch_adventure_effect", py.iter(players).map((p) => (py.at(p, "dynamic_punch_adventure_effect")))], ["weather", py.at(settings, "weather")], ["dodge_strategy", py.or(py.at(settings, "dodge_strategy"), () => "none")], ["player_strategy", py.or(py.at(settings, "player_strategy"), () => "no_strategy")], ["catch_tank_team_indices", py.iter(players).map((p) => (py.iter(py.at(p, "catch_tank_slots")).map((slot) => (py.sub(slot, 1)))))], ["party_power_groups", py.iter(py.at(py.at(settings, "party_power"), "groups")).map((group) => (py.iter(group).map((p) => (py.at(mapping, p)))))], ["boosted_party_power", ((py.equal(py.at(py.at(settings, "party_power"), "mode"), "boosted")))], ["use_purified_gems", py.get(settings, "use_purified_gems", false)], ["battle_log_mode", "none"]]);
 }
-function reconstruct(document: any, engine: any): any {
-    let player_ids: any;
-    let p: any;
-    let id_to_index: any;
-    let i: any;
-    let fast: any;
-    let charged: any;
-    let sim: any;
-    let warnings: any;
-    let expected: any;
-    let recording: any;
-    let candidate: any;
-    let result: any;
-    let generated: any;
-    let event: any;
-    let finish_tick: any;
-    let source: any;
-    let queue: any;
-    let sequence: any;
-    let pending_boss: any;
-    let boss_ready_tick: any;
-    let in_lobby: any;
-    let e: any;
-    let limit: any;
-    let tick: any;
-    let _: any;
-    let kind: any;
-    let data: any;
-    let move: any;
-    let dodgers: any;
-    let action: any;
-    let hit_tick: any;
-    let external_id: any;
-    let player: any;
-    let pokemon: any;
-    let slot: any;
-    let candidates: any;
-    let m: any;
-    let matches: any;
-    let final: any;
-    let metadata: any;
-    let t: any;
-    player_ids = py.iter(py.at(document, "players")).map((p: any) => (py.at(p, "id")));
-    id_to_index = py.dict(py.iter(py.enumerate(player_ids)).map(([i, p]: any) => ([p, i])));
+function reconstruct(document, engine) {
+    let player_ids;
+    let p;
+    let id_to_index;
+    let i;
+    let fast;
+    let charged;
+    let sim;
+    let warnings;
+    let expected;
+    let recording;
+    let candidate;
+    let result;
+    let generated;
+    let event;
+    let finish_tick;
+    let source;
+    let queue;
+    let sequence;
+    let pending_boss;
+    let boss_ready_tick;
+    let in_lobby;
+    let e;
+    let limit;
+    let tick;
+    let _;
+    let kind;
+    let data;
+    let move;
+    let dodgers;
+    let action;
+    let hit_tick;
+    let external_id;
+    let player;
+    let pokemon;
+    let slot;
+    let candidates;
+    let m;
+    let matches;
+    let final;
+    let metadata;
+    let t;
+    player_ids = py.iter(py.at(document, "players")).map((p) => (py.at(p, "id")));
+    id_to_index = py.dict(py.iter(py.enumerate(player_ids)).map(([i, p]) => ([p, i])));
     fast = py.next(py.iter(py.values(engine.BOSS_FAST_MOVES)));
     charged = py.next(py.iter(py.values(engine.BOSS_CHARGED_MOVES)));
     class ObservedSimulation extends engine.Simulation {
-        declare frames: any;
-        declare messages: any;
-        __post_init__(): any {
+        __post_init__() {
             super.__post_init__();
             this.frames = py.dict([]);
             this.messages = [];
         }
-        notice(target: any, text: any, kind: any = "action", slot: any = null): any {
+        notice(target, text, kind = "action", slot = null) {
             py.append(this.messages, py.dict([["tick", py.round(py.mul(this.current_time, 2))], ["target", target], ["text", text], ["kind", kind], ["slot", slot]]));
         }
-        record_replay_action(time: any, actor_kind: any, actor_id: any, action_kind: any, value: any = null): any {
-            let target: any;
-            let label: any;
+        record_replay_action(time, actor_kind, actor_id, action_kind, value = null) {
+            let target;
+            let label;
             super.record_replay_action(time, actor_kind, actor_id, action_kind, value);
             target = (py.truth(((py.equal(actor_kind, "boss")))) ? "boss" : `p${py.str(py.at(player_ids, actor_id))}`);
             label = py.get(py.dict([["fast", fast.name], ["charged", charged.name], ["move", py.str(value)], ["switch", `Switch to slot ${py.str(value)}`], ["dodge", "Dodge"], ["gem", "Purified Gem"], ["quit", "In lobby"], ["rejoin", "Rejoined"]]), action_kind, action_kind);
             this.notice(target, label);
         }
-        effectiveness_notice(move: any, types: any, target: any, slot: any = null): any {
-            let multiplier: any;
+        effectiveness_notice(move, types, target, slot = null) {
+            let multiplier;
             multiplier = engine.type_effectiveness(move.move_type, types);
             if (py.truth(((multiplier > 1.00001)))) {
                 this.notice(target, "Super effective", "super", slot);
@@ -134,9 +130,9 @@ function reconstruct(document: any, engine: any): any {
                 }
             }
         }
-        apply_player_hit(player_id: any, generation: any, move: any): any {
-            let player: any;
-            let hp: any;
+        apply_player_hit(player_id, generation, move) {
+            let player;
+            let hp;
             player = py.at(this.players, player_id);
             if (py.truth(py.or(!py.truth(player.on_field), () => ((!py.equal(player.generation, generation)))))) {
                 return;
@@ -147,9 +143,9 @@ function reconstruct(document: any, engine: any): any {
                 this.effectiveness_notice(move, engine.BOSS_TYPES, "boss");
             }
         }
-        apply_boss_hit(move: any, dodgers: any): any {
-            let i: any;
-            let player: any;
+        apply_boss_hit(move, dodgers) {
+            let i;
+            let player;
             for (const __item of py.iter(py.enumerate(this.players))) {
                 [i, player] = __item;
                 if (py.truth(player.on_field)) {
@@ -161,28 +157,28 @@ function reconstruct(document: any, engine: any): any {
             }
             super.apply_boss_hit(move, dodgers);
         }
-        capture_replay_state(): any {
-            let tick: any;
-            let m: any;
-            let i: any;
-            let p: any;
+        capture_replay_state() {
+            let tick;
+            let m;
+            let i;
+            let p;
             tick = py.round(py.mul(this.current_time, 2));
-            this.frames[py.key(tick)] = py.dict([["tick", tick], ["boss_hp", py.max(0, this.boss_hp)], ["boss_energy", this.boss_energy], ["enraged", this.enraged], ["purified_gems_used", this.purified_gems_used], ["players", py.iter(py.enumerate(this.players)).map(([i, p]: any) => (py.dict([["id", py.at(player_ids, i)], ["slot", py.add(p.pokemon_index, 1)], ["on_field", p.on_field], ["hp", py.max(0, p.hp)], ["energy", p.energy], ["party_power", p.party_power_active], ["party_power_progress", p.party_power_progress], ["party_power_threshold", p.party_power_threshold], ["faints", p.faints], ["rejoins", p.rejoins], ["purified_gems_used", p.purified_gems_used], ["team", py.iter(p.team).map((m: any) => (py.dict([["hp", py.max(0, m.hp)], ["energy", m.energy]])))]])))]]);
+            this.frames[py.key(tick)] = py.dict([["tick", tick], ["boss_hp", py.max(0, this.boss_hp)], ["boss_energy", this.boss_energy], ["enraged", this.enraged], ["purified_gems_used", this.purified_gems_used], ["players", py.iter(py.enumerate(this.players)).map(([i, p]) => (py.dict([["id", py.at(player_ids, i)], ["slot", py.add(p.pokemon_index, 1)], ["on_field", p.on_field], ["hp", py.max(0, p.hp)], ["energy", p.energy], ["party_power", p.party_power_active], ["party_power_progress", p.party_power_progress], ["party_power_threshold", p.party_power_threshold], ["faints", p.faints], ["rejoins", p.rejoins], ["purified_gems_used", p.purified_gems_used], ["team", py.iter(p.team).map((m) => (py.dict([["hp", py.max(0, m.hp)], ["energy", m.energy]])))]])))]]);
         }
     }
-    function make_sim(cls: any = ObservedSimulation): any {
+    function make_sim(cls = ObservedSimulation) {
         return new cls(fast, charged, new PythonRandom(py.get(py.at(document, "settings"), "random_seed", 0)), undefined, engine.BOSS_HP, undefined, undefined, undefined, undefined, undefined, true);
     }
-    function signature(doc: any): any {
-        let result: any;
-        let event: any;
-        let actors: any;
-        let p: any;
-        let actor: any;
+    function signature(doc) {
+        let result;
+        let event;
+        let actors;
+        let p;
+        let actor;
         result = [];
         for (const __item of py.iter(py.at(doc, "events"))) {
             event = __item;
-            actors = (py.truth(((py.equal(py.at(event, "actor_kind"), "boss")))) ? ["boss"] : py.iter(py.at(event, "players")).map((p: any) => (`p${py.str(p)}`)));
+            actors = (py.truth(((py.equal(py.at(event, "actor_kind"), "boss")))) ? ["boss"] : py.iter(py.at(event, "players")).map((p) => (`p${py.str(p)}`)));
             for (const __item of py.iter(actors)) {
                 actor = __item;
                 py.append(result, [py.at(event, "tick"), actor, py.at(event, "kind"), py.get(event, "move_name"), py.get(event, "slot")]);
@@ -200,7 +196,7 @@ function reconstruct(document: any, engine: any): any {
         generated = parse_replay_text(engine.render_battle_replay(candidate, result, py.at(py.at(document, "settings"), "random_seed")));
         for (const __item of py.iter(py.at(generated, "events"))) {
             event = __item;
-            event[py.key("players")] = py.iter(py.at(event, "players")).map((p: any) => (py.at(player_ids, py.sub(p, 1))));
+            event[py.key("players")] = py.iter(py.at(event, "players")).map((p) => (py.at(player_ids, py.sub(p, 1))));
         }
         if (py.truth(py.and(((py.equal(signature(generated), signature(document)))), () => ((py.equal(py.at(py.at(generated, "settings"), "expected_result"), expected)))))) {
             sim = candidate;
@@ -210,12 +206,12 @@ function reconstruct(document: any, engine: any): any {
     }
     if (py.truth(((sim === null)))) {
         class TimelineSimulation extends ObservedSimulation {
-            switch(time: any, player_id: any, tactical: any): any {
-                let player: any;
-                let explicit: any;
-                let e: any;
-                let next_index: any;
-                let i: any;
+            switch(time, player_id, tactical) {
+                let player;
+                let explicit;
+                let e;
+                let next_index;
+                let i;
                 player = py.at(this.players, player_id);
                 player.generation = py.add(player.generation, 1);
                 player.on_field = false;
@@ -224,9 +220,9 @@ function reconstruct(document: any, engine: any): any {
                 if (py.truth(recording)) {
                     return;
                 }
-                explicit = py.iter(py.iter(py.at(document, "events")).map((e: any) => (py.and(((py.equal(py.at(e, "tick"), py.round(py.mul(time, 2))))), () => py.and(((py.has(py.at(e, "players"), py.at(player_ids, player_id)))), () => ((py.has(new Set<any>(["switch", "quit"]), py.at(e, "kind"))))))))).some(py.truth);
+                explicit = py.iter(py.iter(py.at(document, "events")).map((e) => (py.and(((py.equal(py.at(e, "tick"), py.round(py.mul(time, 2))))), () => py.and(((py.has(py.at(e, "players"), py.at(player_ids, player_id)))), () => ((py.has(new Set(["switch", "quit"]), py.at(e, "kind"))))))))).some(py.truth);
                 if (py.truth(!py.truth(explicit))) {
-                    next_index = py.next(py.iter(py.range(py.add(player.pokemon_index, 1), py.len(player.team))).filter((i: any) => py.truth(((py.at(player.team, i).hp > 0)))).map((i: any) => (i)), null);
+                    next_index = py.next(py.iter(py.range(py.add(player.pokemon_index, 1), py.len(player.team))).filter((i) => py.truth(((py.at(player.team, i).hp > 0)))).map((i) => (i)), null);
                     if (py.truth(((next_index !== null)))) {
                         player.pokemon_index = next_index;
                         player.on_field = true;
@@ -247,7 +243,7 @@ function reconstruct(document: any, engine: any): any {
         pending_boss = null;
         boss_ready_tick = 0;
         in_lobby = py.mul([false], py.len(sim.players));
-        function push(tick: any, kind: any, data: any): any {
+        function push(tick, kind, data) {
             sequence = py.add(sequence, 1);
             py.heappush(queue, [tick, (py.truth(py.endswith(kind, "_hit")) ? 0 : 1), sequence, kind, data]);
         }
@@ -255,7 +251,7 @@ function reconstruct(document: any, engine: any): any {
             event = __item;
             push(py.at(event, "tick"), "action", event);
         }
-        if (py.truth(py.iter(py.iter(py.at(document, "events")).map((e: any) => (py.and(((py.equal(py.at(e, "kind"), "move"))), () => !py.truth(py.get(e, "move_name")))))).some(py.truth))) {
+        if (py.truth(py.iter(py.iter(py.at(document, "events")).map((e) => (py.and(((py.equal(py.at(e, "kind"), "move"))), () => !py.truth(py.get(e, "move_name")))))).some(py.truth))) {
             throw new Error("Declare each move code in the preamble, for example Move codes: sc=Shadow Claw.");
         }
         limit = py.round(py.mul(engine.RAID_SECONDS, 2));
@@ -274,11 +270,7 @@ function reconstruct(document: any, engine: any): any {
             sim.current_time = (tick / 2);
             finish_tick = tick;
             if (py.truth(((py.equal(kind, "player_hit"))))) {
-                sim.apply_player_hit(...(data as [
-                    any,
-                    any,
-                    any
-                ]));
+                sim.apply_player_hit(...data);
             }
             else {
                 if (py.truth(((py.equal(kind, "boss_hit"))))) {
@@ -289,7 +281,7 @@ function reconstruct(document: any, engine: any): any {
                 else {
                     event = data;
                     action = py.at(event, "kind");
-                    function fail(message: any): any {
+                    function fail(message) {
                         throw new Error(`Line ${py.str(py.at(event, "source_line"))} (${py.format((tick / 2), `g`)}s): ${py.str(message)}`);
                     }
                     if (py.truth(((py.equal(py.at(event, "actor_kind"), "boss"))))) {
@@ -398,7 +390,7 @@ function reconstruct(document: any, engine: any): any {
                                                 }
                                                 pokemon = player.pokemon;
                                                 candidates = [pokemon.fast_move, pokemon.charged_move];
-                                                move = py.next(py.iter(candidates).filter((m: any) => py.truth(((py.has(new Set<any>([py.lower(m.name), py.lower(engine.displayed_player_move_name(m, pokemon))]), py.lower(py.at(event, "move_name"))))))).map((m: any) => (m)), null);
+                                                move = py.next(py.iter(candidates).filter((m) => py.truth(((py.has(new Set([py.lower(m.name), py.lower(engine.displayed_player_move_name(m, pokemon))]), py.lower(py.at(event, "move_name"))))))).map((m) => (m)), null);
                                                 if (py.truth(((move === null)))) {
                                                     fail(`${py.str(pokemon.species.name)} is not configured with ${py.str(py.at(event, "move_name"))}.`);
                                                 }
@@ -444,13 +436,13 @@ function reconstruct(document: any, engine: any): any {
     metadata = [];
     for (const __item of py.iter(py.enumerate(sim.players))) {
         [i, player] = __item;
-        py.append(metadata, py.dict([["id", py.at(player_ids, i)], ["zacian_adventure_effect", py.at(engine.ZACIAN_ADVENTURE_EFFECT, i)], ["behemoth_bash_adventure_effect", py.at(engine.BEHEMOTH_BASH_ADVENTURE_EFFECT, i)], ["dynamic_punch_adventure_effect", py.at(engine.DYNAMIC_PUNCH_ADVENTURE_EFFECT, i)], ["team", py.iter(player.team).map((m: any) => (py.dict([["name", py.add((py.truth(py.and(m.is_shadow, () => !py.truth(py.startswith(m.species.name, "Shadow ")))) ? "Shadow " : ""), m.species.name)], ["max_hp", m.max_hp], ["types", m.species.types], ["level", m.level], ["charged_energy", m.charged_move.energy]])))]]));
+        py.append(metadata, py.dict([["id", py.at(player_ids, i)], ["zacian_adventure_effect", py.at(engine.ZACIAN_ADVENTURE_EFFECT, i)], ["behemoth_bash_adventure_effect", py.at(engine.BEHEMOTH_BASH_ADVENTURE_EFFECT, i)], ["dynamic_punch_adventure_effect", py.at(engine.DYNAMIC_PUNCH_ADVENTURE_EFFECT, i)], ["team", py.iter(player.team).map((m) => (py.dict([["name", py.add((py.truth(py.and(m.is_shadow, () => !py.truth(py.startswith(m.species.name, "Shadow ")))) ? "Shadow " : ""), m.species.name)], ["max_hp", m.max_hp], ["types", m.species.types], ["level", m.level], ["charged_energy", m.charged_move.energy]])))]]));
     }
-    return py.dict([["replay", document], ["source", source], ["warnings", warnings], ["tick_seconds", 0.5], ["duration_ticks", finish_tick], ["raid_ticks", py.round(py.mul(engine.RAID_SECONDS, 2))], ["boss", py.dict([["name", engine.BOSS_NAME], ["types", engine.BOSS_TYPES], ["max_hp", engine.BOSS_HP], ["max_energy", engine.BOSS_MAX_ENERGY]])], ["players", metadata], ["frames", py.iter(py.sorted(sim.frames)).map((t: any) => (py.at(sim.frames, t)))], ["messages", sim.messages], ["result", py.dict([["won", ((sim.boss_hp <= 0))], ["boss_hp", py.max(0, sim.boss_hp)], ["finish_time", (finish_tick / 2)]])]]);
+    return py.dict([["replay", document], ["source", source], ["warnings", warnings], ["tick_seconds", 0.5], ["duration_ticks", finish_tick], ["raid_ticks", py.round(py.mul(engine.RAID_SECONDS, 2))], ["boss", py.dict([["name", engine.BOSS_NAME], ["types", engine.BOSS_TYPES], ["max_hp", engine.BOSS_HP], ["max_energy", engine.BOSS_MAX_ENERGY]])], ["players", metadata], ["frames", py.iter(py.sorted(sim.frames)).map((t) => (py.at(sim.frames, t)))], ["messages", sim.messages], ["result", py.dict([["won", ((sim.boss_hp <= 0))], ["boss_hp", py.max(0, sim.boss_hp)], ["finish_time", (finish_tick / 2)]])]]);
 }
 export { replay_config, reconstruct };
 /** Parse and reconstruct with an isolated native engine and the static catalog. */
-export function build_playback(text: string, catalog: CalculatorEntry[]): Record<string, any> {
+export function build_playback(text, catalog) {
     if (text.length > 2000000)
         throw new Error('Replay text is too large.');
     const document = parse_replay_text(text);
@@ -477,3 +469,4 @@ export function build_playback(text: string, catalog: CalculatorEntry[]): Record
         throw new Error('A recorded action occurs after the raid timer expires.');
     return reconstruct(document, engine);
 }
+//# sourceMappingURL=battle_playback.js.map

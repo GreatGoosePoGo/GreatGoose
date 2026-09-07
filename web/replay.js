@@ -29,6 +29,7 @@ Dynamic Punch+ effects: p1=false; p2=false
 Weather: none
 Dodge: downtime_saver
 Swap: hot_swap_greedy
+Purified Gems: none
 Catch tanks: p1=-; p2=-
 Party Power: normal; groups=p1,2
 Move codes: sc=Shadow Claw; vw=Vine Whip; co=Confusion

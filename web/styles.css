@@ -405,7 +405,12 @@ select:focus, input:focus, textarea:focus, button:focus-visible {
 
 .section-heading h2 { margin-bottom: 2px; }
 .section-heading p { margin-bottom: 0; color: var(--muted); }
-.team { display: grid; gap: 10px; margin-top: 20px; }
+.players { display: grid; gap: 18px; margin-top: 20px; }
+.player-section { padding: 16px; border: 1px solid #cbd5e4; border-radius: 11px; background: #f7f9fc; }
+.player-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.player-heading h3 { margin: 0; font-size: 19px; }
+.player-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.team { display: grid; gap: 10px; margin-top: 12px; }
 
 .pokemon-row {
   display: flex;
@@ -474,6 +479,30 @@ select:focus, input:focus, textarea:focus, button:focus-visible {
   justify-content: flex-end;
   gap: 8px;
 }
+
+.pokemon-code-field {
+  flex: 1 1 360px;
+  min-width: min(100%, 260px);
+  color: #465169;
+  font-size: 13px;
+}
+
+.pokemon-code-input {
+  width: 100%;
+  margin-top: 5px;
+  font: 13px/1.35 Consolas, "Courier New", monospace;
+}
+
+.pokemon-code-status {
+  flex: 1 0 100%;
+  min-height: 19px;
+  color: var(--blue-dark);
+  font-size: 13px;
+  text-align: right;
+}
+
+.pokemon-code-status:empty { display: none; }
+.pokemon-code-status.error { color: var(--red); }
 
 .shadow-field {
   display: flex;
@@ -551,7 +580,7 @@ button {
 .result-heading span { color: var(--muted); font-size: 18px; }
 .result-meta { display: grid; justify-items: end; gap: 2px; }
 .result-meta #result-seed { font-size: 12px; font-family: Consolas, "Courier New", monospace; }
-.result-stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin: 24px 0; }
+.result-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin: 24px 0; }
 .result-stats div { display: grid; gap: 2px; padding: 16px; background: #f5f7fa; border-radius: 8px; }
 .result-stats strong { font-size: 24px; }
 .result-stats span { color: var(--muted); font-size: 12px; }
@@ -753,7 +782,12 @@ dialog::backdrop { background: rgb(23 32 51 / 55%); }
   .slot-number { display: none; }
   .pokemon-code-actions { justify-content: stretch; }
   .pokemon-code-actions .shadow-field { flex-basis: 100%; flex-wrap: wrap; }
+  .pokemon-code-field { flex-basis: 100%; min-width: 0; }
   .pokemon-code-actions button { flex: 1; }
+  .pokemon-code-status { text-align: left; }
+  .player-heading { align-items: stretch; flex-direction: column; }
+  .player-actions { justify-content: stretch; }
+  .player-actions button { flex: 1; }
   .section-heading { align-items: stretch; flex-direction: column; }
   .replay-actions { align-items: stretch; flex-direction: column; }
   .replay-actions .primary { justify-self: auto; }

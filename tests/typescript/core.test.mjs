@@ -32,6 +32,58 @@ test('engines and simulations have independent state and configurations',()=>{
  one.run();assert.equal(two.boss_hp,3600);
  assert.equal(a.BOSS_FAST_MOVES['Hidden Power'].move_type,'Normal');
 });
+test('Shadow enrage uses exact additive stats and Purified Gems obey raid limits',()=>{
+ const team=[['Mewtwo','Confusion','Psystrike',50,15,15,15,false,1]];
+ const config={
+  raid_difficulty:'Tier 5 Shadow',boss_form_id:'STARMIE',
+  boss_manual_profile:{name:'Test Shadow Boss',attack:100,defense:100,types:['Normal']},
+  boss_fast_move_names:['Water Gun'],boss_charged_move_names:['Hydro Pump'],
+  player_teams:[team,team],friendship_multipliers:[1,1],
+  zacian_adventure_effect:[false,false],behemoth_bash_adventure_effect:[false,false],
+  dynamic_punch_adventure_effect:[false,false],catch_tank_team_indices:[[],[]],
+  use_purified_gems:false,battle_log_mode:'full',random_seed:42,
+ };
+ const engine=createRaidEngine(config,catalog);
+ const sim=engine.createSimulation({detailed:true});
+ const player=sim.players[0];
+ const move=player.pokemon.fast_move;
+ const baseDefense=(100+15)*engine.BOSS_CPM;
+ const modifier=engine.type_effectiveness(move.move_type,engine.BOSS_TYPES)*1.2;
+ assert.equal(sim.outgoing_damage(move,0),engine.pokemon_go_damage(move.power,player.pokemon.effective_attack,baseDefense,modifier));
+ sim.enraged=true;
+ const enragedDefense=baseDefense+Math.floor(baseDefense*engine.SHADOW_ENRAGE_DEFENSE_BONUS);
+ assert.equal(sim.outgoing_damage(move,0),engine.pokemon_go_damage(move.power,player.pokemon.effective_attack,enragedDefense,modifier));
+ const bossMove=Object.values(engine.BOSS_FAST_MOVES)[0];
+ const baseAttack=(100+15)*engine.BOSS_CPM;
+ assert.equal(sim.incoming_damage(bossMove,0,player,false),engine.pokemon_go_damage(bossMove.power,baseAttack+Math.floor(baseAttack*0.8),player.pokemon.effective_defense,1));
+
+ sim.enraged=false;sim.boss_hp=engine.ENRAGE_HP;sim.current_time=10;sim.update_enrage_state();
+ assert.equal(sim.enraged,true);
+ assert.throws(()=>sim.use_purified_gem(10,99,true));
+ for(const id of [0,1]) sim.use_purified_gem(10,id,true);
+ assert.throws(()=>sim.use_purified_gem(14.5,0,true),/5-second cooldown/);
+ for(const time of [15,20,25]) for(const id of [0,1]) sim.use_purified_gem(time,id,true);
+ assert.equal(sim.purified_gems_used,8);assert.equal(sim.shadow_subdued,true);assert.equal(sim.enraged,false);
+ assert.deepEqual(sim.players.map(p=>p.purified_gems_used),[4,4]);
+ const result=new engine.TrialResult(false,25,sim.boss_hp,0,0,0,0,0,8);
+ const replay=engine.render_battle_replay(sim,result,42);
+ const parsed=parse_replay_text(replay);
+ assert.equal(parsed.settings.use_purified_gems,false);
+ assert.equal(parsed.events.filter(event=>event.kind==='gem').reduce((total,event)=>total+event.players.length,0),8);
+
+ const soloEngine=createRaidEngine({...config,player_teams:[team],friendship_multipliers:[1],zacian_adventure_effect:[false],behemoth_bash_adventure_effect:[false],dynamic_punch_adventure_effect:[false],catch_tank_team_indices:[[]]},catalog);
+ const solo=soloEngine.createSimulation();solo.boss_hp=soloEngine.ENRAGE_HP;solo.update_enrage_state();
+ for(const time of [0,5,10,15,20]) solo.use_purified_gem(time,0,true);
+ assert.equal(solo.purified_gems_used,5);assert.equal(solo.enraged,true);assert.equal(solo.shadow_subdued,false);
+ assert.throws(()=>solo.use_purified_gem(25,0,true),/at most 5/);
+
+ const attackers=Array(6).fill(['NECROZMA_DAWN_WINGS','Shadow Claw','Moongeist Beam',50,15,15,15,false,1]);
+ const autoEngine=createRaidEngine({...config,boss_manual_profile:null,player_teams:[attackers,attackers],friendship_multipliers:[1.1,1.1],use_purified_gems:true},catalog);
+ const automatic=autoEngine.createSimulation({detailed:true});const automaticResult=automatic.run();
+ const gemTicks=automatic.replay_actions.filter(action=>action[4]==='gem').map(action=>action[0]);
+ assert.equal(automaticResult.purified_gems_used,8);assert.equal(automatic.shadow_subdued,true);
+ assert.deepEqual(gemTicks,[173,173,183,183,193,193,203,203]);
+});
 test('replay timestamps, legacy tuples, and malformed input are safe',()=>{
  assert.equal(seconds_to_tick('1.500000000000000000000',1),3);
  for(const invalid of ['0.25','1.50000000000000000001','9999999999999999999999']) assert.throws(()=>seconds_to_tick(invalid,1));
@@ -42,6 +94,7 @@ test('replay timestamps, legacy tuples, and malformed input are safe',()=>{
  assert.throws(()=>parse_replay_text(preamble+'t0p2:co'),/undefined p2/);
  assert.throws(()=>parse_replay_text(preamble+'t0p1:r2'),/Party presets/);
  assert.throws(()=>parse_replay_text(preamble+'t0p1:s2'),/only has 1/);
+ assert.equal(parse_replay_text(preamble+'t0p1:g').events[0].kind,'gem');
  assert.throws(()=>build_playback(preamble+'t0p1:ps',catalog),/needs 50 energy/);
  assert.throws(()=>build_playback(preamble+'t0p1:q\n+1p1:s1',catalog),/must rejoin/);
  const frame=build_playback(preamble+'t0p1:co\n+0b:f',catalog).frames.at(-1);
@@ -53,6 +106,20 @@ test('application boundary rejects invalid inputs before starting calculations',
  assert.throws(()=>battle_config({...request,team:[{...request.team[0],fast_move:'Water Gun'}]},catalog),/legal moves/);
  assert.throws(()=>battle_config({...request,boss:'MEW',boss_fast_move:'Pound',boss_charged_move:'Psychic',boss_moveset_mode:'all',simulation_count:2},catalog),/limit is 500/);
  assert.throws(()=>run_simulations({...request,zacian_adventure_effect:true,behemoth_bash_adventure_effect:true},catalog),/Only one Adventure Effect/);
+});
+test('calculator accepts multiple player teams and preserves legacy single-team requests',()=>{
+ const secondTeam=[{name:'GROUDON_PRIMAL',fast_move:'Mud Shot',charged_move:'Precipice Blades',level:50}];
+ const multiplayer={...request,team:undefined,players:[{team:request.team},{team:secondTeam}],random_seed:42};
+ const config=battle_config(multiplayer,catalog);
+ assert.equal(config.player_teams.length,2);
+ assert.deepEqual(config.friendship_multipliers,[1,1]);
+ assert.deepEqual(config.catch_tank_team_indices,[[],[]]);
+ const result=run_simulations(multiplayer,catalog);
+ assert.equal(parse_replay_text(result.replay_text).players.length,2);
+ assert.equal(battle_config(request,catalog).player_teams.length,1);
+ assert.throws(()=>battle_config({...request,team:undefined,players:[]},catalog),/between 1 and 20 players/);
+ assert.throws(()=>battle_config({...request,team:undefined,players:Array.from({length:21},()=>({team:request.team}))},catalog),/between 1 and 20 players/);
+ assert.throws(()=>battle_config({...request,team:undefined,player_strategy:'catch_tank',players:[{team:[{...request.team[0],catch_tank:true}]}]},catalog),/normal attacker/);
 });
 test('browser IDs and seeds work when crypto.randomUUID is unavailable',()=>{
  const descriptor=Object.getOwnPropertyDescriptor(globalThis,'crypto');

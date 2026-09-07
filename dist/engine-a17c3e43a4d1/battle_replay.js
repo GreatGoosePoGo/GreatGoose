@@ -2,10 +2,10 @@
 import * as py from "./compatibility.js";
 import { re } from "./text.js";
 import { seconds_to_tick } from "./text.js";
-let EVENT_RE: any;
-let PLAYER_LINE_RE: any;
-let ASSIGNMENT_RE: any;
-let MOVE_CODE_RE: any;
+let EVENT_RE;
+let PLAYER_LINE_RE;
+let ASSIGNMENT_RE;
+let MOVE_CODE_RE;
 /** Parser for Great Goose's compact, hand-written battle replay format.
  *
  * Timestamps become integer half-second ticks. Combat reconstruction lives in
@@ -16,28 +16,65 @@ PLAYER_LINE_RE = re.compile("^p(?P<player>\\d+)\\s*:\\s*(?P<team>.+)$", re.I);
 ASSIGNMENT_RE = re.compile("^p(?P<player>\\d+)\\s*=\\s*(?P<value>.+)$", re.I);
 MOVE_CODE_RE = re.compile("^[a-z][a-z0-9_+\\-]*$");
 class ReplayParseError extends Error {
-    constructor(public line_number: number, message: string) { super(`Line ${line_number}: ${message}`); this.name = "ReplayParseError"; }
+    line_number;
+    constructor(line_number, message) {
+        super(`Line ${line_number}: ${message}`);
+        this.line_number = line_number;
+        this.name = "ReplayParseError";
+    }
 }
 class ReplayPlayer {
-    constructor(public player_id: number, public team_text: string = "", public team: (Record<string, any>)[] = [], public friendship_multiplier: number = 1.0, public zacian_adventure_effect: boolean = false, public behemoth_bash_adventure_effect: boolean = false, public dynamic_punch_adventure_effect: boolean = false, public catch_tank_slots: (number)[] = []) { }
-    to_dict(): Record<string, any> {
+    player_id;
+    team_text;
+    team;
+    friendship_multiplier;
+    zacian_adventure_effect;
+    behemoth_bash_adventure_effect;
+    dynamic_punch_adventure_effect;
+    catch_tank_slots;
+    constructor(player_id, team_text = "", team = [], friendship_multiplier = 1.0, zacian_adventure_effect = false, behemoth_bash_adventure_effect = false, dynamic_punch_adventure_effect = false, catch_tank_slots = []) {
+        this.player_id = player_id;
+        this.team_text = team_text;
+        this.team = team;
+        this.friendship_multiplier = friendship_multiplier;
+        this.zacian_adventure_effect = zacian_adventure_effect;
+        this.behemoth_bash_adventure_effect = behemoth_bash_adventure_effect;
+        this.dynamic_punch_adventure_effect = dynamic_punch_adventure_effect;
+        this.catch_tank_slots = catch_tank_slots;
+    }
+    to_dict() {
         return py.dict([["id", this.player_id], ["label", `p${py.str(this.player_id)}`], ["team_text", this.team_text], ["team", this.team], ["friendship_multiplier", this.friendship_multiplier], ["zacian_adventure_effect", this.zacian_adventure_effect], ["behemoth_bash_adventure_effect", this.behemoth_bash_adventure_effect], ["dynamic_punch_adventure_effect", this.dynamic_punch_adventure_effect], ["catch_tank_slots", this.catch_tank_slots]]);
     }
 }
 class ReplayEvent {
-    constructor(public tick: number, public players: (number)[], public action_kind: string, public action_code: string, public source_line: number, public slot: number | null = null, public actor_kind: string = "players") { }
-    get seconds(): number {
+    tick;
+    players;
+    action_kind;
+    action_code;
+    source_line;
+    slot;
+    actor_kind;
+    constructor(tick, players, action_kind, action_code, source_line, slot = null, actor_kind = "players") {
+        this.tick = tick;
+        this.players = players;
+        this.action_kind = action_kind;
+        this.action_code = action_code;
+        this.source_line = source_line;
+        this.slot = slot;
+        this.actor_kind = actor_kind;
+    }
+    get seconds() {
         return (this.tick / 2);
     }
-    to_dict(): Record<string, any> {
-        let player_label: any;
-        let player: any;
-        let description: any;
+    to_dict() {
+        let player_label;
+        let player;
+        let description;
         if (py.truth(((py.equal(this.actor_kind, "boss"))))) {
             player_label = "Boss";
         }
         else {
-            player_label = py.add(`p${py.str(py.at(this.players, 0))}`, py.join("", py.iter(py.slice(this.players, 1, undefined)).map((player: any) => (`,${py.str(player)}`))));
+            player_label = py.add(`p${py.str(py.at(this.players, 0))}`, py.join("", py.iter(py.slice(this.players, 1, undefined)).map((player) => (`,${py.str(player)}`))));
         }
         if (py.truth(((py.equal(this.action_kind, "boss_fast"))))) {
             description = "Boss starts its fast move";
@@ -76,28 +113,28 @@ class ReplayEvent {
         return py.dict([["tick", this.tick], ["seconds", this.seconds], ["time_label", format_tick(this.tick)], ["players", py.iter(this.players)], ["player_label", player_label], ["actor_kind", this.actor_kind], ["kind", this.action_kind], ["code", this.action_code], ["slot", this.slot], ["description", description], ["source_line", this.source_line]]);
     }
 }
-function format_tick(tick: number): string {
-    let whole: any;
-    let half: any;
+function format_tick(tick) {
+    let whole;
+    let half;
     [whole, half] = py.divmod(tick, 2);
     return (py.truth(half) ? `${py.str(whole)}.5s` : `${py.str(whole)}s`);
 }
-function parse_bool(value: string, line_number: number): boolean {
-    let normalized: any;
+function parse_bool(value, line_number) {
+    let normalized;
     normalized = py.lower(py.strip(value));
-    if (py.truth(((py.has(new Set<any>(["true", "yes", "1", "on"]), normalized))))) {
+    if (py.truth(((py.has(new Set(["true", "yes", "1", "on"]), normalized))))) {
         return true;
     }
-    if (py.truth(((py.has(new Set<any>(["false", "no", "0", "off"]), normalized))))) {
+    if (py.truth(((py.has(new Set(["false", "no", "0", "off"]), normalized))))) {
         return false;
     }
     throw new ReplayParseError(line_number, `Expected true or false, not "${py.str(py.strip(value))}".`);
 }
-function parse_player_assignments(value: string, line_number: number): Record<string, string> {
-    let assignments: any;
-    let part: any;
-    let match: any;
-    let player_id: any;
+function parse_player_assignments(value, line_number) {
+    let assignments;
+    let part;
+    let match;
+    let player_id;
     assignments = py.dict([]);
     for (const __item of py.iter(py.split(value, ";"))) {
         part = __item;
@@ -120,16 +157,16 @@ function parse_player_assignments(value: string, line_number: number): Record<st
     }
     return assignments;
 }
-function parse_player_group(value: string, line_number: number): (number)[] {
-    let players: any;
-    let piece: any;
-    let player: any;
+function parse_player_group(value, line_number) {
+    let players;
+    let piece;
+    let player;
     value = py.strip(value);
     if (py.truth(!py.truth(re.fullmatch("p\\d+(?:,\\d+)*", value, re.I)))) {
         throw new ReplayParseError(line_number, `Expected a group such as "p1,2", not "${py.str(value)}".`);
     }
-    players = py.iter(py.split(py.slice(value, 1, undefined), ",")).map((piece: any) => (py.int(piece)));
-    if (py.truth(py.iter(py.iter(players).map((player: any) => (((player < 1))))).some(py.truth))) {
+    players = py.iter(py.split(py.slice(value, 1, undefined), ",")).map((piece) => (py.int(piece)));
+    if (py.truth(py.iter(py.iter(players).map((player) => (((player < 1))))).some(py.truth))) {
         throw new ReplayParseError(line_number, "Player numbers start at 1.");
     }
     if (py.truth(((!py.equal(py.len(py.set(players)), py.len(players)))))) {
@@ -137,12 +174,12 @@ function parse_player_group(value: string, line_number: number): (number)[] {
     }
     return players;
 }
-function parse_move_code_assignments(value: string, line_number: number): Record<string, string> {
-    let assignments: any;
-    let part: any;
-    let code: any;
-    let move_name: any;
-    let piece: any;
+function parse_move_code_assignments(value, line_number) {
+    let assignments;
+    let part;
+    let code;
+    let move_name;
+    let piece;
     assignments = py.dict([]);
     for (const __item of py.iter(py.split(value, ";"))) {
         part = __item;
@@ -153,12 +190,12 @@ function parse_move_code_assignments(value: string, line_number: number): Record
         if (py.truth(((!py.has(part, "="))))) {
             throw new ReplayParseError(line_number, `Expected a move-code assignment such as "sc=Shadow Claw", not "${py.str(part)}".`);
         }
-        [code, move_name] = py.iter(py.split(part, "=", 1)).map((piece: any) => (py.strip(piece)));
+        [code, move_name] = py.iter(py.split(part, "=", 1)).map((piece) => (py.strip(piece)));
         code = py.lower(code);
         if (py.truth(!py.truth(MOVE_CODE_RE.fullmatch(code)))) {
             throw new ReplayParseError(line_number, `Invalid move code "${py.str(code)}".`);
         }
-        if (py.truth(py.or(((py.has(new Set<any>(["d", "g", "q", "r"]), code))), () => re.fullmatch("s\\d+", code)))) {
+        if (py.truth(py.or(((py.has(new Set(["d", "g", "q", "r"]), code))), () => re.fullmatch("s\\d+", code)))) {
             throw new ReplayParseError(line_number, `Move code "${py.str(code)}" is reserved for an action.`);
         }
         if (py.truth(!py.truth(move_name))) {
@@ -174,14 +211,14 @@ function parse_move_code_assignments(value: string, line_number: number): Record
     }
     return assignments;
 }
-function parse_short_boss(value: string, line_number: number): Record<string, any> {
-    let parts: any;
-    let part: any;
-    let boss: any;
-    let key: any;
-    let setting: any;
-    let piece: any;
-    parts = py.iter(py.split(value, ";")).filter((part: any) => py.truth(py.strip(part))).map((part: any) => (py.strip(part)));
+function parse_short_boss(value, line_number) {
+    let parts;
+    let part;
+    let boss;
+    let key;
+    let setting;
+    let piece;
+    parts = py.iter(py.split(value, ";")).filter((part) => py.truth(py.strip(part))).map((part) => (py.strip(part)));
     if (py.truth(!py.truth(parts))) {
         throw new ReplayParseError(line_number, "Boss is missing a form ID.");
     }
@@ -191,7 +228,7 @@ function parse_short_boss(value: string, line_number: number): Record<string, an
         if (py.truth(((!py.has(part, "="))))) {
             throw new ReplayParseError(line_number, `Expected a boss setting such as "fast=Water Gun", not "${py.str(part)}".`);
         }
-        [key, setting] = py.iter(py.split(part, "=", 1)).map((piece: any) => (py.strip(piece)));
+        [key, setting] = py.iter(py.split(part, "=", 1)).map((piece) => (py.strip(piece)));
         if (py.truth(((py.equal(py.lower(key), "fast"))))) {
             boss[py.key("fast_move")] = setting;
         }
@@ -206,8 +243,8 @@ function parse_short_boss(value: string, line_number: number): Record<string, an
     }
     return boss;
 }
-function pokemon_from_verbose_tuple(value: any, line_number: number): Record<string, any> {
-    let pokemon: any;
+function pokemon_from_verbose_tuple(value, line_number) {
+    let pokemon;
     if (py.truth(py.or(!py.truth(py.isinstance(value, "(tuple, list)")), () => ((py.len(value) < 4))))) {
         throw new ReplayParseError(line_number, "Each verbose team member must have at least four values.");
     }
@@ -223,12 +260,12 @@ function pokemon_from_verbose_tuple(value: any, line_number: number): Record<str
     }
     return pokemon;
 }
-function parse_verbose_teams(value: string, line_number: number): Record<string, ReplayPlayer> {
-    let teams: any;
-    let players: any;
-    let index: any;
-    let team: any;
-    let member: any;
+function parse_verbose_teams(value, line_number) {
+    let teams;
+    let players;
+    let index;
+    let team;
+    let member;
     try {
         teams = py.literal(value);
     }
@@ -244,29 +281,29 @@ function parse_verbose_teams(value: string, line_number: number): Record<string,
         if (py.truth(py.or(!py.truth(py.isinstance(team, "list")), () => !py.truth(team)))) {
             throw new ReplayParseError(line_number, `p${py.str(index)} has an empty or invalid team.`);
         }
-        players[py.key(index)] = new ReplayPlayer(index, py.repr(team), py.iter(team).map((member: any) => (pokemon_from_verbose_tuple(member, line_number))));
+        players[py.key(index)] = new ReplayPlayer(index, py.repr(team), py.iter(team).map((member) => (pokemon_from_verbose_tuple(member, line_number))));
     }
     return players;
 }
-function parse_readable_team(text: string): (Record<string, any>)[] {
-    let result: any;
-    let member: any;
-    let parts: any;
-    let part: any;
-    let level: any;
-    let ivs: any;
-    let iv: any;
+function parse_readable_team(text) {
+    let result;
+    let member;
+    let parts;
+    let part;
+    let level;
+    let ivs;
+    let iv;
     /** Readable member fields use /; separate multiple team members with ;. */
     result = [];
     for (const __item of py.iter(py.split(text, ";"))) {
         member = __item;
-        parts = py.iter(py.split(member, "/")).map((part: any) => (py.strip(part)));
+        parts = py.iter(py.split(member, "/")).map((part) => (py.strip(part)));
         if (py.truth(((py.len(parts) < 4)))) {
             return [];
         }
         try {
             level = py.float(py.lstrip(py.at(parts, 3), "Ll"));
-            ivs = (py.truth(((py.len(parts) > 4))) ? py.iter(py.split(py.at(parts, 4), "-")).map((iv: any) => (py.int(iv))) : py.mul([15], 3));
+            ivs = (py.truth(((py.len(parts) > 4))) ? py.iter(py.split(py.at(parts, 4), "-")).map((iv) => (py.int(iv))) : py.mul([15], 3));
             if (py.truth(((!py.equal(py.len(ivs), 3))))) {
                 return [];
             }
@@ -278,8 +315,8 @@ function parse_readable_team(text: string): (Record<string, any>)[] {
     }
     return result;
 }
-function parse_literal_list(value: string, line_number: number, label: string): (any)[] {
-    let parsed: any;
+function parse_literal_list(value, line_number, label) {
+    let parsed;
     try {
         parsed = py.literal(value);
     }
@@ -291,17 +328,17 @@ function parse_literal_list(value: string, line_number: number, label: string): 
     }
     return parsed;
 }
-function parse_event(line: string, line_number: number, previous_tick: number | null): ReplayEvent {
-    let match: any;
-    let time_code: any;
-    let tick: any;
-    let actor: any;
-    let action: any;
-    let players: any;
-    let piece: any;
-    let player: any;
-    let switch_match: any;
-    let slot: any;
+function parse_event(line, line_number, previous_tick) {
+    let match;
+    let time_code;
+    let tick;
+    let actor;
+    let action;
+    let players;
+    let piece;
+    let player;
+    let switch_match;
+    let slot;
     match = EVENT_RE.fullmatch(line);
     if (py.truth(!py.truth(match))) {
         throw new ReplayParseError(line_number, "Expected an event such as t9p1:db, +1.5p1,2:g, t12b:c, t30p1:q, or +4p1:r.");
@@ -315,7 +352,7 @@ function parse_event(line: string, line_number: number, previous_tick: number | 
     }
     else {
         tick = seconds_to_tick(py.slice(time_code, 1, undefined), line_number);
-        if (py.truth(py.and(((previous_tick !== null)), () => ((tick < previous_tick!))))) {
+        if (py.truth(py.and(((previous_tick !== null)), () => ((tick < previous_tick))))) {
             throw new ReplayParseError(line_number, "Absolute event times cannot move backwards.");
         }
     }
@@ -330,8 +367,8 @@ function parse_event(line: string, line_number: number, previous_tick: number | 
         }
         throw new ReplayParseError(line_number, "Boss actions are \"b:f\" for its fast move or \"b:c\" for its charged move.");
     }
-    players = py.iter(py.iter(py.split(py.slice(actor, 1, undefined), ",")).map((piece: any) => (py.int(piece))));
-    if (py.truth(py.iter(py.iter(players).map((player: any) => (((player < 1))))).some(py.truth))) {
+    players = py.iter(py.iter(py.split(py.slice(actor, 1, undefined), ",")).map((piece) => (py.int(piece))));
+    if (py.truth(py.iter(py.iter(players).map((player) => (((player < 1))))).some(py.truth))) {
         throw new ReplayParseError(line_number, "Player numbers start at 1.");
     }
     if (py.truth(((!py.equal(py.len(py.set(players)), py.len(players)))))) {
@@ -362,58 +399,58 @@ function parse_event(line: string, line_number: number, previous_tick: number | 
     }
     return new ReplayEvent(tick, players, "move", action, line_number);
 }
-function parse_replay_text(text: string): Record<string, any> {
-    let lines: any;
-    let start: any;
-    let end: any;
-    let raid: any;
-    let boss: any;
-    let players: any;
-    let settings: any;
-    let warnings: any;
-    let move_codes: any;
-    let events: any;
-    let in_events: any;
-    let in_teams: any;
-    let previous_tick: any;
-    let line_number: any;
-    let raw_line: any;
-    let line: any;
-    let event: any;
-    let player_line: any;
-    let player_id: any;
-    let team_text: any;
-    let structured_team: any;
-    let members: any;
-    let member: any;
-    let match: any;
-    let verbose: any;
-    let piece: any;
-    let current_form: any;
-    let value: any;
-    let entries: any;
-    let index: any;
-    let entry: any;
-    let weather_match: any;
-    let weather: any;
-    let prefix: any;
-    let slots: any;
-    let slot: any;
-    let group_text: any;
-    let raw_groups: any;
-    let player: any;
-    let group: any;
-    let code: any;
-    let move_name: any;
-    let teamless: any;
-    let labels: any;
-    let player_ids: any;
-    let unknown: any;
-    let team: any;
-    let known_settings_players: any;
-    let ordered_players: any;
-    let event_dicts: any;
-    let event_dict: any;
+function parse_replay_text(text) {
+    let lines;
+    let start;
+    let end;
+    let raid;
+    let boss;
+    let players;
+    let settings;
+    let warnings;
+    let move_codes;
+    let events;
+    let in_events;
+    let in_teams;
+    let previous_tick;
+    let line_number;
+    let raw_line;
+    let line;
+    let event;
+    let player_line;
+    let player_id;
+    let team_text;
+    let structured_team;
+    let members;
+    let member;
+    let match;
+    let verbose;
+    let piece;
+    let current_form;
+    let value;
+    let entries;
+    let index;
+    let entry;
+    let weather_match;
+    let weather;
+    let prefix;
+    let slots;
+    let slot;
+    let group_text;
+    let raw_groups;
+    let player;
+    let group;
+    let code;
+    let move_name;
+    let teamless;
+    let labels;
+    let player_ids;
+    let unknown;
+    let team;
+    let known_settings_players;
+    let ordered_players;
+    let event_dicts;
+    let event_dict;
     /** Parse replay text into a JSON-ready normalized document. */
     if (py.truth(py.or(!py.truth(py.isinstance(text, "str")), () => !py.truth(py.strip(text))))) {
         throw new ReplayParseError(1, "Replay text is empty.");
@@ -477,7 +514,7 @@ function parse_replay_text(text: string): Record<string, any> {
                 if (py.truth(!py.truth(members))) {
                     throw new ReplayParseError(line_number, `p${py.str(player_id)} has an empty team.`);
                 }
-                structured_team = py.iter(members).map((member: any) => (pokemon_from_verbose_tuple(member, line_number)));
+                structured_team = py.iter(members).map((member) => (pokemon_from_verbose_tuple(member, line_number)));
             }
             else {
                 structured_team = parse_readable_team(team_text);
@@ -488,9 +525,9 @@ function parse_replay_text(text: string): Record<string, any> {
         in_teams = false;
         if (py.truth(py.startswith(line, "Purified Gems: "))) {
             value = py.lower(py.strip(py.removeprefix(line, "Purified Gems: ")));
-            if (py.truth(py.has(new Set<any>(["use", "true", "yes", "on", "1"]), value)))
+            if (py.truth(py.has(new Set(["use", "true", "yes", "on", "1"]), value)))
                 settings[py.key("use_purified_gems")] = true;
-            else if (py.truth(py.has(new Set<any>(["none", "false", "no", "off", "0"]), value)))
+            else if (py.truth(py.has(new Set(["none", "false", "no", "off", "0"]), value)))
                 settings[py.key("use_purified_gems")] = false;
             else
                 throw new ReplayParseError(line_number, 'Purified Gems must be "use" or "none".');
@@ -511,7 +548,7 @@ function parse_replay_text(text: string): Record<string, any> {
                 if (py.truth(py.startswith(line, "Boss: "))) {
                     verbose = re.fullmatch("Boss:\\s*(?P<name>.+?)\\s*\\((?P<form>[^;()]+);\\s*(?P<source>[^)]+)\\);\\s*types:\\s*(?P<types>[^;]+);\\s*base attack/defense:\\s*(?P<attack>\\d+)/(?P<defense>\\d+)", line, re.I);
                     if (py.truth(verbose)) {
-                        py.update(boss, py.dict([["name", py.strip(verbose.group("name"))], ["form_id", py.strip(verbose.group("form"))], ["source", py.strip(verbose.group("source"))], ["types", py.iter(py.split(verbose.group("types"), "/")).map((piece: any) => (py.strip(piece)))], ["base_attack", py.int(verbose.group("attack"))], ["base_defense", py.int(verbose.group("defense"))]]));
+                        py.update(boss, py.dict([["name", py.strip(verbose.group("name"))], ["form_id", py.strip(verbose.group("form"))], ["source", py.strip(verbose.group("source"))], ["types", py.iter(py.split(verbose.group("types"), "/")).map((piece) => (py.strip(piece)))], ["base_attack", py.int(verbose.group("attack"))], ["base_defense", py.int(verbose.group("defense"))]]));
                     }
                     else {
                         py.update(boss, parse_short_boss(py.removeprefix(line, "Boss: "), line_number));
@@ -633,8 +670,8 @@ function parse_replay_text(text: string): Record<string, any> {
                                                                         value = py.strip(py.removeprefix(line, "Catch tanks: "));
                                                                         for (const __item of py.iter(py.items(parse_player_assignments(value, line_number)))) {
                                                                             [player_id, entry] = __item;
-                                                                            slots = (py.truth(((py.equal(entry, "-")))) ? [] : py.iter(py.split(entry, ",")).map((piece: any) => (py.int(py.strip(piece)))));
-                                                                            if (py.truth(py.iter(py.iter(slots).map((slot: any) => (((slot < 1))))).some(py.truth))) {
+                                                                            slots = (py.truth(((py.equal(entry, "-")))) ? [] : py.iter(py.split(entry, ",")).map((piece) => (py.int(py.strip(piece)))));
+                                                                            if (py.truth(py.iter(py.iter(slots).map((slot) => (((slot < 1))))).some(py.truth))) {
                                                                                 throw new ReplayParseError(line_number, "Catch-tank slots start at 1.");
                                                                             }
                                                                             py.setdefault(players, player_id, new ReplayPlayer(player_id)).catch_tank_slots = slots;
@@ -648,7 +685,7 @@ function parse_replay_text(text: string): Record<string, any> {
                                                                                 if (py.truth(!py.truth(py.isinstance(entry, "list")))) {
                                                                                     throw new ReplayParseError(line_number, "Each catch-tank entry must be a list.");
                                                                                 }
-                                                                                py.setdefault(players, index, new ReplayPlayer(index)).catch_tank_slots = py.iter(entry).map((slot: any) => (py.add(py.int(slot), 1)));
+                                                                                py.setdefault(players, index, new ReplayPlayer(index)).catch_tank_slots = py.iter(entry).map((slot) => (py.add(py.int(slot), 1)));
                                                                             }
                                                                         }
                                                                         else {
@@ -662,14 +699,14 @@ function parse_replay_text(text: string): Record<string, any> {
                                                                                 group_text = py.strip(match.group("groups"));
                                                                                 if (py.truth(py.startswith(group_text, "["))) {
                                                                                     raw_groups = parse_literal_list(group_text, line_number, "Party Power groups");
-                                                                                    py.at(settings, "party_power")[py.key("groups")] = py.iter(raw_groups).map((group: any) => (py.iter(group).map((player: any) => (py.add(py.int(player), 1)))));
+                                                                                    py.at(settings, "party_power")[py.key("groups")] = py.iter(raw_groups).map((group) => (py.iter(group).map((player) => (py.add(py.int(player), 1)))));
                                                                                 }
                                                                                 else {
-                                                                                    if (py.truth(((py.has(new Set<any>(["", "-"]), group_text))))) {
+                                                                                    if (py.truth(((py.has(new Set(["", "-"]), group_text))))) {
                                                                                         py.at(settings, "party_power")[py.key("groups")] = [];
                                                                                     }
                                                                                     else {
-                                                                                        py.at(settings, "party_power")[py.key("groups")] = py.iter(py.split(group_text, "|")).map((group: any) => (parse_player_group(group, line_number)));
+                                                                                        py.at(settings, "party_power")[py.key("groups")] = py.iter(py.split(group_text, "|")).map((group) => (parse_player_group(group, line_number)));
                                                                                     }
                                                                                 }
                                                                             }
@@ -738,9 +775,9 @@ function parse_replay_text(text: string): Record<string, any> {
     if (py.truth(!py.truth(players))) {
         throw new ReplayParseError(1, "Missing player teams under \"Teams:\" or \"Player teams:\".");
     }
-    teamless = py.iter(py.values(players)).filter((player: any) => py.truth(!py.truth(player.team_text))).map((player: any) => (player.player_id));
+    teamless = py.iter(py.values(players)).filter((player) => py.truth(!py.truth(player.team_text))).map((player) => (player.player_id));
     if (py.truth(teamless)) {
-        labels = py.join(", ", py.iter(py.sorted(teamless)).map((player: any) => (`p${py.str(player)}`)));
+        labels = py.join(", ", py.iter(py.sorted(teamless)).map((player) => (`p${py.str(player)}`)));
         throw new ReplayParseError(1, `Missing team definition for ${py.str(labels)}.`);
     }
     if (py.truth(!py.truth(events))) {
@@ -749,9 +786,9 @@ function parse_replay_text(text: string): Record<string, any> {
     player_ids = py.set(players);
     for (const __item of py.iter(events)) {
         event = __item;
-        unknown = py.iter(event.players).filter((player: any) => py.truth(((!py.has(player_ids, player))))).map((player: any) => (player));
+        unknown = py.iter(event.players).filter((player) => py.truth(((!py.has(player_ids, player))))).map((player) => (player));
         if (py.truth(unknown)) {
-            labels = py.join(", ", py.iter(unknown).map((player: any) => (`p${py.str(player)}`)));
+            labels = py.join(", ", py.iter(unknown).map((player) => (`p${py.str(player)}`)));
             throw new ReplayParseError(event.source_line, `Event refers to undefined ${py.str(labels)}.`);
         }
         if (py.truth(((py.equal(event.action_kind, "switch"))))) {
@@ -770,16 +807,16 @@ function parse_replay_text(text: string): Record<string, any> {
     known_settings_players = py.set(players);
     for (const __item of py.iter(py.at(py.at(settings, "party_power"), "groups"))) {
         group = __item;
-        unknown = py.iter(group).filter((player: any) => py.truth(((!py.has(known_settings_players, player))))).map((player: any) => (player));
+        unknown = py.iter(group).filter((player) => py.truth(((!py.has(known_settings_players, player))))).map((player) => (player));
         if (py.truth(unknown)) {
-            labels = py.join(", ", py.iter(unknown).map((player: any) => (`p${py.str(player)}`)));
+            labels = py.join(", ", py.iter(unknown).map((player) => (`p${py.str(player)}`)));
             throw new ReplayParseError(1, `Party Power group refers to undefined ${py.str(labels)}.`);
         }
     }
     if (py.truth(py.or(!py.truth(py.get(boss, "fast_move")), () => !py.truth(py.get(boss, "charged_move"))))) {
         py.append(warnings, "Boss fast and charged moves are not specified; they will be required for damage reconstruction.");
     }
-    ordered_players = py.iter(py.sorted(players)).map((player_id: any) => (py.at(players, player_id)));
+    ordered_players = py.iter(py.sorted(players)).map((player_id) => (py.at(players, player_id)));
     event_dicts = [];
     for (const __item of py.iter(events)) {
         event = __item;
@@ -803,6 +840,7 @@ function parse_replay_text(text: string): Record<string, any> {
         }
         py.append(event_dicts, event_dict);
     }
-    return py.dict([["format", "Great Goose replay text v1"], ["time_unit", "seconds"], ["tick_seconds", 0.5], ["raid", raid], ["boss", boss], ["players", py.iter(ordered_players).map((player: any) => (player.to_dict()))], ["settings", settings], ["move_codes", move_codes], ["events", event_dicts], ["warnings", warnings], ["summary", py.dict([["player_count", py.len(ordered_players)], ["event_count", py.len(events)], ["last_tick", py.at(events, -1).tick], ["last_time_label", format_tick(py.at(events, -1).tick)]])]]);
+    return py.dict([["format", "Great Goose replay text v1"], ["time_unit", "seconds"], ["tick_seconds", 0.5], ["raid", raid], ["boss", boss], ["players", py.iter(ordered_players).map((player) => (player.to_dict()))], ["settings", settings], ["move_codes", move_codes], ["events", event_dicts], ["warnings", warnings], ["summary", py.dict([["player_count", py.len(ordered_players)], ["event_count", py.len(events)], ["last_tick", py.at(events, -1).tick], ["last_time_label", format_tick(py.at(events, -1).tick)]])]]);
 }
 export { ReplayParseError, parse_replay_text };
+//# sourceMappingURL=battle_replay.js.map

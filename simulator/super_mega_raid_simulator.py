@@ -24,8 +24,6 @@ TRIALS_PER_MOVESET = 1_000
 RANDOM_SEED = 20260716
 
 # Raid HP, CPM, and timers mirror PokéChespin's current public raid modes.
-# Shadow tiers expose their correct base HP/CPM/timer, but this simulator does
-# not yet model Shadow enrage or Purified Gems.
 RAID_DIFFICULTIES = {
     "Tier 1": {"hp": 600, "cpm": 0.5974, "seconds": 180.0},
     "Tier 3": {"hp": 3_600, "cpm": 0.73, "seconds": 180.0},
@@ -60,12 +58,22 @@ RAID_SECONDS = RAID_RULES["seconds"]
 BOSS_HP = RAID_RULES["hp"]
 BOSS_CPM = RAID_RULES["cpm"]
 SUPER_MEGA_ENRAGE = RAID_RULES.get("super_mega_enrage", False)
-ENRAGE_HP = floor(BOSS_HP * 0.80) if SUPER_MEGA_ENRAGE else -1
+SHADOW_RAID = RAID_RULES.get("shadow", False)
+ENRAGE_HP = floor(BOSS_HP * (0.60 if SHADOW_RAID else 0.80)) \
+    if SHADOW_RAID or SUPER_MEGA_ENRAGE else -1
+SHADOW_UNENRAGE_HP = floor(BOSS_HP * 0.15) if SHADOW_RAID else -1
 
 FAST_MOVE_DELAY = 2.5
 BOSS_CHARGED_CHANCE = 0.30
 BOSS_MAX_ENERGY = 200.0
 ENRAGE_ATTACK_MULTIPLIER = 1.8
+# Change only this value when testing a different Shadow enrage defense bonus.
+SHADOW_ENRAGE_DEFENSE_BONUS = 2.2
+SHADOW_ENRAGE_ATTACK_BONUS = 0.8
+USE_PURIFIED_GEMS = False
+PURIFIED_GEM_COOLDOWN = 5.0
+PURIFIED_GEM_LIMIT_PER_PLAYER = 5
+PURIFIED_GEMS_TO_SUBDUE = 8
 DODGE_SECONDS = 1.0
 DODGED_DAMAGE_FRACTION = 0.25
 SWITCH_SECONDS = 1.0
@@ -207,7 +215,8 @@ def apply_runtime_config_from_environment() -> None:
 
     global TRIALS_PER_MOVESET, RANDOM_SEED
     global RAID_DIFFICULTY, RAID_RULES, RAID_SECONDS, BOSS_HP, BOSS_CPM
-    global SUPER_MEGA_ENRAGE, ENRAGE_HP
+    global SUPER_MEGA_ENRAGE, SHADOW_RAID, ENRAGE_HP, SHADOW_UNENRAGE_HP
+    global USE_PURIFIED_GEMS
     global PLAYER_TEAMS, PARTY_POWER_GROUPS, BOOSTED_PARTY_POWER
     global CATCH_TANK_TEAM_INDICES
     global FRIENDSHIP_MULTIPLIERS, ZACIAN_ADVENTURE_EFFECT
@@ -231,7 +240,11 @@ def apply_runtime_config_from_environment() -> None:
     BOSS_HP = RAID_RULES["hp"]
     BOSS_CPM = RAID_RULES["cpm"]
     SUPER_MEGA_ENRAGE = RAID_RULES.get("super_mega_enrage", False)
-    ENRAGE_HP = floor(BOSS_HP * 0.80) if SUPER_MEGA_ENRAGE else -1
+    SHADOW_RAID = RAID_RULES.get("shadow", False)
+    ENRAGE_HP = floor(BOSS_HP * (0.60 if SHADOW_RAID else 0.80)) \
+        if SHADOW_RAID or SUPER_MEGA_ENRAGE else -1
+    SHADOW_UNENRAGE_HP = floor(BOSS_HP * 0.15) if SHADOW_RAID else -1
+    USE_PURIFIED_GEMS = bool(config.get("use_purified_gems", USE_PURIFIED_GEMS))
 
     PLAYER_TEAMS = config.get("player_teams", PLAYER_TEAMS)
     CATCH_TANK_TEAM_INDICES = config.get(
@@ -903,13 +916,16 @@ def incoming_damage_for_pokemon(
     """Calculate boss damage without requiring mutable Simulation state."""
     species = pokemon.species
     modifier = boss_type_modifier(move, species) * weather_move_multiplier(move.move_type)
-    if enraged:
-        modifier *= ENRAGE_ATTACK_MULTIPLIER
+    attack = BOSS_ATTACK * BOSS_CPM
+    if enraged and SHADOW_RAID:
+        attack += floor(attack * SHADOW_ENRAGE_ATTACK_BONUS)
+    elif enraged:
+        attack *= ENRAGE_ATTACK_MULTIPLIER
     if pokemon.is_shadow:
         modifier *= 1.2
     damage = pokemon_go_damage(
         move.power,
-        BOSS_ATTACK * BOSS_CPM,
+        attack,
         pokemon.effective_defense * defense_multiplier,
         modifier,
     )
@@ -921,7 +937,7 @@ def precompute_dodge_profiles(
 ) -> dict[tuple[int, int, bool], DodgeProfile]:
     """Build the shared lookup table once for an aggregate moveset run."""
     profiles: dict[tuple[int, int, bool], DodgeProfile] = {}
-    enrage_states = (False, True) if SUPER_MEGA_ENRAGE else (False,)
+    enrage_states = (False, True) if SUPER_MEGA_ENRAGE or SHADOW_RAID else (False,)
     for player_id, team in enumerate(PLAYER_TEAMS):
         for pokemon_index, setup in enumerate(team):
             (
@@ -1015,6 +1031,8 @@ class Player:
     saved_energy_return_after: dict[int, float] = field(default_factory=dict)
     committed_saved_energy_index: int | None = None
     energy_save_guard_until: float = 0.0
+    purified_gems_used: int = 0
+    last_purified_gem_time: float | None = None
 
     @property
     def pokemon(self) -> BattlePokemon:
@@ -1055,6 +1073,7 @@ class TrialResult:
     tactical_switches: int
     rejoins: int
     catch_tanks_used: int
+    purified_gems_used: int = 0
 
 
 @dataclass
@@ -1066,6 +1085,8 @@ class Simulation:
     boss_hp: int = BOSS_HP
     boss_energy: float = 0.0
     enraged: bool = False
+    shadow_subdued: bool = False
+    purified_gems_used: int = 0
     players: list[Player] = field(default_factory=list)
     events: list[tuple] = field(default_factory=list)
     sequence: int = 0
@@ -1162,7 +1183,11 @@ class Simulation:
         player = self.players[player_id]
         pokemon = player.pokemon
         species = player.species
-        defense = BOSS_DEFENSE * BOSS_CPM * (4 if self.enraged else 1)
+        defense = BOSS_DEFENSE * BOSS_CPM
+        if self.enraged and SHADOW_RAID:
+            defense += floor(defense * SHADOW_ENRAGE_DEFENSE_BONUS)
+        elif self.enraged:
+            defense *= 4
         modifier = type_effectiveness(move.move_type, BOSS_TYPES)
         if move.move_type in species.types:
             modifier *= STAB
@@ -1777,13 +1802,83 @@ class Simulation:
             f"for {damage}; boss HP {max(0, self.boss_hp)}",
         )
         self.boss_energy = min(BOSS_MAX_ENERGY, self.boss_energy + floor(damage / 2))
-        if SUPER_MEGA_ENRAGE and not self.enraged and self.boss_hp <= ENRAGE_HP:
-            self.enraged = True
-            self.log(self.current_time, "BOSS ENRAGED (defense x4, attack x1.8)")
+        self.update_enrage_state()
         if player.catch_tank_active and move is player.pokemon.charged_move:
             self.finish_catch_tank(
                 self.current_time, player_id, "used its charged move"
             )
+
+    def update_enrage_state(self) -> None:
+        if SHADOW_RAID:
+            if self.enraged and self.boss_hp <= SHADOW_UNENRAGE_HP:
+                self.subdue_shadow("HP reached 15%")
+            elif (
+                not self.enraged
+                and not self.shadow_subdued
+                and SHADOW_UNENRAGE_HP < self.boss_hp <= ENRAGE_HP
+            ):
+                self.enraged = True
+                self.log(
+                    self.current_time,
+                    "BOSS ENRAGED (Shadow attack/defense bonuses active)",
+                )
+                if USE_PURIFIED_GEMS:
+                    for player_id in range(len(self.players)):
+                        self.push(self.current_time, "gem_use", (player_id,))
+            elif not self.enraged and self.boss_hp <= SHADOW_UNENRAGE_HP:
+                self.shadow_subdued = True
+        elif SUPER_MEGA_ENRAGE and not self.enraged and self.boss_hp <= ENRAGE_HP:
+            self.enraged = True
+            self.log(self.current_time, "BOSS ENRAGED (defense x4, attack x1.8)")
+
+    def subdue_shadow(self, reason: str) -> None:
+        if not SHADOW_RAID or not self.enraged:
+            return
+        self.enraged = False
+        self.shadow_subdued = True
+        self.log(self.current_time, f"BOSS SUBDUED ({reason})")
+
+    def use_purified_gem(
+        self, time: float, player_id: int, *, strict: bool = False,
+    ) -> bool:
+        def reject(message: str) -> bool:
+            if strict:
+                raise ValueError(message)
+            return False
+
+        if not SHADOW_RAID:
+            return reject("Purified Gems can only be used in Shadow raids.")
+        if not self.enraged:
+            return reject("Purified Gems can only be used while the boss is enraged.")
+        if not isinstance(player_id, int) or isinstance(player_id, bool) or not 0 <= player_id < len(self.players):
+            return reject("Purified Gem player does not exist in this raid.")
+        player = self.players[player_id]
+        if not player.on_field:
+            if not strict:
+                self.push(time + 0.5, "gem_use", (player_id,))
+            return reject("A player in the lobby cannot use a Purified Gem.")
+        if player.purified_gems_used >= PURIFIED_GEM_LIMIT_PER_PLAYER:
+            return reject("A player can use at most 5 Purified Gems per raid.")
+        if (
+            player.last_purified_gem_time is not None
+            and time < player.last_purified_gem_time + PURIFIED_GEM_COOLDOWN - 1e-9
+        ):
+            return reject("Purified Gems have a 5-second cooldown per player.")
+
+        player.purified_gems_used += 1
+        player.last_purified_gem_time = time
+        self.purified_gems_used += 1
+        self.record_replay_action(time, "player", player_id, "gem")
+        self.log(
+            time,
+            f"P{player_id + 1} uses Purified Gem "
+            f"{player.purified_gems_used}/5; raid total {self.purified_gems_used}/8",
+        )
+        if self.purified_gems_used >= PURIFIED_GEMS_TO_SUBDUE:
+            self.subdue_shadow("8 Purified Gems used")
+        elif player.purified_gems_used < PURIFIED_GEM_LIMIT_PER_PLAYER:
+            self.push(time + PURIFIED_GEM_COOLDOWN, "gem_use", (player_id,))
+        return True
 
     @staticmethod
     def charge_party_power(player: Player) -> None:
@@ -1930,6 +2025,8 @@ class Simulation:
                 self.start_catch_tank(time, *data)
             elif kind == "rejoin":
                 self.rejoin(time, *data)
+            elif kind == "gem_use":
+                self.use_purified_gem(time, *data)
             self.capture_replay_state()
 
         return TrialResult(
@@ -1941,6 +2038,7 @@ class Simulation:
             sum(p.tactical_switches for p in self.players),
             sum(p.rejoins for p in self.players),
             sum(p.catch_tanks_used for p in self.players),
+            self.purified_gems_used,
         )
 
 
@@ -1952,7 +2050,7 @@ def replay_tick_text(tick: int) -> str:
 def build_replay_move_codes(move_names: list[str]) -> dict[str, str]:
     """Create compact, deterministic aliases and disambiguate collisions."""
     codes_by_name: dict[str, str] = {}
-    used_codes = {"d", "q", "r"}
+    used_codes = {"d", "g", "q", "r"}
     for move_name in move_names:
         if move_name in codes_by_name:
             continue
@@ -2054,6 +2152,7 @@ def render_battle_replay(
         f"Weather: {WEATHER or 'none'}",
         f"Dodge: {DODGE_STRATEGY}",
         f"Swap: {PLAYER_STRATEGY}",
+        f"Purified Gems: {'use' if USE_PURIFIED_GEMS else 'none'}",
         "Catch tanks: " + "; ".join(
             f"p{player_id}=" + (
                 ",".join(str(index + 1) for index in indexes) if indexes else "-"
@@ -2109,6 +2208,8 @@ def render_battle_replay(
                 action_code = "r"
             elif kind == "dodge":
                 action_code = "d"
+            elif kind == "gem":
+                action_code = "g"
             else:
                 raise ValueError(f"Unknown replay action kind {kind!r}")
         lines.append(f"{time_code}{actor_code}:{action_code}")
@@ -2162,6 +2263,7 @@ def aggregate_summary() -> dict[str, object]:
                 "average_retreats": mean(r.tactical_switches for r in results),
                 "average_rejoins": mean(r.rejoins for r in results),
                 "average_catch_tanks": mean(r.catch_tanks_used for r in results),
+                "average_purified_gems": mean(r.purified_gems_used for r in results),
                 "hidden_power_types": type_counts,
                 "seed": str(row_seed),
             })
@@ -2489,8 +2591,8 @@ def main() -> None:
     )
     if RAID_RULES.get("shadow"):
         print(
-            "Warning: Shadow-tier base stats are active, but Shadow enrage and "
-            "Purified Gems are not modeled."
+            "Shadow enrage: 60% to 15% HP; "
+            f"Purified Gems: {'automatic' if USE_PURIFIED_GEMS else 'deliberately unused'}"
         )
     profile_source = "manual overrides" if BOSS_MANUAL_PROFILE else "calculator data"
     print(

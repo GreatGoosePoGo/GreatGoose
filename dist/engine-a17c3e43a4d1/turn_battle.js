@@ -1,45 +1,9 @@
 /** Manually controlled half-second battles backed by the canonical raid engine. */
 import { heappop, heappush } from './compatibility.js';
 import { PythonRandom } from './random.js';
-import type { RaidEngine } from './super_mega_raid_simulator.js';
-import type { ManualAction } from './types.js';
-
-type EngineMove = InstanceType<RaidEngine['Move']>;
-type EnginePokemon = InstanceType<RaidEngine['BattlePokemon']>;
-type ManualEvent = [time: number, priority: number, sequence: number, kind: string, data: any[]];
-type PendingBoss = [hitTime: number, move: EngineMove, dodgers: Set<number>];
-
-export interface ManualAvailability {
-    fast: boolean;
-    charged: boolean;
-    dodge: boolean;
-    quit: boolean;
-    rejoin: boolean;
-    switch_slots: number[];
-}
-
-export interface ManualCommand {
-    tick: number;
-    action?: ManualAction;
-    slot?: number | null;
-}
-
-export interface ManualRebuildRequest {
-    tick: number;
-    commands: ManualCommand[];
-    stopped?: boolean;
-}
-
-export function createTurnBattle(engine: RaidEngine) {
+export function createTurnBattle(engine) {
     class ManualSimulation extends engine.Simulation {
-        declare events: ManualEvent[];
-        declare tick: number;
-        declare pending_boss: PendingBoss | null;
-        declare lobby: boolean;
-        declare rejoin_at: number;
-        declare stopped: boolean;
-
-        override __post_init__(): void {
+        __post_init__() {
             super.__post_init__();
             this.detailed = true;
             this.tick = 0;
@@ -50,27 +14,24 @@ export function createTurnBattle(engine: RaidEngine) {
             this.push(0, 'boss_decision');
             this.resolve_until(0);
         }
-
         /** Manual battles never enqueue automatic player actions. */
-        override schedule_player(playerId: number, time: number): void {
+        schedule_player(playerId, time) {
             this.players[playerId].next_action_time = time;
         }
-
-        override push(time: number, kind: string, data: any[] = []): void {
+        push(time, kind, data = []) {
             this.sequence += 1;
             if (kind === 'boss_hit') {
-                const [move] = data as [EngineMove, Set<number>];
-                const dodgers = new Set<number>();
+                const [move] = data;
+                const dodgers = new Set();
                 data = [move, dodgers];
                 this.pending_boss = [time, move, dodgers];
             }
             const priority = kind.endsWith('_hit') ? 0 : 1;
             heappush(this.events, [time, priority, this.sequence, kind, data]);
         }
-
-        resolve_until(target: number): void {
+        resolve_until(target) {
             while (this.events.length && this.events[0][0] <= target && this.boss_hp > 0) {
-                const [time, , , kind, data] = heappop(this.events) as ManualEvent;
+                const [time, , , kind, data] = heappop(this.events);
                 this.current_time = time;
                 if (kind === 'boss_decision') {
                     // No new moves may begin after the raid timer expires.
@@ -92,22 +53,20 @@ export function createTurnBattle(engine: RaidEngine) {
                 this.current_time = target;
             this.tick = Math.round(this.current_time * 2);
         }
-
-        enter_lobby(): void {
+        enter_lobby() {
             const player = this.players[0];
             player.on_field = false;
             player.generation += 1;
             player.action_end = this.current_time;
             player.action_is_charged = false;
             this.lobby = true;
-            this.rejoin_at = this.current_time + this.rng.choice<number>(engine.REJOIN_TIMES);
+            this.rejoin_at = this.current_time + this.rng.choice(engine.REJOIN_TIMES);
             this.record_replay_action(this.current_time, 'player', 0, 'quit');
             this.log(this.current_time, `P1 enters lobby; ready to rejoin at ${this.rejoin_at.toFixed(1)}s`);
             this.pending_boss?.[2].delete(0);
         }
-
         /** Faints pause the player's actions, not the boss or raid clock. */
-        override switch(time: number, playerId: number, _tactical: boolean): void {
+        switch(time, playerId, _tactical) {
             const player = this.players[playerId];
             player.on_field = false;
             player.generation += 1;
@@ -117,12 +76,10 @@ export function createTurnBattle(engine: RaidEngine) {
             if (!player.team.some(member => member.hp > 0))
                 this.enter_lobby();
         }
-
-        get finished(): boolean {
+        get finished() {
             return this.stopped || this.boss_hp <= 0 || this.current_time >= engine.RAID_SECONDS;
         }
-
-        availability(): ManualAvailability {
+        availability() {
             const player = this.players[0];
             const alive = player.on_field && player.hp > 0;
             const animationBusy = alive && this.current_time < player.action_end;
@@ -141,22 +98,20 @@ export function createTurnBattle(engine: RaidEngine) {
                 switch_slots: player.team
                     .map((member, index) => ({ member, index }))
                     .filter(({ member, index }) => member.hp > 0
-                        && (index !== player.pokemon_index || !player.on_field)
-                        && !this.lobby
-                        && !animationBusy)
+                    && (index !== player.pokemon_index || !player.on_field)
+                    && !this.lobby
+                    && !animationBusy)
                     .map(({ index }) => index + 1),
             };
         }
-
-        act(action: ManualAction, slot: number | null = null): void {
+        act(action, slot = null) {
             if (this.finished)
                 throw new Error('This battle has ended. Start a new battle to play again.');
             if (action === 'wait')
                 return;
-
             const allowed = this.availability();
             if (action === 'switch') {
-                if (!Number.isInteger(slot) || !allowed.switch_slots.includes(slot!))
+                if (!Number.isInteger(slot) || !allowed.switch_slots.includes(slot))
                     throw new Error('That slot cannot switch in now.');
             }
             else if (!['fast', 'charged', 'dodge', 'quit', 'rejoin'].includes(action)) {
@@ -165,7 +120,6 @@ export function createTurnBattle(engine: RaidEngine) {
             else if (!allowed[action]) {
                 throw new Error(`Cannot ${action} now. Advance a turn or choose an available action.`);
             }
-
             const player = this.players[0];
             const time = this.current_time;
             if (action === 'fast' || action === 'charged') {
@@ -181,14 +135,14 @@ export function createTurnBattle(engine: RaidEngine) {
                 this.push(player.action_end, 'player_hit', [0, player.generation, move]);
             }
             else if (action === 'dodge') {
-                this.pending_boss![2].add(0);
+                this.pending_boss[2].add(0);
                 player.action_end = Math.max(time, player.action_end) + engine.DODGE_SECONDS;
                 this.record_replay_action(time, 'player', 0, 'dodge');
-                this.log(time, `P1 dodges incoming ${this.pending_boss![1].name}`);
+                this.log(time, `P1 dodges incoming ${this.pending_boss[1].name}`);
             }
             else if (action === 'switch') {
                 player.generation += 1; // Cancel the departing Pokémon's unresolved hit.
-                player.pokemon_index = slot! - 1;
+                player.pokemon_index = slot - 1;
                 player.on_field = true;
                 player.switches += 1;
                 player.action_start = time;
@@ -207,38 +161,22 @@ export function createTurnBattle(engine: RaidEngine) {
                 super.rejoin(time, 0);
             }
         }
-
-        advance(action: ManualAction = 'wait', slot: number | null = null, snapshot = true): Record<string, any> | null {
+        advance(action = 'wait', slot = null, snapshot = true) {
             this.act(action, slot);
             this.resolve_until(Math.min(engine.RAID_SECONDS, (this.tick + 1) / 2));
             return snapshot ? this.snapshot() : null;
         }
-
-        recording(): string {
+        recording() {
             const player = this.players[0];
-            const result = new engine.TrialResult(
-                this.boss_hp <= 0,
-                this.current_time,
-                Math.max(0, this.boss_hp),
-                player.switches,
-                player.faints,
-                0,
-                player.rejoins,
-                0,
-                this.purified_gems_used,
-            );
+            const result = new engine.TrialResult(this.boss_hp <= 0, this.current_time, Math.max(0, this.boss_hp), player.switches, player.faints, 0, player.rejoins, 0, this.purified_gems_used);
             let text = engine.render_battle_replay(this, result, engine.RANDOM_SEED);
             const status = this.stopped ? 'stopped' : this.finished ? 'finished' : 'in_progress';
-            text = text.replace(
-                '\nEvents:',
-                `\nRecording: manual; through=${this.current_time}; status=${status}\n\nEvents:`,
-            );
+            text = text.replace('\nEvents:', `\nRecording: manual; through=${this.current_time}; status=${status}\n\nEvents:`);
             return `${text}\n\n# Full event log (comments; compact actions above drive playback)\n${this.event_log.map(line => `# ${line}`).join('\n')}\n`;
         }
-
-        snapshot(): Record<string, any> {
+        snapshot() {
             const player = this.players[0];
-            const member = (pokemon: EnginePokemon, index: number) => ({
+            const member = (pokemon, index) => ({
                 slot: index + 1,
                 name: `${pokemon.is_shadow && !pokemon.species.name.startsWith('Shadow ') ? 'Shadow ' : ''}${pokemon.species.name}`,
                 types: [...pokemon.species.types],
@@ -303,14 +241,9 @@ export function createTurnBattle(engine: RaidEngine) {
             };
         }
     }
-
-    function rebuild(request: ManualRebuildRequest): Record<string, any> {
+    function rebuild(request) {
         engine.validate_settings();
-        const sim = new ManualSimulation(
-            Object.values(engine.BOSS_FAST_MOVES)[0],
-            Object.values(engine.BOSS_CHARGED_MOVES)[0],
-            new PythonRandom(engine.RANDOM_SEED),
-        );
+        const sim = new ManualSimulation(Object.values(engine.BOSS_FAST_MOVES)[0], Object.values(engine.BOSS_CHARGED_MOVES)[0], new PythonRandom(engine.RANDOM_SEED));
         const commands = new Map(request.commands.map(command => [command.tick, command]));
         while (sim.tick < request.tick && !sim.finished) {
             const command = commands.get(sim.tick);
@@ -319,6 +252,6 @@ export function createTurnBattle(engine: RaidEngine) {
         sim.stopped = request.stopped ?? false;
         return sim.snapshot();
     }
-
     return { ManualSimulation, rebuild };
 }
+//# sourceMappingURL=turn_battle.js.map

@@ -23,6 +23,12 @@ if (files.some(path => extname(path) === '.py'))
   throw new Error('The static website unexpectedly contains Python files.');
 
 const index = await readFile(join(root, 'index.html'), 'utf8');
+for (const id of ['players', 'add-player', 'clone-player']) {
+  if (!index.includes(`id="${id}"`))
+    throw new Error(`Multi-player calculator control is missing: ${id}`);
+}
+if (index.includes('pokemon-code-dialog'))
+  throw new Error('The obsolete Pokémon import/export dialog is still present.');
 const localAssets = [...index.matchAll(/\b(?:src|href)="([^"#]+)"/g)]
   .map(match => match[1])
   .filter(path => !/^(?:[a-z]+:|\/\/)/i.test(path));

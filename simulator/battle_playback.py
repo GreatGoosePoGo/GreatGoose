@@ -64,6 +64,7 @@ def replay_config(document):
         'catch_tank_team_indices': [[slot-1 for slot in p['catch_tank_slots']] for p in players],
         'party_power_groups': [[mapping[p] for p in group] for group in settings['party_power']['groups']],
         'boosted_party_power': settings['party_power']['mode'] == 'boosted',
+        'use_purified_gems': settings.get('use_purified_gems', False),
         'battle_log_mode': 'none',
     }
 
@@ -107,7 +108,9 @@ def reconstruct(document):
         engine.BOSS_DEFENSE = boss['base_defense'] + 15
         engine.BOSS_TYPES = tuple(t.title() for t in boss['types'])
         engine.BOSS_NAME = boss.get('name') or engine.BOSS_NAME
-    engine.ENRAGE_HP = int(engine.BOSS_HP * 0.8) if engine.SUPER_MEGA_ENRAGE else -1
+    engine.ENRAGE_HP = int(engine.BOSS_HP * (0.6 if engine.SHADOW_RAID else 0.8)) \
+        if engine.SHADOW_RAID or engine.SUPER_MEGA_ENRAGE else -1
+    engine.SHADOW_UNENRAGE_HP = int(engine.BOSS_HP * 0.15) if engine.SHADOW_RAID else -1
     engine.validate_settings()
     if document['summary']['last_tick'] > round(engine.RAID_SECONDS*2):
         raise ValueError('A recorded action occurs after the raid timer expires.')
@@ -131,7 +134,8 @@ def reconstruct(document):
             target = 'boss' if actor_kind == 'boss' else f'p{player_ids[actor_id]}'
             label = {'fast': fast.name, 'charged': charged.name, 'move': str(value),
                      'switch': f'Switch to slot {value}', 'dodge': 'Dodge',
-                     'quit': 'In lobby', 'rejoin': 'Rejoined'}.get(action_kind, action_kind)
+                     'gem': 'Purified Gem', 'quit': 'In lobby',
+                     'rejoin': 'Rejoined'}.get(action_kind, action_kind)
             self.notice(target, label)
 
         def effectiveness_notice(self, move, types, target, slot=None):
@@ -165,6 +169,7 @@ def reconstruct(document):
             self.frames[tick] = {
                 'tick': tick, 'boss_hp': max(0, self.boss_hp),
                 'boss_energy': self.boss_energy, 'enraged': self.enraged,
+                'purified_gems_used': self.purified_gems_used,
                 'players': [{
                     'id': player_ids[i], 'slot': p.pokemon_index+1,
                     'on_field': p.on_field, 'hp': max(0, p.hp), 'energy': p.energy,
@@ -172,6 +177,7 @@ def reconstruct(document):
                     'party_power_progress': p.party_power_progress,
                     'party_power_threshold': p.party_power_threshold,
                     'faints': p.faints, 'rejoins': p.rejoins,
+                    'purified_gems_used': p.purified_gems_used,
                     'team': [{'hp': max(0, m.hp), 'energy': m.energy} for m in p.team],
                 } for i, p in enumerate(self.players)],
             }
@@ -334,6 +340,11 @@ def reconstruct(document):
                                 fail(f'p{external_id} cannot dodge during its charged-move animation.')
                             dodgers.add(i)
                             player.action_end = max(tick/2, player.action_end)+engine.DODGE_SECONDS
+                        elif action == 'gem':
+                            try:
+                                sim.use_purified_gem(tick/2, i, strict=True)
+                            except ValueError as error:
+                                fail(str(error))
                         elif action == 'move':
                             if not player.on_field or player.hp <= 0:
                                 fail(f'p{external_id} cannot attack from the lobby or with a fainted Pokémon.')
@@ -353,8 +364,9 @@ def reconstruct(document):
                             player.action_end = tick/2+move.duration
                             player.action_is_charged = move is pokemon.charged_move
                             push(tick+round(move.duration*2), 'player_hit', (i, player.generation, move))
-                        sim.record_replay_action(tick/2, 'player', i, action,
-                                                event.get('move_name') if action == 'move' else event.get('slot'))
+                        if action != 'gem':
+                            sim.record_replay_action(tick/2, 'player', i, action,
+                                                    event.get('move_name') if action == 'move' else event.get('slot'))
             sim.capture_replay_state()
         source = 'recorded_timeline'
         if recording and sim.boss_hp > 0:

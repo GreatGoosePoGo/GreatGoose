@@ -1,8 +1,7 @@
 /** Application boundary used by the browser worker and optional Node callers. */
 import { createRaidEngine } from './super_mega_raid_simulator.js';
 import { parseSeed } from './compatibility.js';
-import type { CalculatorEntry, RaidConfig, SimulationRequest, TeamMember } from './types.js';
-export function publicCatalog(catalog: CalculatorEntry[]) {
+export function publicCatalog(catalog) {
     return catalog.map(entry => {
         const fast = [...entry.fast_moves, ...(entry.exclusive_fast_moves || [])];
         const charged = [...entry.charged_moves, ...(entry.exclusive_charged_moves || []), ...(entry.mega_charged_moves || [])];
@@ -17,7 +16,7 @@ export function publicCatalog(catalog: CalculatorEntry[]) {
         };
     });
 }
-function finite(value: unknown, label: string): number {
+function finite(value, label) {
     if (value === null || value === '' || typeof value === 'boolean' || !['string', 'number'].includes(typeof value))
         throw new Error(`${label} must be a number.`);
     const n = Number(value);
@@ -25,13 +24,13 @@ function finite(value: unknown, label: string): number {
         throw new Error(`${label} must be a finite number.`);
     return n;
 }
-function integer(value: unknown, lo: number, hi: number, label: string): number {
+function integer(value, lo, hi, label) {
     const n = finite(value, label);
     if (!Number.isInteger(n) || n < lo || n > hi)
         throw new Error(`${label} must be an integer from ${lo} to ${hi}.`);
     return n;
 }
-function randomBytes(length: number): Uint8Array {
+function randomBytes(length) {
     const bytes = new Uint8Array(length);
     const browserCrypto = globalThis.crypto;
     if (browserCrypto && typeof browserCrypto.getRandomValues === 'function')
@@ -40,7 +39,7 @@ function randomBytes(length: number): Uint8Array {
         bytes[i] = Math.floor(Math.random() * 256);
     return bytes;
 }
-export function freshId(): string {
+export function freshId() {
     const browserCrypto = globalThis.crypto;
     if (browserCrypto && typeof browserCrypto.randomUUID === 'function')
         return browserCrypto.randomUUID();
@@ -50,14 +49,14 @@ export function freshId(): string {
     const hex = Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
     return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
-export function freshSeed(): string {
+export function freshSeed() {
     const bytes = randomBytes(8);
     let value = 0n;
     for (const byte of bytes)
         value = (value << 8n) | BigInt(byte);
     return (value & 0x7fffffffffffffffn).toString();
 }
-export function battle_config(request: SimulationRequest, catalog: CalculatorEntry[]): RaidConfig {
+export function battle_config(request, catalog) {
     if (!request || typeof request !== 'object' || Array.isArray(request))
         throw new Error('Request must be an object.');
     const publicById = new Map(publicCatalog(catalog).map(p => [p.form_id, p]));
@@ -79,13 +78,13 @@ export function battle_config(request: SimulationRequest, catalog: CalculatorEnt
     const requestedPlayers = request.players ?? (request.team ? [{ team: request.team }] : []);
     if (!Array.isArray(requestedPlayers) || requestedPlayers.length < 1 || requestedPlayers.length > 20)
         throw new Error('Choose between 1 and 20 players.');
-    const tankTeams: number[][] = [];
-    const teams: TeamMember[][] = requestedPlayers.map((requestedPlayer, playerIndex) => {
+    const tankTeams = [];
+    const teams = requestedPlayers.map((requestedPlayer, playerIndex) => {
         if (!requestedPlayer || typeof requestedPlayer !== 'object' || !Array.isArray(requestedPlayer.team)
             || requestedPlayer.team.length < 1 || requestedPlayer.team.length > 6)
             throw new Error(`Player ${playerIndex + 1} must have between 1 and 6 Pokémon.`);
-        const tanks: number[] = [];
-        const team: TeamMember[] = requestedPlayer.team.map((p, slotIndex) => {
+        const tanks = [];
+        const team = requestedPlayer.team.map((p, slotIndex) => {
             if (!p || typeof p !== 'object')
                 throw new Error(`Player ${playerIndex + 1}, slot ${slotIndex + 1} is invalid.`);
             const entry = publicById.get(p.name);
@@ -121,7 +120,7 @@ export function battle_config(request: SimulationRequest, catalog: CalculatorEnt
         catch_tank_team_indices: tankTeams, battle_log_mode: request.battle_log_mode ?? 'moves',
     };
 }
-export function run_simulations(request: SimulationRequest, catalog: CalculatorEntry[]) {
+export function run_simulations(request, catalog) {
     const config = battle_config(request, catalog);
     const engine = createRaidEngine(config, catalog);
     engine.validate_settings();
@@ -138,3 +137,4 @@ export function run_simulations(request: SimulationRequest, catalog: CalculatorE
         battle_log_mode: config.battle_log_mode, log: sim.event_log, replay_text: engine.render_battle_replay(sim, result, engine.RANDOM_SEED),
     };
 }
+//# sourceMappingURL=website_api.js.map

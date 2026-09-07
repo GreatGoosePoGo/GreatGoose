@@ -9,22 +9,34 @@
   },
   "post_port_reference_changes": {
     "simulator/super_mega_raid_simulator.py": {
-      "sha256": "24757a8bd546aeea76504711c51c87ac335b9dabba60b13b317c12a85b3d800e",
-      "change": "Boss energy from damage is floored to whole energy, matching the TypeScript product engine and existing player-energy rule."
+      "sha256": "3ea9ed392d1caaa066c962edddecf8b662b4940067f0cb3d0bc7be3150b9c795",
+      "change": "Boss energy is floored to whole energy; Shadow enrage and optional automatic Purified Gem use mirror the TypeScript product engine."
+    },
+    "simulator/battle_replay.py": {
+      "sha256": "1b96e9b1f11b01f7d5ea8bef961f850e410a329849dbab2059d9b5e9039ef73d",
+      "change": "Replay preambles and event grammar accept Purified Gem configuration and the g action."
+    },
+    "simulator/battle_playback.py": {
+      "sha256": "86679c34130fec96b479db448a95fc23b1360944b0826b78875af7cf41f90658",
+      "change": "Playback reconstructs and displays validated Purified Gem events and counters."
+    },
+    "simulator/turn_battle.py": {
+      "sha256": "6a0bb9c24b72403553ad3c25f9040fd22624ffa10e4a70c6f0344bef478218ec",
+      "change": "Manual battle state resolves scheduled gems and exposes gem/subdual state."
     }
   },
   "typescript_sha256": {
-    "src/battle_playback.ts": "f143564246215453da4d11c321cb994a82db538ab327869e5fcaff603b5ddedd",
-    "src/battle_replay.ts": "795f12519bb1df380c41ccda015ac9cedb6beec083de123a34b60037e9d055f5",
+    "src/battle_playback.ts": "e8cc14da1290fb5b913dc8ffc9d1b2a525b1bb31fd3dd6a25e8642368893e7b0",
+    "src/battle_replay.ts": "d4b0738bc9d5a2e9cb9139824a2a3353dc40795417443c785eaab2ba06c9fc5d",
     "src/compatibility.ts": "8157b26d76adc59893ac7fa75a0cd44f770a6217ea5a2e6ba111b6ba9541417a",
     "src/random.ts": "e4afa9a9b9051c81163d16b7b5f3db6da46bb5b99a407d8c003f41871191833b",
     "src/recording_store.ts": "7f7056993911eb94d26f4d5a8d6773f4b6d64fa41231ae456f54a7f0ad75285f",
-    "src/super_mega_raid_simulator.ts": "4daf29a818a81c6cc2745a9be6a84a029a3453bb0a21eacb30cf8cec526f21c6",
+    "src/super_mega_raid_simulator.ts": "762badab038a34b71f78fe868ae876ff37a52225ba03f392a6ce62548612ba47",
     "src/text.ts": "f3a1744b52d0159432943642467528836f51f29c53c460b554e8390b115c6f94",
-    "src/turn_battle.ts": "d77cec745a3cc539a92884bebd9806efdf770d6dfd2ec97402f692b69b139c33",
-    "src/turn_service.ts": "3005f8b2dc16d9fd30878a3de3f7cf9d33e0ffd268f39d2cc1a7f8d22deccf3c",
-    "src/types.ts": "eb9458a2d8cb9e9dfeca2b8cffaf0b0c5236896e37b6d26f14016c0bea8ef9f5",
-    "src/website_api.ts": "02f0815217c98b8b1bf1aaffb26b57756fc71d96ad68def6d02cc689a0f757ac",
+    "src/turn_battle.ts": "42312712296cd9a01aa2c9c48be22a78b43802aedfcf035f6d41a584abbd4229",
+    "src/turn_service.ts": "502b4a3d7e43577e7fad4b9bdcb983e2f29b98c3114899f72d07f4a3b9f62b96",
+    "src/types.ts": "2c6d52fb70da6aac51a72dcb697d2998696ec51a3a54c20690b3926e81493bbe",
+    "src/website_api.ts": "dbc3b1cef636eb77186513a30874a040d0de7aa703ad6474ff3bd786a2446e1f",
     "src/worker.ts": "4fe9594604b881a99f36d64de522e1b6eacdd474869fac445c25a1a524311647"
   }
 }

@@ -93,8 +93,18 @@ built browser module use the corresponding `engine/` path. Direct Node consumers
 can import from `build/` and load the same JSON with Node's file API.
 
 The engine supports multiple players and Party Power through `player_teams` and
-`party_power_groups`. The current setup form still configures one player, as in
-the supplied website. Replay files can describe multiple players.
+`party_power_groups`. The calculator form can configure up to 20 players, each
+with a separate team of up to six Pokémon; **Clone Player 1** copies its complete
+team into a new player section. Replay files can also describe multiple players.
+The turn-by-turn mode intentionally uses Player 1 only. Shadow raids
+enrage at 60% HP and return to normal at 15% HP. Set `use_purified_gems: true`
+to use one gem per on-field trainer immediately at enrage and then every five
+seconds, up to five per trainer; eight raid-wide gems subdue the boss. In replay
+text, `p1:g` records player 1 using a Purified Gem.
+
+Each calculator Pokémon row has an always-visible code field. Paste a code and
+select **Import** to replace that slot, or select **Export to clipboard** to put
+the current slot's generated code in the field and copy it immediately.
 
 ## Seeds and recordings
 
@@ -142,8 +152,8 @@ notes are preserved in `README_PYTHON_REFERENCE.md`; use the commands above for
 the new website.
 
 This migration preserves the supplied simulator's rules and assumptions, with
-post-port correctness fixes documented in `PORT_NOTES.md`. It does not update game
-data or add mechanics that were absent in the original, including Shadow enrage
-and Purified Gems. Keep future custom rules separate when they start to diverge
-from the vanilla simulator. A later multiplayer service can reuse the portable
-TypeScript engine; no multiplayer or account service is added here.
+post-port correctness fixes and the subsequently added Shadow enrage/Purified
+Gem mechanic documented in `PORT_NOTES.md`. Keep future custom rules separate
+when they start to diverge from the vanilla simulator. Calculator multiplayer
+runs entirely in the visitor's browser; no live multiplayer or account service
+is added here.

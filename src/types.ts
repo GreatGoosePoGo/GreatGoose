@@ -39,6 +39,7 @@ export interface RaidConfig {
     dodge_strategy?: DodgeStrategy;
     player_strategy?: PlayerStrategy;
     battle_log_mode?: 'none' | 'moves' | 'full';
+    use_purified_gems?: boolean;
     /** Explicit replay preamble overrides, validated before engine creation. */
     raid_seconds?: number;
     boss_hp?: number;
@@ -81,11 +82,16 @@ export interface PokemonInput {
     shadow?: boolean;
     catch_tank?: boolean;
 }
+export interface PlayerInput {
+    team: PokemonInput[];
+}
 export interface SimulationRequest {
     boss: string;
     boss_fast_move: string;
     boss_charged_move: string;
-    team: PokemonInput[];
+    /** Legacy single-player input. Use players for calculator raids with multiple trainers. */
+    team?: PokemonInput[];
+    players?: PlayerInput[];
     raid_difficulty?: RaidDifficulty;
     weather?: Weather;
     simulation_count?: number;
@@ -98,5 +104,6 @@ export interface SimulationRequest {
     dodge_strategy?: DodgeStrategy;
     player_strategy?: PlayerStrategy;
     battle_log_mode?: 'none' | 'moves' | 'full';
+    use_purified_gems?: boolean;
 }
 export type ManualAction = 'wait' | 'fast' | 'charged' | 'dodge' | 'switch' | 'quit' | 'rejoin';

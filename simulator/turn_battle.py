@@ -50,6 +50,8 @@ class ManualSimulation(engine.Simulation):
                 super().apply_boss_hit(*data)
             elif kind == "player_hit":
                 super().apply_player_hit(*data)
+            elif kind == "gem_use":
+                self.use_purified_gem(time, *data)
         if self.boss_hp > 0:
             self.current_time = target
         self.tick = round(self.current_time * 2)
@@ -158,7 +160,8 @@ class ManualSimulation(engine.Simulation):
     def recording(self):
         p = self.players[0]
         result = engine.TrialResult(self.boss_hp <= 0, self.current_time, max(0, self.boss_hp),
-                                    p.switches, p.faints, 0, p.rejoins, 0)
+                                    p.switches, p.faints, 0, p.rejoins, 0,
+                                    self.purified_gems_used)
         text = engine.render_battle_replay(self, result, engine.RANDOM_SEED)
         status = "stopped" if self.stopped else "finished" if self.finished else "in_progress"
         text = text.replace("\nEvents:",
@@ -190,11 +193,14 @@ class ManualSimulation(engine.Simulation):
                          "energy": self.boss_energy, "max_energy": engine.BOSS_MAX_ENERGY,
                          "incoming": self.pending_boss[1].name if self.pending_boss else None,
                          "hits_at": self.pending_boss[0] if self.pending_boss else None,
-                         "enraged": self.enraged},
+                         "enraged": self.enraged,
+                         "purified_gems_used": self.purified_gems_used,
+                         "subdued": self.shadow_subdued},
                 "player": dict(member(p.pokemon, p.pokemon_index), on_field=p.on_field,
                                current_action=current_action,
                                busy_until=p.action_end, in_lobby=self.lobby, rejoin_at=self.rejoin_at,
-                               faints=p.faints, rejoins=p.rejoins),
+                               faints=p.faints, rejoins=p.rejoins,
+                               purified_gems_used=p.purified_gems_used),
                 "team": [member(m, i) for i, m in enumerate(p.team)],
                 "available": self.availability(), "log": self.event_log,
                 "replay_text": self.recording()}
