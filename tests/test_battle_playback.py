@@ -46,6 +46,7 @@ class PlaybackTests(unittest.TestCase):
         frames = result['frames']
         self.assertEqual([f['tick'] for f in frames], [0, 1, 3])
         self.assertEqual([f['boss_hp'] for f in frames], [9000, 9000, 8993])
+        self.assertEqual(frames[-1]['boss_energy'], 8)
         self.assertEqual([f['players'][0]['hp'] for f in frames], [192, 189, 189])
         self.assertEqual(frames[-1]['players'][0]['energy'], 15)
         self.assertIn('Not very effective', [m['text'] for m in result['messages']])

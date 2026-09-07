@@ -45,7 +45,7 @@ test('replay timestamps, legacy tuples, and malformed input are safe',()=>{
  assert.throws(()=>build_playback(preamble+'t0p1:ps',catalog),/needs 50 energy/);
  assert.throws(()=>build_playback(preamble+'t0p1:q\n+1p1:s1',catalog),/must rejoin/);
  const frame=build_playback(preamble+'t0p1:co\n+0b:f',catalog).frames.at(-1);
- assert.equal(frame.boss_hp,8993);assert.equal(frame.players[0].energy,15);
+ assert.equal(frame.boss_hp,8993);assert.equal(frame.boss_energy,8);assert.equal(frame.players[0].energy,15);
 });
 test('application boundary rejects invalid inputs before starting calculations',()=>{
  for(const simulation_count of [0,101,1.5,true,NaN]) assert.throws(()=>battle_config({...request,simulation_count},catalog));

@@ -62,6 +62,11 @@ browser inspection.
 - The detailed Node/Python CLI report is replaced by structured TypeScript return
   values. `aggregate_summary`, replay text and the website's result fields remain
   available. `local_server.py` is retained only as a Python reference/test helper.
+- After the initial port, boss energy gained from incoming damage was corrected to
+  `floor(damage / 2)`, matching the existing whole-energy rule used for players and
+  strategy prediction. The Python comparison copy mirrors this post-port fix so
+  deterministic parity testing remains useful; the supplied source archive remains
+  the untouched historical baseline.
 
 ## Existing model limits
 

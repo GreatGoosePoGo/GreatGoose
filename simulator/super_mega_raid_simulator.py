@@ -1776,7 +1776,7 @@ class Simulation:
             f"{displayed_player_move_name(move, player.pokemon)}{pp_text} "
             f"for {damage}; boss HP {max(0, self.boss_hp)}",
         )
-        self.boss_energy = min(BOSS_MAX_ENERGY, self.boss_energy + damage / 2)
+        self.boss_energy = min(BOSS_MAX_ENERGY, self.boss_energy + floor(damage / 2))
         if SUPER_MEGA_ENRAGE and not self.enraged and self.boss_hp <= ENRAGE_HP:
             self.enraged = True
             self.log(self.current_time, "BOSS ENRAGED (defense x4, attack x1.8)")

@@ -141,9 +141,9 @@ for comparison. They are not part of the built website. The old Python setup
 notes are preserved in `README_PYTHON_REFERENCE.md`; use the commands above for
 the new website.
 
-This migration preserves the supplied simulator's rules and assumptions. It does
-not update game data or add mechanics that were absent in the original, including
-Shadow enrage and Purified Gems. Keep future custom rules separate when they
-start to diverge from the vanilla simulator. A later multiplayer service can
-reuse the portable TypeScript engine; no multiplayer or account service is added
-here.
+This migration preserves the supplied simulator's rules and assumptions, with
+post-port correctness fixes documented in `PORT_NOTES.md`. It does not update game
+data or add mechanics that were absent in the original, including Shadow enrage
+and Purified Gems. Keep future custom rules separate when they start to diverge
+from the vanilla simulator. A later multiplayer service can reuse the portable
+TypeScript engine; no multiplayer or account service is added here.

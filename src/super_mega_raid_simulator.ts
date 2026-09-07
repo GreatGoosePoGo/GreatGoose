@@ -1222,7 +1222,7 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
             this.boss_hp = py.sub(this.boss_hp, damage);
             pp_text = (py.truth(powered) ? " with PP" : "");
             this.log(this.current_time, `P${py.str(py.add(player_id, 1))} lands ${py.str(displayed_player_move_name(move, player.pokemon))}${py.str(pp_text)} for ${py.str(damage)}; boss HP ${py.str(py.max(0, this.boss_hp))}`);
-            this.boss_energy = py.min(BOSS_MAX_ENERGY, py.add(this.boss_energy, (damage / 2)));
+            this.boss_energy = py.min(BOSS_MAX_ENERGY, py.add(this.boss_energy, Math.floor(damage / 2)));
             if (py.truth(py.and(SUPER_MEGA_ENRAGE, () => py.and(!py.truth(this.enraged), () => ((this.boss_hp <= ENRAGE_HP)))))) {
                 this.enraged = true;
                 this.log(this.current_time, "BOSS ENRAGED (defense x4, attack x1.8)");

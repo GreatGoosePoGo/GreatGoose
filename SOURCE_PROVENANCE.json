@@ -1,11 +1,17 @@
 {
   "source_archive": "pokemon-go-raid-simulator(2).zip",
-  "reference_sha256": {
+  "original_reference_sha256": {
     "simulator/super_mega_raid_simulator.py": "8d91bbfe68fc52fb8bf8f24d22aa71ea88f9d6168b5932a2d9449d0b00f5b6d9",
     "simulator/battle_replay.py": "95ab6b5002b721a67a21e0916106fd415a02ed5f76d43369493287c688312477",
     "simulator/battle_playback.py": "ac6dce28f5dcbd7c4248fa3a8bba41f8369f5ed22b397e5be555f5596aeae0a8",
     "simulator/turn_battle.py": "83576d57e481e8038337e2a332b49cb13fa579b179f036571964c701d040fb2a",
     "simulator/calculator_data.json": "530915c0588e3931dc493dd57d036c132ef0a9995cec4c5d58c1c2b58c734e72"
+  },
+  "post_port_reference_changes": {
+    "simulator/super_mega_raid_simulator.py": {
+      "sha256": "24757a8bd546aeea76504711c51c87ac335b9dabba60b13b317c12a85b3d800e",
+      "change": "Boss energy from damage is floored to whole energy, matching the TypeScript product engine and existing player-energy rule."
+    }
   },
   "typescript_sha256": {
     "src/battle_playback.ts": "f143564246215453da4d11c321cb994a82db538ab327869e5fcaff603b5ddedd",
@@ -13,7 +19,7 @@
     "src/compatibility.ts": "8157b26d76adc59893ac7fa75a0cd44f770a6217ea5a2e6ba111b6ba9541417a",
     "src/random.ts": "e4afa9a9b9051c81163d16b7b5f3db6da46bb5b99a407d8c003f41871191833b",
     "src/recording_store.ts": "7f7056993911eb94d26f4d5a8d6773f4b6d64fa41231ae456f54a7f0ad75285f",
-    "src/super_mega_raid_simulator.ts": "912a59ac82ea0798002df7ad0b2b1c101ac1e0cee942134e07048f643d51cf74",
+    "src/super_mega_raid_simulator.ts": "4daf29a818a81c6cc2745a9be6a84a029a3453bb0a21eacb30cf8cec526f21c6",
     "src/text.ts": "f3a1744b52d0159432943642467528836f51f29c53c460b554e8390b115c6f94",
     "src/turn_battle.ts": "d77cec745a3cc539a92884bebd9806efdf770d6dfd2ec97402f692b69b139c33",
     "src/turn_service.ts": "3005f8b2dc16d9fd30878a3de3f7cf9d33e0ffd268f39d2cc1a7f8d22deccf3c",
