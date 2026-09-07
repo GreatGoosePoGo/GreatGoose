@@ -31,9 +31,31 @@ function integer(value: unknown, lo: number, hi: number, label: string): number 
         throw new Error(`${label} must be an integer from ${lo} to ${hi}.`);
     return n;
 }
+function randomBytes(length: number): Uint8Array {
+    const bytes = new Uint8Array(length);
+    const browserCrypto = globalThis.crypto;
+    if (browserCrypto && typeof browserCrypto.getRandomValues === 'function')
+        return browserCrypto.getRandomValues(bytes);
+    for (let i = 0; i < bytes.length; i++)
+        bytes[i] = Math.floor(Math.random() * 256);
+    return bytes;
+}
+export function freshId(): string {
+    const browserCrypto = globalThis.crypto;
+    if (browserCrypto && typeof browserCrypto.randomUUID === 'function')
+        return browserCrypto.randomUUID();
+    const bytes = randomBytes(16);
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
 export function freshSeed(): string {
-    const bits = crypto.getRandomValues(new Uint32Array(2));
-    return ((BigInt(bits[0] & 0x7fffffff) << 32n) | BigInt(bits[1])).toString();
+    const bytes = randomBytes(8);
+    let value = 0n;
+    for (const byte of bytes)
+        value = (value << 8n) | BigInt(byte);
+    return (value & 0x7fffffffffffffffn).toString();
 }
 export function battle_config(request: SimulationRequest, catalog: CalculatorEntry[]): RaidConfig {
     if (!request || typeof request !== 'object' || Array.isArray(request))

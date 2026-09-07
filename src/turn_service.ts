@@ -2,7 +2,7 @@
 import { createRaidEngine } from './super_mega_raid_simulator.js';
 import { createTurnBattle } from './turn_battle.js';
 import { PythonRandom } from './random.js';
-import { battle_config } from './website_api.js';
+import { battle_config, freshId } from './website_api.js';
 import type { CalculatorEntry, RaidConfig, SimulationRequest, ManualAction } from './types.js';
 export interface Command {
     tick: number;
@@ -46,7 +46,7 @@ export class TurnService {
     }
     async start(request: SimulationRequest): Promise<Record<string, any>> {
         const config = battle_config({ ...request, player_strategy: 'no_strategy', dodge_strategy: 'none', battle_log_mode: 'full', simulation_count: 1, boss_moveset_mode: 'selected' }, this.catalog);
-        const sim = this.make(config), id = crypto.randomUUID();
+        const sim = this.make(config), id = freshId();
         const snapshot = this.decorate(sim, id);
         const saved: SavedBattle = { id, revision: 0, updated: Date.now(), config, commands: [], tick: sim.tick, stopped: false, snapshot };
         await this.save(structuredClone(saved));

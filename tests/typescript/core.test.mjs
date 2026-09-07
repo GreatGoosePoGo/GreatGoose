@@ -5,7 +5,7 @@ import { createRaidEngine } from '../../build/super_mega_raid_simulator.js';
 import { PythonRandom } from '../../build/random.js';
 import { parse_replay_text } from '../../build/battle_replay.js';
 import { build_playback } from '../../build/battle_playback.js';
-import { run_simulations,battle_config } from '../../build/website_api.js';
+import { run_simulations,battle_config,freshId,freshSeed } from '../../build/website_api.js';
 import { TurnService } from '../../build/turn_service.js';
 import { literal,seconds_to_tick } from '../../build/text.js';
 const catalog=JSON.parse(readFileSync(new URL('../../simulator/calculator_data.json',import.meta.url)));
@@ -53,6 +53,18 @@ test('application boundary rejects invalid inputs before starting calculations',
  assert.throws(()=>battle_config({...request,team:[{...request.team[0],fast_move:'Water Gun'}]},catalog),/legal moves/);
  assert.throws(()=>battle_config({...request,boss:'MEW',boss_fast_move:'Pound',boss_charged_move:'Psychic',boss_moveset_mode:'all',simulation_count:2},catalog),/limit is 500/);
  assert.throws(()=>run_simulations({...request,zacian_adventure_effect:true,behemoth_bash_adventure_effect:true},catalog),/Only one Adventure Effect/);
+});
+test('browser IDs and seeds work when crypto.randomUUID is unavailable',()=>{
+ const descriptor=Object.getOwnPropertyDescriptor(globalThis,'crypto');
+ const getRandomValues=globalThis.crypto?.getRandomValues?.bind(globalThis.crypto);
+ Object.defineProperty(globalThis,'crypto',{configurable:true,value:getRandomValues?{getRandomValues}:undefined});
+ try {
+  assert.match(freshId(),/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+  assert.match(freshSeed(),/^\d+$/);
+ } finally {
+  if(descriptor) Object.defineProperty(globalThis,'crypto',descriptor);
+  else delete globalThis.crypto;
+ }
 });
 test('accepted manual turns persist, restore, reject stale steps, and roll back failed saves',async()=>{
  const saved=new Map();let rejectSave=false;

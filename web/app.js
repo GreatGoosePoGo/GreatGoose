@@ -20,6 +20,7 @@ const codeStatus = document.querySelector("#pokemon-code-status");
 const codeAction = document.querySelector("#pokemon-code-action");
 let codeDialogMode = "export";
 let codeDialogRow = null;
+let pokemonRowIdSequence = 0;
 
 const strategyDescriptions = {
   no_strategy: "Keep attacking until each Pokémon faints. No voluntary swaps.",
@@ -419,7 +420,7 @@ function addPokemon(defaultId = "MEWTWO") {
   if (teamElement.children.length >= 6) return;
   const row = document.createElement("div");
   row.className = "pokemon-row";
-  const rowId = `pokemon-matches-${crypto.randomUUID()}`;
+  const rowId = `pokemon-matches-${++pokemonRowIdSequence}`;
   row.innerHTML = `
     <span class="slot-number"></span>
     <label class="pokemon-field">
