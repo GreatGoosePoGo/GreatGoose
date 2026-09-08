@@ -22,7 +22,7 @@ Each build puts the complete worker module graph and calculator data in a
 content-addressed engine directory and versions the page assets, preventing
 mixed old/new releases in browser or CDN caches.
 
-The four original Python files remain unchanged as a regression reference.
+The four Python reference files remain available for regression comparison.
 Auxiliary Python collection, CP/IV and raid-manager tools remain as supplied;
 they were outside the four requested website modules.
 
@@ -79,6 +79,15 @@ browser inspection.
   the legacy single `team` field. The website provides separate player sections,
   clones Player 1 on demand, and keeps Pokémon codes inline with immediate
   clipboard export instead of using a modal dialog.
+- The static site now has one coordinated top-level build: `apps/home`,
+  `apps/raids`, and `apps/rankings` publish to `/`, `/raids/`, and `/rankings/`,
+  while the TypeScript combat package lives in `packages/raid-engine`. Only the
+  top-level build clears `dist`, preventing one application from overwriting
+  another.
+- Raid setup links use a bounded, versioned, UTF-8-safe base64url query value.
+  Setup links populate validated inputs; result links additionally pin the exact
+  returned seed and request automatic simulation. Unknown versions, malformed
+  values and invalid Pokémon or options are rejected before calculation.
 
 ## Existing model limits
 

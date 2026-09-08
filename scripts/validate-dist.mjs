@@ -2,9 +2,11 @@ import {readFile, readdir, stat} from 'node:fs/promises';
 import {dirname, extname, join, normalize, relative, resolve, sep} from 'node:path';
 
 const root = resolve('dist');
-const build = JSON.parse(await readFile(join(root, 'build-info.json'), 'utf8'));
+const raidsRoot = join(root, 'raids');
+const rankingsRoot = join(root, 'rankings');
+const build = JSON.parse(await readFile(join(raidsRoot, 'build-info.json'), 'utf8'));
 if (!/^[a-f0-9]{12}$/.test(build.version))
-  throw new Error('dist/build-info.json has an invalid version.');
+  throw new Error('dist/raids/build-info.json has an invalid version.');
 if (build.engine_directory !== `engine-${build.version}`)
   throw new Error('The engine directory does not match the build version.');
 
@@ -22,27 +24,39 @@ const files = await filesBelow(root);
 if (files.some(path => extname(path) === '.py'))
   throw new Error('The static website unexpectedly contains Python files.');
 
-const index = await readFile(join(root, 'index.html'), 'utf8');
+const homeIndex = await readFile(join(root, 'index.html'), 'utf8');
+if (!homeIndex.includes('href="raids/"') || !homeIndex.includes('href="rankings/"'))
+  throw new Error('The home page must link to both path-based applications.');
+await stat(join(rankingsRoot, 'index.html'));
+
+const index = await readFile(join(raidsRoot, 'index.html'), 'utf8');
 for (const id of ['players', 'add-player', 'clone-player']) {
   if (!index.includes(`id="${id}"`))
     throw new Error(`Multi-player calculator control is missing: ${id}`);
 }
 if (index.includes('pokemon-code-dialog'))
   throw new Error('The obsolete Pokémon import/export dialog is still present.');
+for (const id of ['copy-setup-link', 'copy-result-link', 'share-status']) {
+  if (!index.includes(`id="${id}"`))
+    throw new Error(`Share-link control is missing: ${id}`);
+}
+if (!index.includes('src="share.js?'))
+  throw new Error('The versioned share-link codec is missing.');
 const localAssets = [...index.matchAll(/\b(?:src|href)="([^"#]+)"/g)]
   .map(match => match[1])
-  .filter(path => !/^(?:[a-z]+:|\/\/)/i.test(path));
+  .filter(path => !/^(?:[a-z]+:|\/\/)/i.test(path))
+  .filter(path => !path.split('?', 1)[0].endsWith('/'));
 for (const asset of localAssets) {
   const [path, query = ''] = asset.split('?', 2);
-  const destination = resolve(root, path);
-  if (destination !== root && !destination.startsWith(root + sep))
-    throw new Error(`HTML asset escapes dist/: ${asset}`);
+  const destination = resolve(raidsRoot, path);
+  if (destination !== raidsRoot && !destination.startsWith(raidsRoot + sep))
+    throw new Error(`Raid HTML asset escapes dist/raids/: ${asset}`);
   await stat(destination);
   if (/\.(?:js|css)$/.test(path) && query !== `v=${build.version}`)
     throw new Error(`HTML asset is not tied to this build: ${asset}`);
 }
 
-const engineRoot = join(root, build.engine_directory);
+const engineRoot = join(raidsRoot, build.engine_directory);
 const engineFiles = await filesBelow(engineRoot);
 for (const required of ['worker.js', 'calculator_data.json'])
   await stat(join(engineRoot, required));
@@ -59,7 +73,7 @@ for (const path of engineFiles.filter(path => path.endsWith('.js'))) {
   }
 }
 
-const client = await readFile(join(root, 'client.js'), 'utf8');
+const client = await readFile(join(raidsRoot, 'client.js'), 'utf8');
 if (!client.includes(`${build.engine_directory}/worker.js`))
   throw new Error('The page client does not load the matching engine directory.');
 

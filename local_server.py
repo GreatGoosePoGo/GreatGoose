@@ -15,7 +15,7 @@ from urllib.parse import urlparse
 
 
 ROOT = Path(__file__).resolve().parent
-WEB_ROOT = ROOT / "web"
+WEB_ROOT = ROOT / "apps" / "raids"
 SIM_ROOT = ROOT / "simulator"
 DATA_PATH = SIM_ROOT / "calculator_data.json"
 SIMULATOR_PATH = SIM_ROOT / "super_mega_raid_simulator.py"

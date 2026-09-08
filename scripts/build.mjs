@@ -18,7 +18,7 @@ async function filesBelow(folder) {
 // releases even when a CDN caches JavaScript aggressively.
 const inputs = [
   ...(await filesBelow('build')).filter(path => path.endsWith('.js')),
-  ...await filesBelow('web'),
+  ...await filesBelow('apps/raids'),
   'simulator/calculator_data.json',
 ].sort();
 const digest = createHash('sha256');
@@ -30,31 +30,33 @@ const version = digest.digest('hex').slice(0, 12);
 const engineDirectory = `engine-${version}`;
 
 await rm('dist', {recursive: true, force: true});
-await mkdir(join('dist', engineDirectory), {recursive: true});
-await cp('web', 'dist', {recursive: true});
-await cp('build', join('dist', engineDirectory), {
+await cp('apps/home', 'dist', {recursive: true});
+await cp('apps/raids', join('dist', 'raids'), {recursive: true});
+await cp('apps/rankings', join('dist', 'rankings'), {recursive: true});
+await mkdir(join('dist', 'raids', engineDirectory), {recursive: true});
+await cp('build', join('dist', 'raids', engineDirectory), {
   recursive: true,
   filter: path => !path.endsWith('.d.ts'),
 });
 await cp(
   'simulator/calculator_data.json',
-  join('dist', engineDirectory, 'calculator_data.json'),
+  join('dist', 'raids', engineDirectory, 'calculator_data.json'),
 );
 
-const clientPath = join('dist', 'client.js');
+const clientPath = join('dist', 'raids', 'client.js');
 const client = (await readFile(clientPath, 'utf8'))
   .replace('engine/worker.js', `${engineDirectory}/worker.js`);
 await writeFile(clientPath, client);
 
-const indexPath = join('dist', 'index.html');
+const indexPath = join('dist', 'raids', 'index.html');
 const index = (await readFile(indexPath, 'utf8')).replace(
-  /\b(href|src)="(styles\.css|client\.js|pokemon_code\.js|app\.js|playback\.js|replay\.js|turns\.js)(?:\?v=[^"]*)?"/g,
+  /\b(href|src)="(styles\.css|client\.js|pokemon_code\.js|share\.js|app\.js|playback\.js|replay\.js|turns\.js)(?:\?v=[^"]*)?"/g,
   (_match, attribute, asset) => `${attribute}="${asset}?v=${version}"`,
 );
 await writeFile(indexPath, index);
 await writeFile(
-  join('dist', 'build-info.json'),
+  join('dist', 'raids', 'build-info.json'),
   JSON.stringify({version, engine_directory: engineDirectory}, null, 2) + '\n',
 );
 
-console.log(`Built static website ${version} in dist/ — no simulation server required.`);
+console.log(`Built Great Goose site ${version} with /raids/ and /rankings/ in dist/.`);

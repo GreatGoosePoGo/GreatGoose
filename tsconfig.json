@@ -11,12 +11,12 @@
     "declaration": true,
     "sourceMap": true,
     "outDir": "build",
-    "rootDir": "src",
+    "rootDir": "packages/raid-engine/src",
     "skipLibCheck": true,
     "noEmitOnError": true,
     "inlineSources": true
   },
   "include": [
-    "src/**/*.ts"
+    "packages/raid-engine/src/**/*.ts"
   ]
 }

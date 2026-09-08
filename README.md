@@ -1,8 +1,14 @@
-# Pokémon GO Raid Simulator — TypeScript
+# Great Goose Pokémon GO — TypeScript
 
-The website now runs simulations, replay parsing, battle playback and manual
-turns in the browser. It does not run Python, use Pyodide, or send calculation
-requests to a backend. Long calculations run in a Web Worker.
+Great Goose is a single static website with independently developed applications:
+
+- `/` — home page
+- `/raids/` — raid simulator, replay player and manual battles
+- `/rankings/` — rankings application workspace
+
+Simulations run entirely in the visitor's browser, with long calculations in a
+Web Worker. The deployed site does not run Python, use Pyodide, or call a
+simulation backend.
 
 ## Run the included website
 
@@ -12,61 +18,71 @@ With Node.js installed, open PowerShell in the extracted project folder and run:
 npm start
 ```
 
-Open **http://localhost:8000**. The ZIP includes the compiled `dist/` folder, so
-this needs neither Python nor an npm dependency install. Keep the terminal open;
-press Ctrl+C to stop. Opening `index.html` directly from disk will not work,
-because browsers require an HTTP origin for module workers and the data file.
+Open **http://localhost:8000** for the home page or
+**http://localhost:8000/raids/** for the simulator. The ZIP includes the compiled
+`dist/` folder, so running the included build requires neither Python nor an npm
+dependency install. Keep the terminal open and press Ctrl+C to stop.
 
-For eventual deployment, upload the **complete contents of `dist/`** to a static
-web host. Do not copy only the new engine directory: `npm run build` gives the
-page and the whole worker module graph one matching content version. No Node or
-Python process runs on the host. Paths are relative, so a subdirectory is
-supported. Serve `.js` files as JavaScript and `.json` files as JSON.
+Opening an HTML file directly from disk will not work because browsers require
+an HTTP origin for module workers and the static catalog.
+
+## Repository architecture
+
+| Source | Responsibility |
+| --- | --- |
+| `apps/home/` | Great Goose landing page built at `/` |
+| `apps/raids/` | Raid UI, replay controls, manual battle controls and share links built at `/raids/` |
+| `apps/rankings/` | Independent rankings application workspace built at `/rankings/` |
+| `packages/raid-engine/src/super_mega_raid_simulator.ts` | Raid configuration, damage, strategies, event queue and aggregate results |
+| `packages/raid-engine/src/battle_replay.ts` | Compact and legacy replay parsing, validation and tick normalization |
+| `packages/raid-engine/src/battle_playback.ts` | Seed verification and reconstruction of replay frames and messages |
+| `packages/raid-engine/src/turn_battle.ts` | Manual half-second turns, action availability and recording |
+| `packages/raid-engine/src/website_api.ts` | Catalog and validated form-input boundary |
+| `packages/raid-engine/src/worker.ts`, `apps/raids/client.js` | Browser job transport and static catalog loading |
+| `simulator/` | Python reference implementation, auxiliary tools and shared catalog |
+
+The top-level build is the only process allowed to clear `dist/`. It copies the
+three applications into their matching routes and places the complete compiled
+worker graph in `dist/raids/engine-<version>/`. This prevents a rankings build
+from overwriting the raid application.
 
 ## Edit and rebuild
 
 ```powershell
 npm ci
 npm run build
+npm test
 npm start
 ```
 
-`npm ci` installs the pinned TypeScript compiler. Node is a development tool and
-local static file server; the deployed calculations use the visitor's browser.
+Edit engine TypeScript in `packages/raid-engine/src/` and application files in
+`apps/`. `build/` and `dist/` are generated. Deploy the **complete contents of
+`dist/`**, never just one app or engine directory.
 
-| Source | Responsibility |
-| --- | --- |
-| `src/super_mega_raid_simulator.ts` | Raid configuration, data registration, damage, strategies, event queue and aggregate results |
-| `src/battle_replay.ts` | Compact and legacy replay text parsing, validation and tick normalization |
-| `src/battle_playback.ts` | Seed verification and reconstruction of replay frames and messages |
-| `src/turn_battle.ts` | Manual half-second turns, action availability and recording |
-| `src/website_api.ts` | Catalog and form-input boundary for the existing website |
-| `src/worker.ts`, `web/client.js` | Browser job transport; the worker loads the static catalog once |
-| `src/turn_service.ts`, `src/recording_store.ts` | Independent turn sessions and browser autosave/restore |
-| `src/random.ts` | Python-compatible seeded random generator |
-| `src/compatibility.ts`, `src/text.ts` | Explicit cross-language numeric/collection semantics and safe text handling |
-| `src/types.ts` | Public configuration and catalog types |
-| `simulator/calculator_data.json` | Unmodified supplied species/move data; copied beside the versioned worker |
-| `web/` | Existing interface, styles, replay display and controls |
+## Share links
 
-Edit TypeScript in `src/`, then rebuild. `build/` and the content-addressed
-`dist/engine-<version>/` directory are generated JavaScript. `dist/build-info.json`
-records the matching engine directory. The four modules retain their original
-function names to help trace a rule back to the Python reference. Small
-compatibility helpers operate on native JavaScript values; no Python interpreter
-or transpiler is needed to build or run.
+The raid calculator supports two client-side share actions:
+
+- **Copy setup link** creates a versioned `?v=1&setup=...` URL that fills the
+  complete boss, player teams and battle settings without running.
+- **Copy result link** is enabled after a simulation. It also pins the returned
+  random seed and adds `run=1`, causing the recipient's browser to reproduce the
+  calculation automatically.
+
+The setup uses bounded, UTF-8-safe base64url data and is validated through the
+same Pokémon, move and option boundaries as manually entered data. Nothing is
+uploaded to a server. Large 20-player configurations can produce long URLs, so
+the interface warns when messaging applications may shorten them.
 
 ## Engine use
 
-The engine is independent of the DOM, Web Workers, storage and networking. Pass
-in the data and a configuration; every engine gets its own configuration and
-catalogs, and every simulation gets independent mutable battle state.
+The engine is independent of the DOM, Web Workers, storage and networking. Its
+compiled modules remain available in `build/` after `npm run build`:
 
 ```typescript
-import { createRaidEngine } from './src/super_mega_raid_simulator.js';
-import type { CalculatorEntry, RaidConfig } from './src/types.js';
+import { createRaidEngine } from './build/super_mega_raid_simulator.js';
+import type { CalculatorEntry, RaidConfig } from './build/types.js';
 
-const catalog: CalculatorEntry[] = await fetch('calculator_data.json').then(r => r.json());
 const config: RaidConfig = {
   trials: 1,
   random_seed: '42',
@@ -82,78 +98,38 @@ const config: RaidConfig = {
   dodge_strategy: 'lethal_only',
   player_strategy: 'no_strategy',
 };
-const engine = createRaidEngine(config, catalog);
+
+const engine = createRaidEngine(config, catalog as CalculatorEntry[]);
 const battle = engine.createSimulation({ detailed: true });
 const result = battle.run();
-const replay = engine.render_battle_replay(battle, result, engine.RANDOM_SEED);
 ```
 
-The `.js` import extension is intentional for TypeScript's NodeNext output. In a
-built browser module use the corresponding `engine/` path. Direct Node consumers
-can import from `build/` and load the same JSON with Node's file API.
+The engine supports multiple players, Party Power, Shadow raids, automatic
+Purified Gems and all existing dodge/swap strategies. The calculator can
+configure up to 20 players with six Pokémon each. Turn-by-turn mode intentionally
+uses Player 1 only.
 
-The engine supports multiple players and Party Power through `player_teams` and
-`party_power_groups`. The calculator form can configure up to 20 players, each
-with a separate team of up to six Pokémon; **Clone Player 1** copies its complete
-team into a new player section. Replay files can also describe multiple players.
-The turn-by-turn mode intentionally uses Player 1 only. Shadow raids
-enrage at 60% HP and return to normal at 15% HP. Set `use_purified_gems: true`
-to use one gem per on-field trainer immediately at enrage and then every five
-seconds, up to five per trainer; eight raid-wide gems subdue the boss. In replay
-text, `p1:g` records player 1 using a Purified Gem.
+Each Pokémon row has an inline Great Goose Pokémon code field. **Import** applies
+the pasted code to that slot; **Export to clipboard** fills the field and copies
+it without opening a dialog.
 
-Each calculator Pokémon row has an always-visible code field. Paste a code and
-select **Import** to replace that slot, or select **Export to clipboard** to put
-the current slot's generated code in the field and copy it immediately.
+## Seeds, recordings and verification
 
-## Seeds and recordings
-
-Seeded attempts use CPython-compatible MT19937, including integer seeding,
-`random()` and the rejection-sampling used by `choice()`. Use decimal strings for
-seeds above JavaScript's safe integer range. The website accepts the original
-0–9223372036854775807 range without rounding. Fresh simulations get fresh seeds;
-batches retain the Python sequence of random draws within each moveset.
-
-Manual battles are saved after every accepted turn in this browser's IndexedDB.
-Use **Saved battles → Restore battle** to resume or export an earlier battle,
-including after a refresh. Exporting downloads the familiar `.txt` replay. Saves
-are tied to the website origin and browser profile; clearing site data removes
-them, so export recordings you want to keep or transfer. Failed saves retain the
-previous accepted turn. Conflicting edits from another tab require a restore.
-
-## Verification
+Seeds use the original 0–9223372036854775807 range without JavaScript rounding.
+Fresh simulations get fresh seeds; a result share link pins the actual returned
+seed. Manual battles are stored in this browser's IndexedDB after each accepted
+turn and can be restored or exported as replay text.
 
 ```powershell
 npm test
 npm run typecheck
-```
-
-These checks need only Node and TypeScript. The build verifies every page asset,
-the versioned worker module graph, and the absence of Python or server API paths
-from the static output. The tests exercise the real worker, controls, input
-validation, seeded runs, replay handling, independent engines, and recording
-restore/save failure behavior.
-
-For the optional migration comparison, install Python and run:
-
-```powershell
 npm run test:parity
 ```
 
-This runs the TypeScript engine against the unchanged Python source in
-`simulator/`. See `PARITY_RESULTS.json` and `PORT_NOTES.md` for the checked cases.
-Python is used only by this optional developer check.
+The Node tests exercise the actual compiled worker, controls, share codec,
+validation, deterministic battles, replays and saved manual battles. The optional
+parity command also needs Python and compares the TypeScript engine against the
+reference modules in `simulator/`.
 
-## Reference and scope
-
-The original Python modules, auxiliary tools and `local_server.py` are retained
-for comparison. They are not part of the built website. The old Python setup
-notes are preserved in `README_PYTHON_REFERENCE.md`; use the commands above for
-the new website.
-
-This migration preserves the supplied simulator's rules and assumptions, with
-post-port correctness fixes and the subsequently added Shadow enrage/Purified
-Gem mechanic documented in `PORT_NOTES.md`. Keep future custom rules separate
-when they start to diverge from the vanilla simulator. Calculator multiplayer
-runs entirely in the visitor's browser; no live multiplayer or account service
-is added here.
+See `PORT_NOTES.md` for behavioral boundaries and `README_PYTHON_REFERENCE.md`
+for the retained Python instructions.

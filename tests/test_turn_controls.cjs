@@ -31,7 +31,7 @@ const fixture = { tick: 0, elapsed: 0, remaining: 300, status: 'in_progress', se
   available: { fast: true, charged: false, dodge: true, quit: true, rejoin: false, switch_slots: [2] },
   log: ['Boss starts Waterfall'], replay_text: 'recording-at-turn-0', session_id: 'session',
   filename: 'battle.txt', recording_file: 'recordings/battle.txt' };
-const elements = new Map([...fs.readFileSync(path.join(root, 'web/index.html'), 'utf8').matchAll(/id="([^"]+)"/g)]
+const elements = new Map([...fs.readFileSync(path.join(root, 'apps/raids/index.html'), 'utf8').matchAll(/id="([^"]+)"/g)]
   .map(match => [match[1], new Element()]));
 let requests = [], exported, requestFailed = false;
 const context = vm.createContext({
@@ -51,7 +51,7 @@ const context = vm.createContext({
     return state;
   } },
 });
-vm.runInContext(fs.readFileSync(path.join(root, 'web/turns.js'), 'utf8'), context);
+vm.runInContext(fs.readFileSync(path.join(root, 'apps/raids/turns.js'), 'utf8'), context);
 const at = id => elements.get('turn-' + id);
 (async () => {
   await at('start').click();

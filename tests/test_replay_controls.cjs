@@ -9,13 +9,13 @@ const root = path.resolve(__dirname, '..');
 const built = spawnSync(process.execPath, ['--input-type=module', '-e', `
 import {readFileSync} from 'node:fs';
 import {build_playback} from './build/battle_playback.js';
-const source=readFileSync('web/replay.js','utf8');
+const source=readFileSync('apps/raids/replay.js','utf8');
 const example=source.match(/const replayExample = \\x60([\\s\\S]*?)\\x60;/)[1];
 console.log(JSON.stringify(build_playback(example,JSON.parse(readFileSync('simulator/calculator_data.json','utf8')))));
 `], { cwd: root, encoding: 'utf8' });
 assert.equal(built.status, 0, built.stderr);
 const fixture = JSON.parse(built.stdout);
-const styles = fs.readFileSync(path.join(root, 'web/styles.css'), 'utf8');
+const styles = fs.readFileSync(path.join(root, 'apps/raids/styles.css'), 'utf8');
 assert.match(styles, /\.battle-stage\s*\{[^}]*overflow:\s*hidden;/s);
 assert.doesNotMatch(styles, /\.battle-stage\s*\{[^}]*overflow:\s*auto;/s);
 assert.match(styles, /\.type-fairy\s*\{\s*background-position:\s*-112px\s+-50\.061px;/);
@@ -43,7 +43,7 @@ class Element {
 
 function setup({ renderer = true, status = 200, protocol = 'http:', replaySource = null } = {}) {
   const elements = new Map();
-  for (const match of fs.readFileSync(path.join(root, 'web/index.html'), 'utf8').matchAll(/id="([^"]+)"/g)) {
+  for (const match of fs.readFileSync(path.join(root, 'apps/raids/index.html'), 'utf8').matchAll(/id="([^"]+)"/g)) {
     elements.set('#' + match[1], new Element());
   }
   elements.get('#playback-speed').value = '1';
@@ -61,8 +61,8 @@ function setup({ renderer = true, status = 200, protocol = 'http:', replaySource
     cancelAnimationFrame: () => { callback = null; },
     RaidClient: { request: async () => { if (status !== 200) throw new Error('Local worker failed'); return structuredClone(fixture); } },
   });
-  if (renderer) vm.runInContext(fs.readFileSync(path.join(root, 'web/playback.js'), 'utf8'), context);
-  vm.runInContext(replaySource || fs.readFileSync(path.join(root, 'web/replay.js'), 'utf8'), context);
+  if (renderer) vm.runInContext(fs.readFileSync(path.join(root, 'apps/raids/playback.js'), 'utf8'), context);
+  vm.runInContext(replaySource || fs.readFileSync(path.join(root, 'apps/raids/replay.js'), 'utf8'), context);
   return { context, elements, advance: ms => { if (callback) callback(ms); } };
 }
 

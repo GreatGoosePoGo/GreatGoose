@@ -86,7 +86,7 @@ class PlaybackTests(unittest.TestCase):
             build_playback(PREAMBLE+'t0p1:q\n+2p1:s1')
 
     def test_example_supports_multiple_players_effects_and_readable_teams(self):
-        example = re.search(r'const replayExample = `(.*?)`;', (ROOT/'web/replay.js').read_text(), re.S)[1]
+        example = re.search(r'const replayExample = `(.*?)`;', (ROOT/'apps/raids/replay.js').read_text(), re.S)[1]
         result = build_playback(example.replace('p2', 'p10').replace('groups=p1,2', 'groups=p1,10'))
         self.assertEqual([p['id'] for p in result['players']], [1, 10])
         self.assertEqual(result['source'], 'recorded_timeline')
