@@ -77,4 +77,29 @@ const client = await readFile(join(raidsRoot, 'client.js'), 'utf8');
 if (!client.includes(`${build.engine_directory}/worker.js`))
   throw new Error('The page client does not load the matching engine directory.');
 
+const rankingsIndex = await readFile(join(rankingsRoot, 'index.html'), 'utf8');
+await stat(join(rankingsRoot, 'assets', 'pokemon-go-type-icons.png'));
+for (const asset of ['styles.css', 'app.js']) {
+  if (!rankingsIndex.includes(`${asset}?v=${build.version}`))
+    throw new Error(`The rankings page does not load versioned ${asset}.`);
+}
+const rankingsClient = await readFile(join(rankingsRoot, 'app.js'), 'utf8');
+if (!rankingsClient.includes(`${build.engine_directory}/rankings_worker.js`))
+  throw new Error('The rankings page does not load the matching worker.');
+const rankingsEngineRoot = join(rankingsRoot, build.engine_directory);
+for (const asset of ['rankings.js', 'rankings_worker.js', 'calculator_data.json', 'shadow_availability.json', 'ranking_categories.json'])
+  await stat(join(rankingsEngineRoot, asset));
+const rankingsWorker = await readFile(join(rankingsEngineRoot, 'rankings_worker.js'), 'utf8');
+if (!rankingsWorker.includes("from './rankings.js'"))
+  throw new Error('The rankings worker is missing its calculation engine.');
+const shadowAvailability = JSON.parse(await readFile(join(rankingsEngineRoot, 'shadow_availability.json'), 'utf8'));
+if (!Array.isArray(shadowAvailability.form_ids) || shadowAvailability.form_ids.length < 300)
+  throw new Error('The released Shadow availability snapshot is missing or implausibly small.');
+if (new Set(shadowAvailability.form_ids).size !== shadowAvailability.form_ids.length)
+  throw new Error('The released Shadow availability snapshot contains duplicate form IDs.');
+const rankingCategories = JSON.parse(await readFile(join(rankingsEngineRoot, 'ranking_categories.json'), 'utf8'));
+if (!Array.isArray(rankingCategories.legendary_dex_numbers)
+    || rankingCategories.legendary_dex_numbers.length !== 97)
+  throw new Error('The broad Legendary category snapshot is missing or invalid.');
+
 console.log(`Validated static website ${build.version}: ${files.length} files and a closed engine module graph.`);

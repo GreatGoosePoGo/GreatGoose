@@ -19,7 +19,10 @@ async function filesBelow(folder) {
 const inputs = [
   ...(await filesBelow('build')).filter(path => path.endsWith('.js')),
   ...await filesBelow('apps/raids'),
+  ...await filesBelow('apps/rankings'),
   'simulator/calculator_data.json',
+  'simulator/ranking_categories.json',
+  'simulator/shadow_availability.json',
 ].sort();
 const digest = createHash('sha256');
 for (const path of inputs) {
@@ -34,6 +37,7 @@ await cp('apps/home', 'dist', {recursive: true});
 await cp('apps/raids', join('dist', 'raids'), {recursive: true});
 await cp('apps/rankings', join('dist', 'rankings'), {recursive: true});
 await mkdir(join('dist', 'raids', engineDirectory), {recursive: true});
+await mkdir(join('dist', 'rankings', engineDirectory), {recursive: true});
 await cp('build', join('dist', 'raids', engineDirectory), {
   recursive: true,
   filter: path => !path.endsWith('.d.ts'),
@@ -41,6 +45,21 @@ await cp('build', join('dist', 'raids', engineDirectory), {
 await cp(
   'simulator/calculator_data.json',
   join('dist', 'raids', engineDirectory, 'calculator_data.json'),
+);
+for (const asset of ['rankings.js', 'rankings.js.map', 'rankings_worker.js', 'rankings_worker.js.map']) {
+  await cp(join('build', asset), join('dist', 'rankings', engineDirectory, asset));
+}
+await cp(
+  'simulator/calculator_data.json',
+  join('dist', 'rankings', engineDirectory, 'calculator_data.json'),
+);
+await cp(
+  'simulator/shadow_availability.json',
+  join('dist', 'rankings', engineDirectory, 'shadow_availability.json'),
+);
+await cp(
+  'simulator/ranking_categories.json',
+  join('dist', 'rankings', engineDirectory, 'ranking_categories.json'),
 );
 
 const clientPath = join('dist', 'raids', 'client.js');
@@ -54,6 +73,18 @@ const index = (await readFile(indexPath, 'utf8')).replace(
   (_match, attribute, asset) => `${attribute}="${asset}?v=${version}"`,
 );
 await writeFile(indexPath, index);
+
+const rankingsClientPath = join('dist', 'rankings', 'app.js');
+const rankingsClient = (await readFile(rankingsClientPath, 'utf8'))
+  .replace('engine/rankings_worker.js', `${engineDirectory}/rankings_worker.js`);
+await writeFile(rankingsClientPath, rankingsClient);
+
+const rankingsIndexPath = join('dist', 'rankings', 'index.html');
+const rankingsIndex = (await readFile(rankingsIndexPath, 'utf8')).replace(
+  /\b(href|src)="(styles\.css|app\.js)(?:\?v=[^"]*)?"/g,
+  (_match, attribute, asset) => `${attribute}="${asset}?v=${version}"`,
+);
+await writeFile(rankingsIndexPath, rankingsIndex);
 await writeFile(
   join('dist', 'raids', 'build-info.json'),
   JSON.stringify({version, engine_directory: engineDirectory}, null, 2) + '\n',

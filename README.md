@@ -4,7 +4,7 @@ Great Goose is a single static website with independently developed applications
 
 - `/` — home page
 - `/raids/` — raid simulator, replay player and manual battles
-- `/rankings/` — rankings application workspace
+- `/rankings/` — Level 40 attacker rankings by attack type, with released Shadow variants
 
 Simulations run entirely in the visitor's browser, with long calculations in a
 Web Worker. The deployed site does not run Python, use Pyodide, or call a
@@ -32,7 +32,10 @@ an HTTP origin for module workers and the static catalog.
 | --- | --- |
 | `apps/home/` | Great Goose landing page built at `/` |
 | `apps/raids/` | Raid UI, replay controls, manual battle controls and share links built at `/raids/` |
-| `apps/rankings/` | Independent rankings application workspace built at `/rankings/` |
+| `apps/rankings/` | Rankings UI and worker client built at `/rankings/` |
+| `packages/raid-engine/src/rankings.ts` | Deterministic Level 40 ideal, simple-cycle and effective DPS calculations |
+| `simulator/ranking_categories.json` | Version-pinned broad Legendary/Mythical/Ultra Beast classification |
+| `simulator/shadow_availability.json` | Version-pinned snapshot of forms released as Shadows, mapped to the local catalog |
 | `packages/raid-engine/src/super_mega_raid_simulator.ts` | Raid configuration, damage, strategies, event queue and aggregate results |
 | `packages/raid-engine/src/battle_replay.ts` | Compact and legacy replay parsing, validation and tick normalization |
 | `packages/raid-engine/src/battle_playback.ts` | Seed verification and reconstruction of replay frames and messages |
@@ -42,9 +45,35 @@ an HTTP origin for module workers and the static catalog.
 | `simulator/` | Python reference implementation, auxiliary tools and shared catalog |
 
 The top-level build is the only process allowed to clear `dist/`. It copies the
-three applications into their matching routes and places the complete compiled
-worker graph in `dist/raids/engine-<version>/`. This prevents a rankings build
-from overwriting the raid application.
+three applications into their matching routes and gives both calculation apps a
+matching versioned worker directory. This prevents one application build from
+overwriting or mixing versions with another.
+
+## Rankings v1
+
+Rankings are calculated locally for Level 40 Pokémon with fixed 15/15/15 IVs.
+For each attack type, the engine evaluates every legal fast move paired with a
+charged move of that type, then displays the best moveset per form. Exact rounded
+move damage is calculated against synthetic boss Defense values 160, 180, 200,
+220 and 240, then averaged. **Simple DPS** has no incoming damage.
+
+**Ideal DPS** averages 32 deterministic pulse schedules with 3–4 second
+intervals, varied phase and varied pulse size. The Boss Attack control selects a
+smoothed coefficient of 675, 900 or 1125. Boss Move Type can keep that damage
+typeless or apply any of the 18 Pokémon GO types against the attacker's defensive
+typing. After each charged move, the attacker
+continues only if 32 fixed continuation samples give its next charged move at
+least a 10% chance to land; otherwise the model switches it out. Movesets below
+the same 10% cutoff for their first charged attack are omitted. **Effective DPS**
+uses the resulting expected damage and field time, adding five one-second
+transitions and a ten-second relobby to a six-attacker cycle.
+
+The chosen attack type is super effective; other fast-move types are neutral.
+Released Shadow variants use their normal form's movepool with the standard
+outgoing/incoming modifiers. Released Super Max–eligible Megas receive their
+additional charged move at all four Mega Levels. Its power scales by
+×1.0/×1.1/×1.2/×1.3; Mega Level 4 also applies the temporary two-level combat
+boost to those eligible forms. The selected Mega Level is stored in the URL.
 
 ## Edit and rebuild
 

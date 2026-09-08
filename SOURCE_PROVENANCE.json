@@ -25,6 +25,20 @@
       "change": "Manual battle state resolves scheduled gems and exposes gem/subdual state."
     }
   },
+  "rankings_external_sources": {
+    "mega_plus_release_snapshot": {
+      "released_through": "2026-09-08",
+      "official_sources": [
+        "https://pokemongo.com/news/more-mega-updates-2026",
+        "https://pokemongolive.com/en/news/mega-squads-2026"
+      ],
+      "move_stat_sources": [
+        "https://www.dittobase.com/pokemon-go/moves/fell-stinger-plus",
+        "https://www.dittobase.com/pokemon-go/moves/dark-pulse-plus"
+      ],
+      "notes": "The rankings include only released Super Max forms. Mega Staraptor and Brave Bird+ remain excluded until their announced September 19, 2026 debut."
+    }
+  },
   "typescript_sha256": {
     "packages/raid-engine/src/battle_playback.ts": "e8cc14da1290fb5b913dc8ffc9d1b2a525b1bb31fd3dd6a25e8642368893e7b0",
     "packages/raid-engine/src/battle_replay.ts": "d4b0738bc9d5a2e9cb9139824a2a3353dc40795417443c785eaab2ba06c9fc5d",

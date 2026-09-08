@@ -53,6 +53,8 @@ export interface CalculatorMove {
     duration_ms: number;
     type: string;
     elite?: boolean;
+    /** Raid power at Mega Levels 1–4 for a temporary Mega "+" move. */
+    plus_powers?: number[];
 }
 export interface CalculatorEntry {
     form_id: string;
