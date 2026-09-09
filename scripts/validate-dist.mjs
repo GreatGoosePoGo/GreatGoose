@@ -60,6 +60,9 @@ const engineRoot = join(raidsRoot, build.engine_directory);
 const engineFiles = await filesBelow(engineRoot);
 for (const required of ['worker.js', 'calculator_data.json'])
   await stat(join(engineRoot, required));
+const raidCatalog = JSON.parse(await readFile(join(engineRoot, 'calculator_data.json'), 'utf8'));
+if (!Array.isArray(raidCatalog) || raidCatalog.length < 1000)
+  throw new Error('The raid calculator catalog is missing or implausibly small.');
 
 for (const path of engineFiles.filter(path => path.endsWith('.js'))) {
   const source = await readFile(path, 'utf8');
@@ -89,6 +92,9 @@ if (!rankingsClient.includes(`${build.engine_directory}/rankings_worker.js`))
 const rankingsEngineRoot = join(rankingsRoot, build.engine_directory);
 for (const asset of ['rankings.js', 'rankings_worker.js', 'calculator_data.json', 'shadow_availability.json', 'ranking_categories.json'])
   await stat(join(rankingsEngineRoot, asset));
+const rankingsCatalog = JSON.parse(await readFile(join(rankingsEngineRoot, 'calculator_data.json'), 'utf8'));
+if (!Array.isArray(rankingsCatalog) || rankingsCatalog.length !== raidCatalog.length)
+  throw new Error('The rankings calculator catalog is missing or does not match the raid catalog.');
 const rankingsWorker = await readFile(join(rankingsEngineRoot, 'rankings_worker.js'), 'utf8');
 if (!rankingsWorker.includes("from './rankings.js'"))
   throw new Error('The rankings worker is missing its calculation engine.');
