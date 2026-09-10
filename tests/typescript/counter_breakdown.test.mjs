@@ -61,6 +61,8 @@ test('detail observers preserve battle results and count actual landed actions a
         const player = detailed.players[0];
         assert.equal(data.lives.reduce((sum, life) => sum + life.charged, 0), player.charged_moves_used);
         assert.equal(data.lives.reduce((sum, life) => sum + life.fast, 0), player.fast_moves_used);
+        assert.equal(data.lives.reduce((sum, life) => sum + life.damage, 0), engine.BOSS_HP - actual.boss_hp);
+        assert(data.lives.every(life => life.fieldSeconds >= 0));
         assert.equal(data.lives.filter(life => life.fainted).length, actual.faints);
         assert.equal(data.outings.filter(outing => outing.completed).length, actual.rejoins);
         assert.equal(data.outings.reduce((sum, outing) => sum + outing.damage, 0), engine.BOSS_HP - actual.boss_hp);
@@ -77,6 +79,9 @@ test('detail cycles and probabilities are moveset-specific, reproducible and equ
         if (pair.completedLives) {
             near(pair.cycleDistribution.reduce((sum, bin) => sum + bin.probability, 0), 1);
             assert(pair.chargedCyclesPerLife >= 0);
+            assert(pair.fieldSecondsPerLife > 0);
+            assert(pair.averageOnFieldDps > 0);
+            assert(pair.peakOnFieldDps > 0);
         }
         assert(pair.firstOutingDamage >= 0 && pair.firstOutingDamage <= details.bossHp);
         for (const phase of pair.survival) {
@@ -87,6 +92,9 @@ test('detail cycles and probabilities are moveset-specific, reproducible and equ
     }
     if (details.movesets.every(pair => pair.completedLives)) {
         near(details.average.chargedCyclesPerLife, details.movesets.reduce((sum, pair) => sum + pair.chargedCyclesPerLife, 0) / details.movesets.length);
+        near(details.average.fieldSecondsPerLife, details.movesets.reduce((sum, pair) => sum + pair.fieldSecondsPerLife, 0) / details.movesets.length);
+        near(details.average.averageOnFieldDps, details.movesets.reduce((sum, pair) => sum + pair.averageOnFieldDps, 0) / details.movesets.length);
+        near(details.average.peakOnFieldDps, details.movesets.reduce((sum, pair) => sum + pair.peakOnFieldDps, 0) / details.movesets.length);
     }
     near(details.average.firstOutingDamage, details.movesets.reduce((sum, pair) => sum + pair.firstOutingDamage, 0) / details.movesets.length);
 });

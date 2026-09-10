@@ -10,7 +10,7 @@
   const BOSS_ATTACK_LEVELS = ["low", "medium", "high"];
   const BOSS_MOVE_TYPES = ["typeless", ...TYPES];
   const MEGA_LEVELS = [1, 2, 3, 4];
-  const worker = new Worker("engine-a63b7d5fe155/rankings_worker.js", {type: "module"});
+  const worker = new Worker("engine-7c2ab367aee1/rankings_worker.js", {type: "module"});
   const cache = new Map();
   const pending = new Map();
   let requestId = 0;

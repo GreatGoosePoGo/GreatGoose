@@ -12,7 +12,7 @@
     "no_strategy", "hot_swap_greedy", "hot_swap_cautious", "hot_swap_very_cautious",
   ];
   const MEGA_LEVELS = [1, 2, 3, 4];
-  const worker = new Worker("engine-a63b7d5fe155/counters_worker.js", {type: "module"});
+  const worker = new Worker("engine-7c2ab367aee1/counters_worker.js", {type: "module"});
   const cache = new Map();
   const pending = new Map();
   let requestId = 0;
@@ -458,7 +458,7 @@
     const disclosure = document.createElement("details");
     disclosure.className = "counter-breakdown";
     const summary = document.createElement("summary");
-    summary.textContent = "Matchup breakdown";
+    summary.textContent = "Performance details";
     const panel = document.createElement("div");
     panel.className = "breakdown-body";
     disclosure.append(summary, panel);
@@ -470,7 +470,7 @@
       if (!disclosure.open || requested) return;
       requested = true;
       panel.setAttribute("aria-busy", "true");
-      panel.textContent = "Simulating this counter’s cycles and team outings…";
+      panel.textContent = "Measuring field time, survival, and damage…";
       const pick = {formId: row.formId, fastMoveId: row.fastMoveId, chargedMoveId: row.chargedMoveId, shadow: row.shadow};
       try {
         const result = await workerRequest({mode: "breakdown", ...snapshot.settings, pick}, {
@@ -555,67 +555,56 @@
   }
 
   function renderBreakdown(panel, result) {
-    const number = value => value === null ? "Not observed" : value.toFixed(2);
-    const percentage = value => value === null ? "Not observed" : `${(100 * value).toFixed(1)}%`;
-    const damage = value => value === null ? "Not observed" : `${value.toFixed(0)} HP (${(100 * value / result.bossHp).toFixed(1)}%)`;
+    const number = value => value === null ? "Raid ends first" : value.toFixed(2);
+    const seconds = value => value === null ? "Raid ends first" : `${value.toFixed(1)}s`;
     const range = (min, max) => min === max ? String(min) : `${min}–${max}`;
     const avg = result.average;
     const metrics = document.createElement("dl");
-    metrics.className = "breakdown-metrics";
+    metrics.className = "breakdown-metrics player-metrics";
     metrics.append(
-      metricBlock("Charged cycles / fainted life", number(avg.chargedCyclesPerLife)),
-      metricBlock("Fast attacks / fainted life", number(avg.fastMovesPerLife)),
-      metricBlock("Damage / completed team outing", damage(avg.damagePerCompletedOuting)),
-      metricBlock("First team outing damage", damage(avg.firstOutingDamage)),
+      metricBlock("Time on the field", seconds(avg.fieldSecondsPerLife), "Average active time before one attacker faints. Time spent waiting on the bench after a hot swap is excluded."),
+      metricBlock("Average on-field DPS", number(avg.averageOnFieldDps), "Damage per second while this Pokémon is active. Switch and relobby time are excluded."),
+      metricBlock("Peak DPS", number(avg.peakOnFieldDps), "A strong 10-second burst: the 90th percentile of the best 10-second windows observed in individual lives."),
+      metricBlock("Your charged moves", number(avg.chargedCyclesPerLife), "Average charged attacks landed by one attacker before it faints."),
     );
-    const completedLives = result.movesets.reduce((sum, pair) => sum + pair.completedLives, 0);
-    const unfinishedLives = result.movesets.reduce((sum, pair) => sum + pair.unfinishedLives, 0);
-    const completeOutings = result.movesets.reduce((sum, pair) => sum + pair.completedOutings, 0);
-    const partialOutings = result.movesets.reduce((sum, pair) => sum + pair.partialOutings, 0);
+    const hitSummary = avg.bossFastHitsSurvived === null || avg.bossChargedHitsSurvived === null
+      ? "This raid ended before enough attackers fainted to estimate a typical life."
+      : `A typical life survives about ${avg.bossFastHitsSurvived.toFixed(1)} boss fast hits + ${avg.bossChargedHitsSurvived.toFixed(1)} boss charged hits before the final KO.`;
+    const scope = result.movesets.length === 1
+      ? `${result.movesets[0].fastMove} + ${result.movesets[0].chargedMove}`
+      : `Average across ${result.movesets.length} possible boss movesets`;
     panel.replaceChildren(
-      textElement("h3", "Cycles, survival & team damage"),
-      textElement("p", `${result.simulatedBattles} detailed raids · ${result.trialsPerMoveset} per moveset · ${result.movesets.length} of ${result.totalBossMovesets} matching movesets tested. Averages give each tested moveset equal weight.`, "breakdown-note"),
+      textElement("h3", "How this Pokémon performs"),
+      textElement("p", scope, "breakdown-scope"),
       metrics,
-      textElement("p", `A cycle is one landed charged attack, including fast attacks and energy gained from damage. ${completedLives} fainted lives measured; ${unfinishedLives} unfinished lives excluded. Hot-swap returns count toward the same life.`, "breakdown-note"),
-      textElement("p", `A team outing runs from entry with six fresh Pokémon until leaving for the lobby. ${completeOutings} completed outings; ${partialOutings} partial outings. First-outing damage includes wins/timeouts. Completed-only averages can favour shorter lives or outings. “Not observed” means at least one moveset had no completed sample; it does not mean zero damage or cycles.`, "breakdown-note"),
+      textElement("p", hitSummary, "hit-summary"),
+      textElement("p", "Peak DPS is a strong 10-second burst, not one lucky instantaneous hit. Boss damage can raise it by supplying energy for an earlier charged move.", "breakdown-note"),
     );
-    const cyclesTable = distribution => dataTable("Charged attacks landed before fainting · simulated frequency", ["Completed charged cycles", "Probability among fainted lives"],
-      distribution.filter(bin => bin.probability === null || bin.probability > 0).map(bin => [bin.cycles === 12 ? "12+" : String(bin.cycles), percentage(bin.probability)]));
-    const curveTable = phase => dataTable(`${phase.phase} phase · binomial survival estimate, no dodging`, ["Boss hits received (n)", "Chance HP remains above zero"],
-      phase.curve.filter(point => point.hits <= 6 || [8, 10, 12, 15, 20, 30, 40, 50, 60].includes(point.hits) || point === phase.curve.at(-1))
-        .map(point => [String(point.hits), percentage(point.survivalProbability)]));
-    const probabilities = document.createElement("details");
-    probabilities.className = "probability-details";
-    probabilities.append(textElement("summary", "Cycle probabilities & binomial survival — averaged across tested movesets"));
-    probabilities.append(cyclesTable(avg.cycleDistribution));
-    probabilities.append(textElement("p", "The binomial estimate treats each incoming hit as charged with probability p, fitted from the detailed raids. Real attacks depend on boss energy, so they are correlated. This is not a prediction of charged-cycle probabilities. It assumes full HP, no dodging or swapping, and a fixed normal/enraged phase; your selected strategies still apply to the simulations above.", "breakdown-note"));
-    probabilities.append(textElement("p", "K ~ Binomial(n, p). Survive when (n − K) × fast damage + K × charged damage < HP. Each moveset’s probability is calculated separately, then averaged. Hidden Power is averaged over 16 types. Curves show up to 60 hits.", "breakdown-note"));
-    avg.survival.forEach(phase => probabilities.append(curveTable(phase)));
-    panel.append(probabilities, textElement("h4", "Breakdown by boss moveset"));
+    panel.append(textElement("h4", result.movesets.length === 1 ? "Boss attacks" : "By boss moveset"));
     for (const pair of result.movesets) {
       const detail = document.createElement("details");
       detail.className = "pair-breakdown";
       detail.open = result.movesets.length === 1;
-      detail.append(textElement("summary", `${pair.fastMove} / ${pair.chargedMove} · ${number(pair.chargedCyclesPerLife)} charged cycles per fainted life`));
-      detail.append(dataTable("Observed in detailed raids", ["Metric", "Value"], [
-        ["Completed lives / unfinished lives", `${pair.completedLives} / ${pair.unfinishedLives}`],
-        ["Fast hits survived before fainting (mean)", number(pair.bossFastHitsSurvived)],
-        ["Charged hits survived before fainting (mean)", number(pair.bossChargedHitsSurvived)],
-        ["Charged share of incoming hits (p)", percentage(pair.observedChargedProbability)],
-        ["Damage per completed team outing", damage(pair.damagePerCompletedOuting)],
-        ["Damage per partial team outing", damage(pair.damagePerPartialOuting)],
-        ["Completed / partial team outings", `${pair.completedOutings} / ${pair.partialOutings}`],
-        ["First team outing damage", damage(pair.firstOutingDamage)],
-      ]));
+      detail.append(textElement("summary", `${pair.fastMove} + ${pair.chargedMove} · ${seconds(pair.fieldSecondsPerLife)} on field · ${number(pair.averageOnFieldDps)} DPS`));
+      const pairMetrics = document.createElement("dl");
+      pairMetrics.className = "pair-metrics";
+      pairMetrics.append(
+        metricBlock("Time on field", seconds(pair.fieldSecondsPerLife)),
+        metricBlock("Average DPS", number(pair.averageOnFieldDps)),
+        metricBlock("Peak DPS", number(pair.peakOnFieldDps)),
+        metricBlock("Your charged moves", number(pair.chargedCyclesPerLife)),
+      );
+      detail.append(pairMetrics);
+      const pairHits = pair.bossFastHitsSurvived === null || pair.bossChargedHitsSurvived === null
+        ? "The raid ended before a typical fainted life could be measured."
+        : `Usually survives about ${pair.bossFastHitsSurvived.toFixed(1)} × ${pair.fastMove} + ${pair.bossChargedHitsSurvived.toFixed(1)} × ${pair.chargedMove} before the final KO.`;
+      detail.append(textElement("p", pairHits, "hit-summary compact"));
       for (const phase of pair.survival) {
-        detail.append(textElement("h4", `${phase.phase} phase · ${phase.hp} attacker HP`));
-        detail.append(textElement("p", `Fast hit: ${range(phase.fastDamageMin, phase.fastDamageMax)} damage. Charged hit: ${phase.chargedDamage} damage (${phase.dodgedChargedDamage} if successfully dodged). Survives ${phase.chargedHitsSurvived} charged hits alone; the next is lethal.`, "breakdown-note"));
-        detail.append(dataTable("Undodged hit limits from full HP · each row is an alternative", ["Boss charged hits", "Additional fast hits survivable"], phase.combos.map(combo => [
-          String(combo.chargedHits), combo.survives ? range(combo.fastHitsMin, combo.fastHitsMax) : "KO from charged hits alone",
-        ])));
-        detail.append(curveTable(phase));
+        const fastOnly = phase.combos[0];
+        const phaseName = pair.survival.length > 1 ? `${phase.phase} phase: ` : "";
+        detail.append(textElement("p", `${phaseName}From full HP with no dodge, survives ${range(fastOnly.fastHitsMin, fastOnly.fastHitsMax)} ${pair.fastMove} hits alone or ${phase.chargedHitsSurvived} ${pair.chargedMove} hits alone.`, "solo-hit-limit"));
+        detail.append(textElement("p", `Damage per hit: ${range(phase.fastDamageMin, phase.fastDamageMax)} fast · ${phase.chargedDamage} charged${phase.dodgedChargedDamage !== phase.chargedDamage ? ` · ${phase.dodgedChargedDamage} when dodged` : ""}.`, "breakdown-note compact"));
       }
-      detail.append(cyclesTable(pair.cycleDistribution));
       panel.append(detail);
     }
   }

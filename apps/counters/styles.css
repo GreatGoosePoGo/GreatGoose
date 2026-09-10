@@ -488,12 +488,41 @@ select:focus,
 .breakdown-body { padding: 1rem; }
 .breakdown-body h3 { margin: 0 0 .5rem; }
 .breakdown-body h4 { margin: 1rem 0 .5rem; }
+.breakdown-scope { margin: 0 0 .85rem; color: var(--muted); font-size: .875rem; }
 .breakdown-note { font-size: .875rem; color: var(--muted); line-height: 1.6; }
 .breakdown-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
 .breakdown-metrics div { border-left: 3px solid var(--blue); padding: .4rem .8rem; background: var(--surface-soft); }
 .breakdown-metrics dt { font-size: .875rem; color: var(--muted); }
 .breakdown-metrics dd { margin: .3rem 0 0; font-weight: 750; }
+.player-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.player-metrics dd { font-size: 1.2rem; }
+.hit-summary {
+  margin: 1rem 0 .35rem;
+  padding: .8rem .9rem;
+  border-radius: .55rem;
+  color: #173149;
+  background: var(--blue-soft);
+  font-weight: 750;
+}
+.hit-summary.compact { margin: .8rem .3rem; }
 .probability-details, .pair-breakdown { border: 1px solid var(--line); border-radius: .6rem; margin-top: .7rem; padding: 0 .6rem; }
+.pair-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  margin: .25rem .3rem .8rem;
+  background: var(--line);
+}
+.pair-metrics div { min-width: 0; padding: .7rem; background: var(--surface-soft); }
+.pair-metrics dt { color: var(--muted); font-size: .76rem; font-weight: 700; }
+.pair-metrics dd { margin: .2rem 0 0; font-size: 1rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.solo-hit-limit {
+  margin: .65rem .3rem .2rem;
+  color: #263746;
+  font-size: .9rem;
+  font-weight: 700;
+}
+.breakdown-note.compact { margin: .15rem .3rem .85rem; }
 .table-scroll { overflow-x: auto; margin: .6rem 0 1rem; max-width: 100%; }
 .table-scroll table { width: 100%; border-collapse: collapse; font-size: .875rem; }
 .table-scroll caption { text-align: left; padding: .6rem; font-weight: 700; }
@@ -640,6 +669,7 @@ select:focus,
   .condition-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .quick-setup { grid-template-columns: minmax(16rem, 2fr) 1fr 1fr; }
   .generate-button { grid-column: 1 / -1; width: 100%; }
+  .player-metrics, .pair-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 48rem) {
@@ -684,4 +714,5 @@ select:focus,
   .card-metrics div:nth-child(3) { border-top: 1px solid #e3e8ec; border-left: 0; }
   .card-metrics div:nth-child(4) { border-top: 1px solid #e3e8ec; }
   .card-metrics div { padding-inline: .55rem; }
+  .player-metrics, .pair-metrics { grid-template-columns: 1fr; }
 }

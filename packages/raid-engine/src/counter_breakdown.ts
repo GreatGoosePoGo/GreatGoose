@@ -4,7 +4,16 @@ import type {CalculatorEntry} from './types.js';
 import type {Simulation} from './super_mega_raid_simulator.js';
 
 export interface CounterPick {formId: string; fastMoveId: string; chargedMoveId: string; shadow: boolean}
-interface Life {fast: number; charged: number; fastSurvived: number; chargedSurvived: number; fainted: boolean}
+interface Life {
+    fast: number;
+    charged: number;
+    fastSurvived: number;
+    chargedSurvived: number;
+    fainted: boolean;
+    fieldSeconds: number;
+    damage: number;
+    damageEvents: {time: number; damage: number}[];
+}
 interface Outing {damage: number; completed: boolean}
 
 /** Strict survival: damage equal to HP is a KO, not a survived hit. */
@@ -39,17 +48,28 @@ export function observeCounterTrial(simulation: Simulation) {
     let outing: Outing | null = {damage: 0, completed: false};
     let bossFastHits = 0;
     let bossChargedHits = 0;
+    let activeLife: Life | null = null;
+    let activeSince = simulation.current_time;
     const touch = (index: number) => {
         let life = currentLives.get(index);
         if (!life) {
-            life = {fast: 0, charged: 0, fastSurvived: 0, chargedSurvived: 0, fainted: false};
+            life = {fast: 0, charged: 0, fastSurvived: 0, chargedSurvived: 0,
+                fainted: false, fieldSeconds: 0, damage: 0, damageEvents: []};
             currentLives.set(index, life);
             lives.push(life);
         }
         return life;
     };
+    const settleActiveTime = (time: number) => {
+        if (activeLife) activeLife.fieldSeconds += Math.max(0, time - activeSince);
+    };
     simulation.capture_replay_state = () => {
-        if (player.on_field) touch(player.pokemon_index);
+        const nextLife = player.on_field ? touch(player.pokemon_index) : null;
+        if (nextLife !== activeLife) {
+            settleActiveTime(simulation.current_time);
+            activeLife = nextLife;
+            activeSince = simulation.current_time;
+        }
         if (!player.on_field && outing) {
             outing.completed = true;
             outings.push(outing);
@@ -66,6 +86,11 @@ export function observeCounterTrial(simulation: Simulation) {
         if (life) {
             life.fast += player.fast_moves_used - fastBefore;
             life.charged += player.charged_moves_used - chargedBefore;
+            const damage = hpBefore - Math.max(0, simulation.boss_hp);
+            if (damage > 0) {
+                life.damage += damage;
+                life.damageEvents.push({time: simulation.current_time, damage});
+            }
         }
         if (outing) outing.damage += hpBefore - Math.max(0, simulation.boss_hp);
     };
@@ -90,7 +115,9 @@ export function observeCounterTrial(simulation: Simulation) {
         rejoin(time, id);
     };
     return {
-        finish() {
+        finish(finalTime = simulation.current_time) {
+            settleActiveTime(finalTime);
+            activeLife = null;
             if (outing) outings.push(outing);
             return {lives, outings, bossFastHits, bossChargedHits};
         },
@@ -100,6 +127,26 @@ export function observeCounterTrial(simulation: Simulation) {
 const mean = (values: number[]) => values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
 const averageNullable = (values: (number | null)[]) => values.every(value => value !== null)
     ? mean(values as number[]) : null;
+const percentile = (values: number[], fraction: number) => {
+    if (!values.length) return null;
+    const sorted = [...values].sort((a, b) => a - b);
+    return sorted[Math.ceil((sorted.length - 1) * fraction)];
+};
+const peakWindowDps = (life: Life, windowSeconds = 10) => {
+    let start = 0;
+    let damage = 0;
+    let peak = 0;
+    for (let end = 0; end < life.damageEvents.length; end += 1) {
+        const event = life.damageEvents[end];
+        damage += event.damage;
+        while (life.damageEvents[start].time < event.time - windowSeconds) {
+            damage -= life.damageEvents[start].damage;
+            start += 1;
+        }
+        peak = Math.max(peak, damage / windowSeconds);
+    }
+    return peak;
+};
 
 export function calculateCounterBreakdown(
     catalog: CalculatorEntry[], settings: RaidCounterSettings, pick: CounterPick,
@@ -123,7 +170,7 @@ export function calculateCounterBreakdown(
             const simulation = counterSimulation(engine, candidate, pair, level, megaLevel, trial);
             const observer = observeCounterTrial(simulation);
             const result = simulation.run();
-            const observation = observer.finish();
+            const observation = observer.finish(result.finish_time);
             lives.push(...observation.lives);
             outings.push(...observation.outings);
             firstOutingDamage.push(observation.outings[0].damage);
@@ -133,6 +180,8 @@ export function calculateCounterBreakdown(
             totalSeconds += result.finish_time;
         }
         const fainted = lives.filter(life => life.fainted);
+        const dpsLives = fainted.length ? fainted : lives;
+        const usableDpsLives = dpsLives.filter(life => life.fieldSeconds > 0 && life.damage > 0);
         const completed = outings.filter(outing => outing.completed);
         const partial = outings.filter(outing => !outing.completed);
         const observedChargedProbability = fastHits + chargedHits ? chargedHits / (fastHits + chargedHits) : null;
@@ -175,6 +224,14 @@ export function calculateCounterBreakdown(
             trials: trialsPerMoveset, hp, completedLives: fainted.length, unfinishedLives: lives.length - fainted.length,
             chargedCyclesPerLife: mean(fainted.map(life => life.charged)),
             fastMovesPerLife: mean(fainted.map(life => life.fast)),
+            fieldSecondsPerLife: mean(fainted.map(life => life.fieldSeconds)),
+            averageOnFieldDps: usableDpsLives.length
+                ? usableDpsLives.reduce((sum, life) => sum + life.damage, 0)
+                    / usableDpsLives.reduce((sum, life) => sum + life.fieldSeconds, 0)
+                : null,
+            // A high-end repeatable burst: the 90th percentile of each life's best
+            // fixed 10-second damage window, rather than one lucky instantaneous hit.
+            peakOnFieldDps: percentile(usableDpsLives.map(life => peakWindowDps(life)), .9),
             bossFastHitsSurvived: mean(fainted.map(life => life.fastSurvived)),
             bossChargedHitsSurvived: mean(fainted.map(life => life.chargedSurvived)),
             completedOutings: completed.length, partialOutings: partial.length,
@@ -192,6 +249,11 @@ export function calculateCounterBreakdown(
         average: {
             chargedCyclesPerLife: averageNullable(movesets.map(pair => pair.chargedCyclesPerLife)),
             fastMovesPerLife: averageNullable(movesets.map(pair => pair.fastMovesPerLife)),
+            fieldSecondsPerLife: averageNullable(movesets.map(pair => pair.fieldSecondsPerLife)),
+            averageOnFieldDps: averageNullable(movesets.map(pair => pair.averageOnFieldDps)),
+            peakOnFieldDps: averageNullable(movesets.map(pair => pair.peakOnFieldDps)),
+            bossFastHitsSurvived: averageNullable(movesets.map(pair => pair.bossFastHitsSurvived)),
+            bossChargedHitsSurvived: averageNullable(movesets.map(pair => pair.bossChargedHitsSurvived)),
             damagePerCompletedOuting: averageNullable(movesets.map(pair => pair.damagePerCompletedOuting)),
             firstOutingDamage: mean(movesets.map(pair => pair.firstOutingDamage))!,
             cycleDistribution: Array.from({length: 13}, (_, cycles) => ({cycles,

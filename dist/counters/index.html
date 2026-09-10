@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Pokémon GO Raid Counters | Great Goose</title>
     <meta name="description" content="Rank Pokémon GO raid counters with full battle simulations and configurable battle conditions.">
-    <link rel="stylesheet" href="styles.css?v=a63b7d5fe155">
-    <script src="app.js?v=a63b7d5fe155" defer></script>
+    <link rel="stylesheet" href="styles.css?v=7c2ab367aee1">
+    <script src="app.js?v=7c2ab367aee1" defer></script>
   </head>
   <body>
     <header class="site-header">
@@ -225,9 +225,9 @@
           <li>Each counter is represented by six identical attackers at the selected level with 15/15/15 IVs.</li>
           <li>Up to 12 evenly sampled ordinary boss fast/charged combinations are simulated three times; bosses with 12 or fewer use every combination.</li>
           <li>Boss move selectors restrict those combinations. Unselected moves are equally weighted across the tested combinations, including in counter breakdowns.</li>
-          <li>Open a counter to run 32 detailed trials per tested boss moveset. A charged cycle means one charged attack that actually landed; animation-cancelled attacks do not count. Cycles are measured over completed Pokémon lives, combining hot-swap returns to the same Pokémon. Lives cut short by victory, the timer, or team retirement are excluded and reported separately.</li>
-          <li>One team outing is the damage dealt by a fresh team of six until it leaves for the lobby. First-outing damage is capped by a victory or the raid timer; completed-outing damage excludes those partial outings.</li>
-          <li>Binomial survival is an undodged, fixed-phase approximation: K ~ Binomial(n, p), surviving when (n − K) × fast damage + K × charged damage &lt; HP. p is the charged-hit share measured in detailed trials. Real boss attacks depend on energy and are not independent; binomial probabilities are not the simulated cycle probabilities. Hidden Power probabilities are averaged over its 16 possible types.</li>
+          <li>Open a counter to run 32 detailed trials per tested boss moveset. Time on field and boss hits survived are averaged over Pokémon that actually fainted; a Pokémon still alive when the raid ends is not treated as if it fainted.</li>
+          <li>Average on-field DPS is damage divided by active field time and excludes time spent on the bench after a hot swap. Peak DPS is the 90th percentile of each life’s best fixed 10-second damage window, which captures repeatable bursts without using one instantaneous or exceptionally lucky hit.</li>
+          <li>The displayed full-HP fast-only and charged-only limits are simple no-dodge comparisons. The typical mixed hit counts come from full simulations using the selected dodge and player strategies. Hidden Power is tested across its 16 possible types.</li>
           <li>Battle DPS includes fainting, switching, relobby downtime, and the selected dodge and player strategies.</li>
           <li>The selected weather and friendship bonuses apply to every simulated battle. Party Power, Adventure Effects, and Purified Gems remain off.</li>
           <li>Exclude legacy removes fast and charged moves marked Elite or legacy; currently available signature and special-form moves remain eligible.</li>
