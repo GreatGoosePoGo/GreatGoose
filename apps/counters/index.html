@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Pokémon GO Raid Counters | Great Goose</title>
+    <meta name="description" content="Rank Pokémon GO raid counters with full battle simulations and configurable battle conditions.">
+    <link rel="stylesheet" href="styles.css">
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="../">Great Goose Pokémon GO</a>
+      <nav aria-label="Great Goose tools">
+        <a href="../raids/">Raids</a>
+        <a href="./" aria-current="page">Counters</a>
+        <a href="../rankings/">Rankings</a>
+      </nav>
+    </header>
+
+    <main>
+      <div class="page-heading">
+        <div>
+          <p class="eyebrow">Simulation-backed rankings</p>
+          <h1>Raid counters</h1>
+        </div>
+        <p>Find the strongest attackers for one specific raid boss.</p>
+        <a class="raid-link" href="../raids/">Build a raid team →</a>
+      </div>
+
+      <section class="boss-panel" aria-labelledby="counter-boss-name">
+        <div class="boss-identity">
+          <div id="counter-boss-mark" class="boss-mark" aria-hidden="true">?</div>
+          <div>
+            <p id="counter-boss-label" class="eyebrow">Tier 5 raid</p>
+            <h2 id="counter-boss-name">Choose a boss</h2>
+            <p id="counter-boss-meta" class="boss-meta">Select a Pokémon below to prepare the matchup.</p>
+            <div id="counter-boss-types" class="type-chips" aria-label="Boss types"></div>
+          </div>
+        </div>
+
+        <div class="outcome-summary" aria-live="polite">
+          <span class="outcome-label">Simulation result</span>
+          <strong id="counter-outcome-status">Ready to simulate</strong>
+          <p id="counter-outcome-detail">Results are based on a full team of six identical attackers.</p>
+        </div>
+
+        <dl class="headline-metrics">
+          <div>
+            <dt>Best counter</dt>
+            <dd id="counter-best-name">—</dd>
+          </div>
+          <div>
+            <dt>Battle DPS</dt>
+            <dd id="counter-best-dps">—</dd>
+          </div>
+          <div>
+            <dt>Boss HP dealt</dt>
+            <dd id="counter-best-damage">—</dd>
+          </div>
+          <div>
+            <dt>Faints</dt>
+            <dd id="counter-best-faints">—</dd>
+          </div>
+        </dl>
+      </section>
+
+      <section class="controls counter-controls" aria-labelledby="counter-heading">
+        <div class="control-heading">
+          <div>
+            <h2 id="counter-heading">Find counters</h2>
+            <p>Every listed result comes from complete raid simulations.</p>
+          </div>
+        </div>
+
+        <div class="quick-setup">
+          <label class="select-control boss-search-control">
+            Raid boss
+            <input id="counter-boss" type="search" list="counter-boss-options" placeholder="Start typing a Pokémon name" autocomplete="off">
+            <datalist id="counter-boss-options"></datalist>
+          </label>
+          <label class="select-control">
+            Difficulty
+            <select id="counter-difficulty">
+              <option>Tier 1</option>
+              <option>Tier 3</option>
+              <option>Tier 4</option>
+              <option selected>Tier 5</option>
+              <option>Mega</option>
+              <option>Mega Legendary</option>
+              <option>Super Mega</option>
+              <option>Elite</option>
+              <option>Primal</option>
+              <option>Tier 1 Shadow</option>
+              <option>Tier 3 Shadow</option>
+              <option>Tier 5 Shadow</option>
+            </select>
+          </label>
+          <label class="select-control">
+            Attacker level
+            <select id="counter-level">
+              <option value="30">Level 30</option>
+              <option value="40" selected>Level 40</option>
+              <option value="50">Level 50</option>
+            </select>
+          </label>
+          <button id="generate-counters" class="generate-button" type="button">Generate top 30</button>
+        </div>
+
+        <details id="counter-settings" class="advanced-settings" open>
+          <summary>
+            <span>Battle settings</span>
+            <span id="counter-settings-summary" class="settings-summary">No weather · No friendship · No dodging</span>
+          </summary>
+          <div class="settings-body">
+            <div class="condition-grid">
+              <label class="select-control">
+                Weather
+                <select id="counter-weather">
+                  <option value="" selected>None</option>
+                  <option>Sunny/Clear</option>
+                  <option>Rainy</option>
+                  <option>Partly Cloudy</option>
+                  <option>Cloudy</option>
+                  <option>Windy</option>
+                  <option>Snow</option>
+                  <option>Fog</option>
+                </select>
+              </label>
+              <label class="select-control">
+                Friendship
+                <select id="counter-friendship">
+                  <option value="1" selected>None</option>
+                  <option value="1.03">Good Friends (1.03×)</option>
+                  <option value="1.05">Great Friends (1.05×)</option>
+                  <option value="1.07">Ultra Friends (1.07×)</option>
+                  <option value="1.10">Best Friends (1.10×)</option>
+                  <option value="1.12">Seasonal Best Friends (1.12×)</option>
+                </select>
+              </label>
+              <label class="select-control">
+                Dodge strategy
+                <select id="counter-dodge-strategy">
+                  <option value="none" selected>Dodge nothing</option>
+                  <option value="all_survivable">Dodge every survivable charged move</option>
+                  <option value="super_effective">Dodge super-effective moves</option>
+                  <option value="non_resisted">Dodge every non-resisted move</option>
+                  <option value="lethal_only">Dodge only lethal charged moves</option>
+                </select>
+              </label>
+              <label class="select-control">
+                Player strategy
+                <select id="counter-player-strategy">
+                  <option value="no_strategy" selected>No voluntary swapping</option>
+                  <option value="hot_swap_greedy">Hot swap — greedy</option>
+                  <option value="hot_swap_cautious">Hot swap — cautious (10% reserve)</option>
+                  <option value="hot_swap_very_cautious">Hot swap — very cautious (15% reserve)</option>
+                </select>
+              </label>
+              <label class="select-control">
+                Mega Level
+                <select id="counter-mega-level">
+                  <option value="1" selected>1 · Base (+)</option>
+                  <option value="2">2 · High (++)</option>
+                  <option value="3">3 · Max (+++)</option>
+                  <option value="4">4 · Super Max (++++)</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="counter-tools">
+              <div class="filter-group" role="group" aria-label="Included raid-counter categories">
+                <span class="filter-label">Include attackers</span>
+                <button id="counter-include-megas" class="filter-button" type="button" aria-pressed="true">Megas</button>
+                <button id="counter-include-shadows" class="filter-button" type="button" aria-pressed="true">Shadows</button>
+                <button id="counter-include-legendaries" class="filter-button" type="button" aria-pressed="true">Legendary</button>
+              </div>
+              <div class="filter-group" role="group" aria-label="Move availability">
+                <span class="filter-label">Move availability</span>
+                <button id="counter-exclude-legacy" class="filter-button" type="button" aria-pressed="false">Exclude legacy</button>
+              </div>
+            </div>
+            <p class="condition-note">Each result uses six identical 15/15/15 attackers. Catch-tank is unavailable because every team slot is the same Pokémon.</p>
+          </div>
+        </details>
+      </section>
+
+      <section id="counter-results" class="results" aria-live="polite" aria-busy="false">
+        <div class="results-heading">
+          <div>
+            <p class="eyebrow">Counter rankings</p>
+            <h2 id="counter-results-title">Choose a boss to begin</h2>
+          </div>
+          <p id="counter-summary" class="summary">The calculation runs entirely in your browser.</p>
+        </div>
+
+        <div id="counter-error" class="error" role="alert" hidden></div>
+        <div class="counter-progress" id="counter-progress" hidden>
+          <progress id="counter-progress-bar" value="0" max="100"></progress>
+          <span id="counter-progress-text">Preparing candidates…</span>
+        </div>
+        <ol id="counter-body" class="counter-list">
+          <li class="empty-state">Select a boss and generate its top counters.</li>
+        </ol>
+      </section>
+
+      <details class="counter-methodology">
+        <summary>Raid-counter methodology</summary>
+        <ul>
+          <li>Each counter is represented by six identical attackers at the selected level with 15/15/15 IVs.</li>
+          <li>Up to 12 evenly sampled ordinary boss fast/charged combinations are simulated three times; bosses with 12 or fewer use every combination.</li>
+          <li>Battle DPS includes fainting, switching, relobby downtime, and the selected dodge and player strategies.</li>
+          <li>The selected weather and friendship bonuses apply to every simulated battle. Party Power, Adventure Effects, and Purified Gems remain off.</li>
+          <li>Exclude legacy removes fast and charged moves marked Elite or legacy; currently available signature and special-form moves remain eligible.</li>
+          <li>A fast analytical pass retains the strongest candidate movesets for full simulations; all displayed scores come from the raid simulator.</li>
+          <li>Mega rows show standardized per-attacker potential. Six copies of the same Mega are a ranking abstraction, not a legal raid party.</li>
+          <li>An asterisk (*) marks an Elite or legacy move.</li>
+        </ul>
+      </details>
+    </main>
+  </body>
+</html>

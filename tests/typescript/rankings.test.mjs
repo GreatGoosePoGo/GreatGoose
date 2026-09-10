@@ -273,6 +273,11 @@ test('rankings UI uses compact selection, metric help, and effective DPS by defa
   assert.match(app, /bossAttack/);
   assert.match(app, /bossMoveType/);
   assert.match(app, /megaLevel/);
+<<<<<<< HEAD
+=======
+  assert.doesNotMatch(app, /mode:\s*["']counters["']|renderCounters|counters_worker/);
+  assert.doesNotMatch(page, /id="view-counters"|id="counter-panel"/);
+>>>>>>> f6ff54f (PokeBattler styled raid counters ranking)
   for (const id of ['include-megas', 'include-shadows', 'include-legendaries']) {
     assert.match(page, new RegExp(`id="${id}"[^>]*aria-pressed="true"`));
   }

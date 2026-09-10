@@ -3,6 +3,7 @@ import {dirname, extname, join, normalize, relative, resolve, sep} from 'node:pa
 
 const root = resolve('dist');
 const raidsRoot = join(root, 'raids');
+const countersRoot = join(root, 'counters');
 const rankingsRoot = join(root, 'rankings');
 const build = JSON.parse(await readFile(join(raidsRoot, 'build-info.json'), 'utf8'));
 if (!/^[a-f0-9]{12}$/.test(build.version))
@@ -25,8 +26,11 @@ if (files.some(path => extname(path) === '.py'))
   throw new Error('The static website unexpectedly contains Python files.');
 
 const homeIndex = await readFile(join(root, 'index.html'), 'utf8');
-if (!homeIndex.includes('href="raids/"') || !homeIndex.includes('href="rankings/"'))
-  throw new Error('The home page must link to both path-based applications.');
+if (!homeIndex.includes('href="raids/"')
+    || !homeIndex.includes('href="counters/"')
+    || !homeIndex.includes('href="rankings/"'))
+  throw new Error('The home page must link to all three path-based applications.');
+await stat(join(countersRoot, 'index.html'));
 await stat(join(rankingsRoot, 'index.html'));
 
 const index = await readFile(join(raidsRoot, 'index.html'), 'utf8');
@@ -90,14 +94,33 @@ const rankingsClient = await readFile(join(rankingsRoot, 'app.js'), 'utf8');
 if (!rankingsClient.includes(`${build.engine_directory}/rankings_worker.js`))
   throw new Error('The rankings page does not load the matching worker.');
 const rankingsEngineRoot = join(rankingsRoot, build.engine_directory);
+<<<<<<< HEAD
 for (const asset of ['rankings.js', 'rankings_worker.js', 'calculator_data.json', 'shadow_availability.json', 'ranking_categories.json'])
+=======
+for (const asset of ['rankings.js', 'raid_counters.js', 'super_mega_raid_simulator.js', 'rankings_worker.js', 'calculator_data.json', 'shadow_availability.json', 'ranking_categories.json'])
+>>>>>>> f6ff54f (PokeBattler styled raid counters ranking)
   await stat(join(rankingsEngineRoot, asset));
 const rankingsCatalog = JSON.parse(await readFile(join(rankingsEngineRoot, 'calculator_data.json'), 'utf8'));
 if (!Array.isArray(rankingsCatalog) || rankingsCatalog.length !== raidCatalog.length)
   throw new Error('The rankings calculator catalog is missing or does not match the raid catalog.');
 const rankingsWorker = await readFile(join(rankingsEngineRoot, 'rankings_worker.js'), 'utf8');
+<<<<<<< HEAD
 if (!rankingsWorker.includes("from './rankings.js'"))
   throw new Error('The rankings worker is missing its calculation engine.');
+=======
+if (!rankingsWorker.includes("from './rankings.js'") || rankingsWorker.includes("from './raid_counters.js'"))
+  throw new Error('The rankings worker must contain only the general ranking calculation entrypoint.');
+const rankingsEngineFiles = await filesBelow(rankingsEngineRoot);
+for (const path of rankingsEngineFiles.filter(path => path.endsWith('.js'))) {
+  const source = await readFile(path, 'utf8');
+  for (const match of source.matchAll(/\b(?:from\s*|import\s*)[(']?['"](\.\.?\/[^'"]+)['"]/g)) {
+    const target = normalize(resolve(dirname(path), match[1]));
+    if (!target.startsWith(rankingsEngineRoot + sep))
+      throw new Error(`Rankings engine import escapes its versioned graph: ${relative(root, path)} -> ${match[1]}`);
+    await stat(target);
+  }
+}
+>>>>>>> f6ff54f (PokeBattler styled raid counters ranking)
 const shadowAvailability = JSON.parse(await readFile(join(rankingsEngineRoot, 'shadow_availability.json'), 'utf8'));
 if (!Array.isArray(shadowAvailability.form_ids) || shadowAvailability.form_ids.length < 300)
   throw new Error('The released Shadow availability snapshot is missing or implausibly small.');
@@ -108,4 +131,47 @@ if (!Array.isArray(rankingCategories.legendary_dex_numbers)
     || rankingCategories.legendary_dex_numbers.length !== 97)
   throw new Error('The broad Legendary category snapshot is missing or invalid.');
 
+<<<<<<< HEAD
+=======
+const countersIndex = await readFile(join(countersRoot, 'index.html'), 'utf8');
+for (const asset of ['styles.css', 'app.js']) {
+  if (!countersIndex.includes(`${asset}?v=${build.version}`))
+    throw new Error(`The counters page does not load versioned ${asset}.`);
+}
+for (const id of [
+  'counter-boss', 'counter-difficulty', 'counter-level', 'counter-weather',
+  'counter-friendship', 'counter-dodge-strategy', 'counter-player-strategy',
+  'counter-exclude-legacy', 'generate-counters', 'counter-body',
+]) {
+  if (!countersIndex.includes(`id="${id}"`))
+    throw new Error(`Raid-counter control is missing: ${id}`);
+}
+const countersClient = await readFile(join(countersRoot, 'app.js'), 'utf8');
+if (!countersClient.includes(`${build.engine_directory}/counters_worker.js`))
+  throw new Error('The counters page does not load the matching worker.');
+const countersEngineRoot = join(countersRoot, build.engine_directory);
+for (const asset of [
+  'counters_worker.js', 'raid_counters.js', 'super_mega_raid_simulator.js',
+  'calculator_data.json', 'shadow_availability.json', 'ranking_categories.json',
+]) {
+  await stat(join(countersEngineRoot, asset));
+}
+const countersCatalog = JSON.parse(await readFile(join(countersEngineRoot, 'calculator_data.json'), 'utf8'));
+if (!Array.isArray(countersCatalog) || countersCatalog.length !== raidCatalog.length)
+  throw new Error('The counter calculator catalog is missing or does not match the raid catalog.');
+const countersWorker = await readFile(join(countersEngineRoot, 'counters_worker.js'), 'utf8');
+if (!countersWorker.includes("from './raid_counters.js'"))
+  throw new Error('The counters worker is missing its simulation-backed calculation engine.');
+const countersEngineFiles = await filesBelow(countersEngineRoot);
+for (const path of countersEngineFiles.filter(path => path.endsWith('.js'))) {
+  const source = await readFile(path, 'utf8');
+  for (const match of source.matchAll(/\b(?:from\s*|import\s*)[(']?['"](\.\.?\/[^'"]+)['"]/g)) {
+    const target = normalize(resolve(dirname(path), match[1]));
+    if (!target.startsWith(countersEngineRoot + sep))
+      throw new Error(`Counters engine import escapes its versioned graph: ${relative(root, path)} -> ${match[1]}`);
+    await stat(target);
+  }
+}
+
+>>>>>>> f6ff54f (PokeBattler styled raid counters ranking)
 console.log(`Validated static website ${build.version}: ${files.length} files and a closed engine module graph.`);

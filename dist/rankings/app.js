@@ -10,7 +10,11 @@
   const BOSS_ATTACK_LEVELS = ["low", "medium", "high"];
   const BOSS_MOVE_TYPES = ["typeless", ...TYPES];
   const MEGA_LEVELS = [1, 2, 3, 4];
+<<<<<<< HEAD
   const worker = new Worker("engine-206e3810fef2/rankings_worker.js", {type: "module"});
+=======
+  const worker = new Worker("engine-5711c489b173/rankings_worker.js", {type: "module"});
+>>>>>>> f6ff54f (PokeBattler styled raid counters ranking)
   const cache = new Map();
   const pending = new Map();
   let requestId = 0;

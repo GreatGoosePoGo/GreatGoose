@@ -14,7 +14,7 @@ const server=createServer(async(req,res)=>{
   if(req.method!=='GET' && req.method!=='HEAD'){res.writeHead(405);res.end();return;}
 
   // Static hosts normally map directory URLs to index.html. Mirror that
-  // behavior locally so routes such as /raids/ and /rankings/ work too.
+  // behavior locally so routes such as /raids/, /counters/, and /rankings/ work too.
   const info=await stat(path);
   if(info.isDirectory()){
    if(!url.pathname.endsWith('/')){

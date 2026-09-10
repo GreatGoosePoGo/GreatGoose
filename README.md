@@ -4,7 +4,12 @@ Great Goose is a single static website with independently developed applications
 
 - `/` — home page
 - `/raids/` — raid simulator, replay player and manual battles
+<<<<<<< HEAD
 - `/rankings/` — Level 40 attacker rankings by attack type, with released Shadow variants
+=======
+- `/counters/` — simulation-backed rankings against a specific raid boss
+- `/rankings/` — Level 40 general attacker rankings by attack type
+>>>>>>> f6ff54f (PokeBattler styled raid counters ranking)
 
 Simulations run entirely in the visitor's browser, with long calculations in a
 Web Worker. The deployed site does not run Python, use Pyodide, or call a
@@ -18,8 +23,9 @@ With Node.js installed, open PowerShell in the extracted project folder and run:
 npm start
 ```
 
-Open **http://localhost:8000** for the home page or
-**http://localhost:8000/raids/** for the simulator. The ZIP includes the compiled
+Open **http://localhost:8000** for the home page,
+**http://localhost:8000/raids/** for the simulator, or
+**http://localhost:8000/counters/** for raid counters. The ZIP includes the compiled
 `dist/` folder, so running the included build requires neither Python nor an npm
 dependency install. Keep the terminal open and press Ctrl+C to stop.
 
@@ -32,8 +38,15 @@ an HTTP origin for module workers and the static catalog.
 | --- | --- |
 | `apps/home/` | Great Goose landing page built at `/` |
 | `apps/raids/` | Raid UI, replay controls, manual battle controls and share links built at `/raids/` |
+<<<<<<< HEAD
 | `apps/rankings/` | Rankings UI and worker client built at `/rankings/` |
 | `packages/raid-engine/src/rankings.ts` | Deterministic Level 40 ideal, simple-cycle and effective DPS calculations |
+=======
+| `apps/counters/` | Specific-boss counter UI and worker client built at `/counters/` |
+| `apps/rankings/` | Rankings UI and worker client built at `/rankings/` |
+| `packages/raid-engine/src/rankings.ts` | Deterministic Level 40 ideal, simple-cycle and effective DPS calculations |
+| `packages/raid-engine/src/raid_counters.ts` | Specific-boss counter prefilter and full event-driven raid simulations |
+>>>>>>> f6ff54f (PokeBattler styled raid counters ranking)
 | `simulator/ranking_categories.json` | Version-pinned broad Legendary/Mythical/Ultra Beast classification |
 | `simulator/shadow_availability.json` | Version-pinned snapshot of forms released as Shadows, mapped to the local catalog |
 | `packages/raid-engine/src/super_mega_raid_simulator.ts` | Raid configuration, damage, strategies, event queue and aggregate results |
@@ -45,7 +58,11 @@ an HTTP origin for module workers and the static catalog.
 | `simulator/` | Python reference implementation, auxiliary tools and shared catalog |
 
 The top-level build is the only process allowed to clear `dist/`. It copies the
+<<<<<<< HEAD
 three applications into their matching routes and gives both calculation apps a
+=======
+four application surfaces into their matching routes and gives all three calculation apps a
+>>>>>>> f6ff54f (PokeBattler styled raid counters ranking)
 matching versioned worker directory. This prevents one application build from
 overwriting or mixing versions with another.
 
@@ -74,6 +91,28 @@ outgoing/incoming modifiers. Released Super Max–eligible Megas receive their
 additional charged move at all four Mega Levels. Its power scales by
 ×1.0/×1.1/×1.2/×1.3; Mega Level 4 also applies the temporary two-level combat
 boost to those eligible forms. The selected Mega Level is stored in the URL.
+<<<<<<< HEAD
+=======
+
+## Raid Counters
+
+The dedicated **Raid Counters** application accepts a boss form and raid
+difficulty. It first
+uses a deterministic DPS/bulk estimate to retain the strongest moveset
+candidates, then runs every retained candidate through the full raid engine
+against up to 12 evenly sampled ordinary boss fast/charged combinations three
+times. Bosses with 12 or fewer combinations use all of them. The displayed
+Battle DPS, damage share and faints come only from those battles.
+
+Each benchmark uses one trainer and six identical 15/15/15 attackers. The user
+can choose Level 30, 40, or 50; weather; friendship; five dodge policies; and
+the no-swap or three hot-swap strategies. Downtime-saver dodging is deliberately
+excluded. Catch tanks are not meaningful for identical-attacker teams and are
+also unavailable. The legacy filter removes moves marked Elite or legacy while
+retaining currently available signature and special-form moves. Party Power,
+Adventure Effects, and Purified Gems remain off. Six-copy Mega teams are a
+standardized ranking abstraction, not a legal party recommendation.
+>>>>>>> f6ff54f (PokeBattler styled raid counters ranking)
 
 ## Edit and rebuild
 
