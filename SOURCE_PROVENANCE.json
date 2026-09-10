@@ -37,6 +37,12 @@
         "https://www.dittobase.com/pokemon-go/moves/dark-pulse-plus"
       ],
       "notes": "The rankings include only released Super Max forms. Mega Staraptor and Brave Bird+ remain excluded until their announced September 19, 2026 debut."
+    },
+    "twilight_trails_move_update": {
+      "effective_utc": "2026-09-08T20:00:00Z",
+      "official_source": "https://pokemongo.com/news/go-battle-league-twilight-trails",
+      "move_stat_source": "https://pokemongohub.net/post/pvp/go-battle-league-twilight-trails-attack-changes-and-new-moves/",
+      "notes": "Psycho Boost uses its new raid values of 130 power and 33 energy. All announced move-pool additions are current, non-Elite moves; eligible Mega forms inherit their base species' additions."
     }
   },
   "typescript_sha256": {

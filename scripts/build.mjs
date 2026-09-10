@@ -19,10 +19,7 @@ async function filesBelow(folder) {
 const inputs = [
   ...(await filesBelow('build')).filter(path => path.endsWith('.js')),
   ...await filesBelow('apps/raids'),
-<<<<<<< HEAD
-=======
   ...await filesBelow('apps/counters'),
->>>>>>> f6ff54f (PokeBattler styled raid counters ranking)
   ...await filesBelow('apps/rankings'),
   'simulator/calculator_data.json',
   'simulator/ranking_categories.json',
@@ -42,10 +39,7 @@ await cp('apps/raids', join('dist', 'raids'), {recursive: true});
 await cp('apps/counters', join('dist', 'counters'), {recursive: true});
 await cp('apps/rankings', join('dist', 'rankings'), {recursive: true});
 await mkdir(join('dist', 'raids', engineDirectory), {recursive: true});
-<<<<<<< HEAD
-=======
 await mkdir(join('dist', 'counters', engineDirectory), {recursive: true});
->>>>>>> f6ff54f (PokeBattler styled raid counters ranking)
 await mkdir(join('dist', 'rankings', engineDirectory), {recursive: true});
 await cp('build', join('dist', 'raids', engineDirectory), {
   recursive: true,
@@ -55,11 +49,6 @@ await cp(
   'simulator/calculator_data.json',
   join('dist', 'raids', engineDirectory, 'calculator_data.json'),
 );
-<<<<<<< HEAD
-for (const asset of ['rankings.js', 'rankings.js.map', 'rankings_worker.js', 'rankings_worker.js.map']) {
-  await cp(join('build', asset), join('dist', 'rankings', engineDirectory, asset));
-}
-=======
 await cp('build', join('dist', 'counters', engineDirectory), {
   recursive: true,
   filter: path => !path.endsWith('.d.ts'),
@@ -80,7 +69,6 @@ await cp('build', join('dist', 'rankings', engineDirectory), {
   recursive: true,
   filter: path => !path.endsWith('.d.ts'),
 });
->>>>>>> f6ff54f (PokeBattler styled raid counters ranking)
 await cp(
   'simulator/calculator_data.json',
   join('dist', 'rankings', engineDirectory, 'calculator_data.json'),
@@ -106,8 +94,6 @@ const index = (await readFile(indexPath, 'utf8')).replace(
 );
 await writeFile(indexPath, index);
 
-<<<<<<< HEAD
-=======
 const countersClientPath = join('dist', 'counters', 'app.js');
 const countersClient = (await readFile(countersClientPath, 'utf8'))
   .replace('engine/counters_worker.js', `${engineDirectory}/counters_worker.js`);
@@ -120,7 +106,6 @@ const countersIndex = (await readFile(countersIndexPath, 'utf8')).replace(
 );
 await writeFile(countersIndexPath, countersIndex);
 
->>>>>>> f6ff54f (PokeBattler styled raid counters ranking)
 const rankingsClientPath = join('dist', 'rankings', 'app.js');
 const rankingsClient = (await readFile(rankingsClientPath, 'utf8'))
   .replace('engine/rankings_worker.js', `${engineDirectory}/rankings_worker.js`);

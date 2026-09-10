@@ -15,6 +15,58 @@ const shadowFormIds = new Set(shadowAvailability.form_ids);
 const rankingCategories = JSON.parse(readFileSync(new URL('../../simulator/ranking_categories.json', import.meta.url)));
 const legendaryDexNumbers = new Set(rankingCategories.legendary_dex_numbers);
 
+test('Twilight Trails raid stats and move availability are current', () => {
+  const entries = new Map(catalog.map(entry => [entry.form_id, entry]));
+  const moves = formId => [
+    ...entries.get(formId).fast_moves,
+    ...entries.get(formId).charged_moves,
+  ];
+
+  for (const formId of ['DEOXYS', 'DEOXYS_ATTACK', 'DEOXYS_DEFENSE', 'DEOXYS_SPEED']) {
+    const psychoBoost = entries.get(formId).charged_moves.find(move => move.id === 'PSYCHO_BOOST');
+    assert.deepEqual(
+      {power: psychoBoost.power, energy: psychoBoost.energy, duration_ms: psychoBoost.duration_ms},
+      {power: 130, energy: -33, duration_ms: 4000},
+    );
+  }
+
+  const additions = {
+    VOLBEAT: ['INFESTATION_FAST', 'LUNGE'], ILLUMISE: ['INFESTATION_FAST', 'SHADOW_BALL'],
+    ARBOK: ['BRUTAL_SWING', 'WRAP'], AERODACTYL: ['BRUTAL_SWING'],
+    MUK_ALOLA: ['BRUTAL_SWING', 'ICE_PUNCH'], GRENINJA: ['BRUTAL_SWING'],
+    ARIADOS: ['FOUL_PLAY'], DARKRAI: ['FOUL_PLAY', 'SUCKER_PUNCH_FAST'],
+    GRAFAIAI: ['FOUL_PLAY', 'SCRATCH_FAST'], VICTREEBEL: ['SUCKER_PUNCH_FAST'],
+    AUDINO: ['CHARGE_BEAM_FAST'], RAICHU: ['VOLT_TACKLE'], RAICHU_ALOLA: ['VOLT_TACKLE'],
+    GRIMMSNARL: ['DRAINING_KISS'], AGGRON: ['BRICK_BREAK'], ZERAORA: ['DYNAMIC_PUNCH'],
+    DEOXYS_DEFENSE: ['LOW_KICK_FAST'], KINGAMBIT: ['LOW_KICK_FAST'], GALLADE: ['SACRED_SWORD'],
+    HOUNDOOM: ['INCINERATE_FAST', 'TRAILBLAZE'], MISMAGIUS: ['MYSTICAL_FIRE'],
+    CROBAT: ['GUST_FAST'], FLAMIGO: ['PECK_FAST'], CHANDELURE: ['ASTONISH_FAST'],
+    COFAGRIGUS: ['ENERGY_BALL'], SKARMORY: ['DRILL_RUN'], BOMBIRDIER: ['DRILL_RUN'],
+    LUGIA: ['EARTH_POWER'], MILTANK: ['HIGH_HORSEPOWER'], NIDOKING: ['AVALANCHE'],
+    URSALUNA: ['SCRATCH_FAST'], ZOROARK_HISUIAN: ['SWIFT'],
+    TOXTRICITY_AMPED: ['SWIFT'], TOXTRICITY_LOW_KEY: ['SWIFT'], SNORLAX: ['PSYWAVE_FAST'],
+  };
+  for (const [formId, moveIds] of Object.entries(additions)) {
+    const pool = moves(formId);
+    for (const moveId of moveIds) {
+      const move = pool.find(candidate => candidate.id === moveId);
+      assert(move, `${formId} is missing ${moveId}`);
+      assert.equal(move.elite, false, `${formId} ${moveId} should be currently available`);
+    }
+  }
+
+  assert.deepEqual(entries.get('RAICHU').charged_moves.find(move => move.id === 'VOLT_TACKLE'), {
+    id: 'VOLT_TACKLE', name: 'Volt Tackle', type: 'electric', power: 90,
+    energy: -33, duration_ms: 3500, elite: false,
+  });
+  for (const [formId, moveId] of [
+    ['AERODACTYL_MEGA', 'BRUTAL_SWING'], ['GRENINJA_MEGA', 'BRUTAL_SWING'],
+    ['RAICHU_MEGA_X', 'VOLT_TACKLE'], ['RAICHU_MEGA_Y', 'VOLT_TACKLE'],
+    ['GALLADE_MEGA', 'SACRED_SWORD'], ['HOUNDOOM_MEGA', 'INCINERATE_FAST'],
+    ['SKARMORY_MEGA', 'DRILL_RUN'],
+  ]) assert(moves(formId).some(move => move.id === moveId), `${formId} did not inherit ${moveId}`);
+});
+
 test('rankings evaluate every attack type and return one valid best moveset per form', () => {
   for (const attackType of RANKING_TYPES) {
     const result = calculateRankings(catalog, {attackType, level: 40});
@@ -273,11 +325,8 @@ test('rankings UI uses compact selection, metric help, and effective DPS by defa
   assert.match(app, /bossAttack/);
   assert.match(app, /bossMoveType/);
   assert.match(app, /megaLevel/);
-<<<<<<< HEAD
-=======
   assert.doesNotMatch(app, /mode:\s*["']counters["']|renderCounters|counters_worker/);
   assert.doesNotMatch(page, /id="view-counters"|id="counter-panel"/);
->>>>>>> f6ff54f (PokeBattler styled raid counters ranking)
   for (const id of ['include-megas', 'include-shadows', 'include-legendaries']) {
     assert.match(page, new RegExp(`id="${id}"[^>]*aria-pressed="true"`));
   }
@@ -295,5 +344,7 @@ test('rankings UI uses compact selection, metric help, and effective DPS by defa
   assert.match(app, /: "effectiveDps"/);
   assert.match(styles, /\.shadow-word\s*\{[^}]*color:\s*#552477/s);
   assert.match(styles, /\.mega-word\s*\{[^}]*color:\s*#1689c7/s);
+  assert.match(styles, /\.metric-help-text\s*\{[^}]*bottom:\s*calc\(100% \+ \.5rem\)[^}]*pointer-events:\s*none/s);
+  assert.doesNotMatch(styles, /\.metric-help-text:hover/);
   assert.match(app, /rank:\s*index \+ 1/);
 });

@@ -18,6 +18,9 @@ test('raid boss catalog exposes forms with complete ordinary movesets', () => {
   assert.equal(mewtwo.name, 'Mewtwo');
   assert.equal(mewtwo.fastMoveCount, 2);
   assert.equal(mewtwo.chargedMoveCount, 5);
+  assert.equal(mewtwo.fastMoves.length, 2);
+  assert.equal(mewtwo.chargedMoves.length, 5);
+  assert(mewtwo.fastMoves.every(move => move.id && move.name && move.type));
   assert(!bosses.some(boss => boss.formId === 'RAIKOU_S'));
   assert(bosses.every(boss => boss.fastMoveCount > 0 && boss.chargedMoveCount > 0));
 });
@@ -173,6 +176,7 @@ test('dedicated counter UI exposes the requested scenario controls', () => {
     'counter-boss', 'counter-difficulty', 'counter-level', 'counter-weather',
     'counter-friendship', 'counter-dodge-strategy', 'counter-player-strategy',
     'counter-exclude-legacy', 'generate-counters', 'counter-body',
+    'counter-boss-fast', 'counter-boss-charged', 'boss-moveset-difficulty',
   ]) {
     assert.match(page, new RegExp(`id="${id}"`));
   }
@@ -189,6 +193,10 @@ test('dedicated counter UI exposes the requested scenario controls', () => {
   assert.doesNotMatch(styles, /Verdana/);
   assert.match(app, /row\.winPercent/);
   assert.match(app, /row\.averageWinTime/);
+  assert.match(app, /mode: "breakdown"/);
+  assert.match(app, /snapshot !== counterResult/);
+  assert.match(app, /bossFastMoveId: elements\.bossFast\.value/);
+  assert.match(app, /bossChargedMoveId: elements\.bossCharged\.value/);
   assert.doesNotMatch(rankingsPage, /id="counter-panel"|id="view-counters"/);
   assert.match(rankingsPage, /href="\.\.\/counters\/">Counters/);
 });
@@ -237,6 +245,19 @@ test('dedicated counters worker loads static data and runs the selected scenario
     assert.equal(result.assumptions.playerStrategy, 'hot_swap_greedy');
     assert.equal(result.assumptions.excludeLegacyMoves, true);
     assert(result.rows.every(row => !row.mega && !row.shadow && !row.legendary));
+    const detailsPromise = once(worker, 'message');
+    const chosen = result.rows[0];
+    worker.postMessage({id: 3, mode: 'breakdown', ...result.settings,
+      pick: {formId: chosen.formId, fastMoveId: chosen.fastMoveId, chargedMoveId: chosen.chargedMoveId, shadow: chosen.shadow}});
+    const [details] = await detailsPromise;
+    assert.equal(details.id, 3);
+    assert(!details.error, details.error);
+    assert.equal(details.result.movesets.length, result.bossMovesets);
+    assert.equal(details.result.simulatedBattles, 32 * result.bossMovesets);
+    const badRequest = once(worker, 'message');
+    worker.postMessage({id: 4, mode: 'breakdown', ...result.settings, pick: {...chosen, fastMoveId: 'NOT_REAL'}});
+    const [bad] = await badRequest;
+    assert.match(bad.error, /Unknown or excluded counter moveset/);
   } finally {
     await worker.terminate();
   }

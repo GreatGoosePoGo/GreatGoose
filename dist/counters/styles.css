@@ -242,6 +242,14 @@ h2 { margin: 0; color: #111820; font-size: 1.35rem; line-height: 1.15; }
   gap: .7rem;
   margin-top: .9rem;
 }
+.boss-moveset-controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) minmax(12rem, 1fr);
+  align-items: end;
+  gap: .7rem;
+  margin-top: .85rem;
+}
+.boss-moveset-controls .condition-note { margin: 0; font-size: .875rem; }
 .select-control {
   display: grid;
   gap: .35rem;
@@ -451,11 +459,48 @@ select:focus,
   gap: .35rem;
 }
 .pokemon-name {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  text-align: left;
   color: #17202a;
   font-size: 1.08rem;
   font-weight: 800;
   line-height: 1.25;
 }
+.pokemon-name:hover { color: var(--blue); text-decoration: underline; }
+.counter-card.expanded { grid-column: 1 / -1; }
+.counter-breakdown > summary,
+.moveset-difficulty > summary,
+.probability-details > summary,
+.pair-breakdown > summary {
+  min-height: 2.75rem;
+  padding: .7rem .9rem;
+  color: var(--blue-dark);
+  font-size: .95rem;
+  font-weight: 700;
+}
+.counter-breakdown { border-top: 1px solid var(--line); }
+.counter-breakdown > summary { background: var(--blue-soft); }
+.moveset-difficulty { margin: 1rem 1rem 0; border: 1px solid var(--line); border-radius: .6rem; }
+.moveset-difficulty > p { margin: .5rem 1rem; color: var(--muted); font-size: .875rem; }
+#moveset-difficulty-summary { font-weight: 400; }
+.breakdown-body { padding: 1rem; }
+.breakdown-body h3 { margin: 0 0 .5rem; }
+.breakdown-body h4 { margin: 1rem 0 .5rem; }
+.breakdown-note { font-size: .875rem; color: var(--muted); line-height: 1.6; }
+.breakdown-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.breakdown-metrics div { border-left: 3px solid var(--blue); padding: .4rem .8rem; background: var(--surface-soft); }
+.breakdown-metrics dt { font-size: .875rem; color: var(--muted); }
+.breakdown-metrics dd { margin: .3rem 0 0; font-weight: 750; }
+.probability-details, .pair-breakdown { border: 1px solid var(--line); border-radius: .6rem; margin-top: .7rem; padding: 0 .6rem; }
+.table-scroll { overflow-x: auto; margin: .6rem 0 1rem; max-width: 100%; }
+.table-scroll table { width: 100%; border-collapse: collapse; font-size: .875rem; }
+.table-scroll caption { text-align: left; padding: .6rem; font-weight: 700; }
+.table-scroll th, .table-scroll td { text-align: left; padding: .6rem; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.table-scroll thead { background: var(--surface-soft); }
+.table-scroll tbody th { font-weight: 500; }
+.moveset-difficulty .table-scroll { margin-inline: .5rem; }
 .variant-tag {
   padding: .12rem .4rem;
   border-radius: 999px;
@@ -598,6 +643,8 @@ select:focus,
 }
 
 @media (max-width: 48rem) {
+  .boss-moveset-controls { grid-template-columns: 1fr 1fr; }
+  .boss-moveset-controls .condition-note { grid-column: 1 / -1; }
   .site-header { align-items: flex-start; flex-wrap: wrap; }
   .page-heading { grid-template-columns: 1fr auto; align-items: start; }
   .page-heading > p { grid-column: 1 / -1; grid-row: 2; }
@@ -615,6 +662,7 @@ select:focus,
 }
 
 @media (max-width: 34rem) {
+  .boss-moveset-controls, .breakdown-metrics { grid-template-columns: 1fr; }
   main { width: min(100% - 1rem, 78rem); margin-top: 1rem; }
   .site-header { padding-inline: .75rem; }
   nav { width: 100%; justify-content: space-between; gap: .75rem; }

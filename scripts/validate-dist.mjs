@@ -94,20 +94,12 @@ const rankingsClient = await readFile(join(rankingsRoot, 'app.js'), 'utf8');
 if (!rankingsClient.includes(`${build.engine_directory}/rankings_worker.js`))
   throw new Error('The rankings page does not load the matching worker.');
 const rankingsEngineRoot = join(rankingsRoot, build.engine_directory);
-<<<<<<< HEAD
-for (const asset of ['rankings.js', 'rankings_worker.js', 'calculator_data.json', 'shadow_availability.json', 'ranking_categories.json'])
-=======
 for (const asset of ['rankings.js', 'raid_counters.js', 'super_mega_raid_simulator.js', 'rankings_worker.js', 'calculator_data.json', 'shadow_availability.json', 'ranking_categories.json'])
->>>>>>> f6ff54f (PokeBattler styled raid counters ranking)
   await stat(join(rankingsEngineRoot, asset));
 const rankingsCatalog = JSON.parse(await readFile(join(rankingsEngineRoot, 'calculator_data.json'), 'utf8'));
 if (!Array.isArray(rankingsCatalog) || rankingsCatalog.length !== raidCatalog.length)
   throw new Error('The rankings calculator catalog is missing or does not match the raid catalog.');
 const rankingsWorker = await readFile(join(rankingsEngineRoot, 'rankings_worker.js'), 'utf8');
-<<<<<<< HEAD
-if (!rankingsWorker.includes("from './rankings.js'"))
-  throw new Error('The rankings worker is missing its calculation engine.');
-=======
 if (!rankingsWorker.includes("from './rankings.js'") || rankingsWorker.includes("from './raid_counters.js'"))
   throw new Error('The rankings worker must contain only the general ranking calculation entrypoint.');
 const rankingsEngineFiles = await filesBelow(rankingsEngineRoot);
@@ -120,7 +112,6 @@ for (const path of rankingsEngineFiles.filter(path => path.endsWith('.js'))) {
     await stat(target);
   }
 }
->>>>>>> f6ff54f (PokeBattler styled raid counters ranking)
 const shadowAvailability = JSON.parse(await readFile(join(rankingsEngineRoot, 'shadow_availability.json'), 'utf8'));
 if (!Array.isArray(shadowAvailability.form_ids) || shadowAvailability.form_ids.length < 300)
   throw new Error('The released Shadow availability snapshot is missing or implausibly small.');
@@ -131,8 +122,6 @@ if (!Array.isArray(rankingCategories.legendary_dex_numbers)
     || rankingCategories.legendary_dex_numbers.length !== 97)
   throw new Error('The broad Legendary category snapshot is missing or invalid.');
 
-<<<<<<< HEAD
-=======
 const countersIndex = await readFile(join(countersRoot, 'index.html'), 'utf8');
 for (const asset of ['styles.css', 'app.js']) {
   if (!countersIndex.includes(`${asset}?v=${build.version}`))
@@ -173,5 +162,4 @@ for (const path of countersEngineFiles.filter(path => path.endsWith('.js'))) {
   }
 }
 
->>>>>>> f6ff54f (PokeBattler styled raid counters ranking)
 console.log(`Validated static website ${build.version}: ${files.length} files and a closed engine module graph.`);

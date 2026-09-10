@@ -28,5 +28,8 @@ const server=createServer(async(req,res)=>{
   const bytes=await readFile(path);res.writeHead(200,{'Content-Type':types[extname(path)]||'application/octet-stream','Cache-Control':'no-cache'});res.end(req.method==='HEAD'?undefined:bytes);
  }catch{res.writeHead(404);res.end('Not found');}
 });
-const port=Number(process.env.PORT||8000);
-server.listen(port,'127.0.0.1',()=>console.log(`Great Goose site ready at http://localhost:${port}`));
+const args=process.argv.slice(2);
+const option=(name,fallback)=>{const index=args.indexOf(name);return index>=0&&args[index+1]?args[index+1]:fallback;};
+const port=Number(option('--port',process.env.PORT||8000));
+const host=option('--host',process.env.HOST||'127.0.0.1');
+server.listen(port,host,()=>console.log(`Great Goose site ready at http://${host}:${port}`));

@@ -69,7 +69,8 @@ select { min-width: 10rem; padding: .55rem .7rem; border: 1px solid var(--line);
 .metric-help-text {
   position: absolute;
   z-index: 10;
-  top: 1.55rem;
+  top: auto;
+  bottom: calc(100% + .5rem);
   right: 0;
   width: min(24rem, calc(100vw - 2rem));
   padding: .8rem .9rem;
@@ -87,8 +88,7 @@ select { min-width: 10rem; padding: .55rem .7rem; border: 1px solid var(--line);
   transition: opacity .12s ease, transform .12s ease;
 }
 .metric-help:hover + .metric-help-text,
-.metric-help:focus + .metric-help-text,
-.metric-help-text:hover { opacity: 1; pointer-events: auto; transform: translateY(0); }
+.metric-help:focus + .metric-help-text { opacity: 1; transform: translateY(0); }
 
 .type-grid { display: flex; flex-wrap: wrap; gap: .35rem; max-width: 51rem; margin-top: .8rem; }
 .type-button {

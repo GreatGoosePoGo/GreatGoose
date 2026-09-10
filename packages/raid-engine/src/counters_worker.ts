@@ -1,5 +1,6 @@
 /** Browser worker for simulation-backed counters against one raid boss. */
 import {calculateRaidCounters, raidBossCatalog} from './raid_counters.js';
+import {calculateCounterBreakdown} from './counter_breakdown.js';
 import type {CalculatorEntry} from './types.js';
 
 interface ShadowAvailability {
@@ -54,6 +55,7 @@ self.onmessage = async (event: MessageEvent) => {
         includeLegendaries, megaLevel, level, friendshipMultiplier, weather,
         dodgeStrategy, playerStrategy, excludeLegacy,
         trialsPerBossMoveset, prefilterLimit,
+        bossFastMoveId, bossChargedMoveId, pick,
     } = event.data ?? {};
     try {
         const {catalog, shadowFormIds, legendaryDexNumbers} = await counterData();
@@ -61,10 +63,7 @@ self.onmessage = async (event: MessageEvent) => {
             self.postMessage({id, result: {bosses: raidBossCatalog(catalog)}});
             return;
         }
-        if (mode !== 'counters') throw new Error('Unknown raid-counter worker request.');
-        const result = calculateRaidCounters(
-            catalog,
-            {
+        const settings = {
                 bossFormId,
                 raidDifficulty,
                 includeMegas: includeMegas !== false,
@@ -79,7 +78,18 @@ self.onmessage = async (event: MessageEvent) => {
                 excludeLegacy: Boolean(excludeLegacy),
                 trialsPerBossMoveset,
                 prefilterLimit,
-            },
+                bossFastMoveId,
+                bossChargedMoveId,
+        };
+        if (mode === 'breakdown') {
+            if (!pick || typeof pick !== 'object') throw new Error('Choose a counter for its breakdown.');
+            self.postMessage({id, result: calculateCounterBreakdown(catalog, settings, pick, shadowFormIds, legendaryDexNumbers)});
+            return;
+        }
+        if (mode !== 'counters') throw new Error('Unknown raid-counter worker request.');
+        const result = calculateRaidCounters(
+            catalog,
+            settings,
             shadowFormIds,
             legendaryDexNumbers,
             (completed, total) => self.postMessage({id, progress: {completed, total}}),

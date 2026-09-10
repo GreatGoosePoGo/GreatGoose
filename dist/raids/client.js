@@ -9,11 +9,7 @@
   function connect() {
     if (worker) return worker;
     if (location.protocol === 'file:') throw new Error('Run npm start and open http://localhost:8000 to load the website.');
-<<<<<<< HEAD
-    worker = new Worker(new URL('engine-206e3810fef2/worker.js', document.baseURI), {type:'module'});
-=======
-    worker = new Worker(new URL('engine-5711c489b173/worker.js', document.baseURI), {type:'module'});
->>>>>>> f6ff54f (PokeBattler styled raid counters ranking)
+    worker = new Worker(new URL('engine-a63b7d5fe155/worker.js', document.baseURI), {type:'module'});
     worker.onmessage = ({data}) => {
       const job = pending.get(data.id);if (!job) return;
       pending.delete(data.id);

@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "dev": "node scripts/serve.mjs",
     "build": "tsc -p tsconfig.json && node scripts/build.mjs && node scripts/validate-dist.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "start": "node scripts/serve.mjs",

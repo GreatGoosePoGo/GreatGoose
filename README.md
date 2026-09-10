@@ -4,12 +4,8 @@ Great Goose is a single static website with independently developed applications
 
 - `/` — home page
 - `/raids/` — raid simulator, replay player and manual battles
-<<<<<<< HEAD
-- `/rankings/` — Level 40 attacker rankings by attack type, with released Shadow variants
-=======
 - `/counters/` — simulation-backed rankings against a specific raid boss
 - `/rankings/` — Level 40 general attacker rankings by attack type
->>>>>>> f6ff54f (PokeBattler styled raid counters ranking)
 
 Simulations run entirely in the visitor's browser, with long calculations in a
 Web Worker. The deployed site does not run Python, use Pyodide, or call a
@@ -38,15 +34,10 @@ an HTTP origin for module workers and the static catalog.
 | --- | --- |
 | `apps/home/` | Great Goose landing page built at `/` |
 | `apps/raids/` | Raid UI, replay controls, manual battle controls and share links built at `/raids/` |
-<<<<<<< HEAD
-| `apps/rankings/` | Rankings UI and worker client built at `/rankings/` |
-| `packages/raid-engine/src/rankings.ts` | Deterministic Level 40 ideal, simple-cycle and effective DPS calculations |
-=======
 | `apps/counters/` | Specific-boss counter UI and worker client built at `/counters/` |
 | `apps/rankings/` | Rankings UI and worker client built at `/rankings/` |
 | `packages/raid-engine/src/rankings.ts` | Deterministic Level 40 ideal, simple-cycle and effective DPS calculations |
 | `packages/raid-engine/src/raid_counters.ts` | Specific-boss counter prefilter and full event-driven raid simulations |
->>>>>>> f6ff54f (PokeBattler styled raid counters ranking)
 | `simulator/ranking_categories.json` | Version-pinned broad Legendary/Mythical/Ultra Beast classification |
 | `simulator/shadow_availability.json` | Version-pinned snapshot of forms released as Shadows, mapped to the local catalog |
 | `packages/raid-engine/src/super_mega_raid_simulator.ts` | Raid configuration, damage, strategies, event queue and aggregate results |
@@ -58,11 +49,7 @@ an HTTP origin for module workers and the static catalog.
 | `simulator/` | Python reference implementation, auxiliary tools and shared catalog |
 
 The top-level build is the only process allowed to clear `dist/`. It copies the
-<<<<<<< HEAD
-three applications into their matching routes and gives both calculation apps a
-=======
 four application surfaces into their matching routes and gives all three calculation apps a
->>>>>>> f6ff54f (PokeBattler styled raid counters ranking)
 matching versioned worker directory. This prevents one application build from
 overwriting or mixing versions with another.
 
@@ -91,8 +78,6 @@ outgoing/incoming modifiers. Released Super Max–eligible Megas receive their
 additional charged move at all four Mega Levels. Its power scales by
 ×1.0/×1.1/×1.2/×1.3; Mega Level 4 also applies the temporary two-level combat
 boost to those eligible forms. The selected Mega Level is stored in the URL.
-<<<<<<< HEAD
-=======
 
 ## Raid Counters
 
@@ -112,9 +97,41 @@ also unavailable. The legacy filter removes moves marked Elite or legacy while
 retaining currently available signature and special-form moves. Party Power,
 Adventure Effects, and Purified Gems remain off. Six-copy Mega teams are a
 standardized ranking abstraction, not a legal party recommendation.
->>>>>>> f6ff54f (PokeBattler styled raid counters ranking)
 
 ## Edit and rebuild
+
+### Boss movesets and counter breakdowns
+
+The Counters page has independent boss fast/charged selectors. Leaving a
+selector on All averages its matching ordinary moves, using the same bounded
+12-combination sample for large movepools. Boss difficulty appears just above
+the counter cards after generating: hardest first by mean battle DPS against
+the fixed displayed lineup, with the easiest tested moveset indexed to 100.
+It changes with the lineup/settings and is not an absolute boss rating.
+
+Click a counter name, card, or Matchup breakdown to run 32 diagnostic trials
+per tested moveset, cached for the current page session. The panel reports
+charged attacks actually landed per fainted life, fast attacks, completed vs
+unfinished samples, survived incoming hits, and damage per six-member team
+outing. Hot-swap returns accumulate on the same individual life. Damage is
+capped at remaining boss HP; first-outing damage includes wins/timeouts while
+completed-outing damage excludes those censored samples. Conditional averages
+of completed lives/outings may be biased toward shorter ones; they are not
+uncensored lifetime predictions. An average is unavailable when any tested
+moveset has no completed sample, rather than treating missing data as zero.
+
+Cycle probabilities are empirical simulation frequencies. Separately, the
+binomial approximation uses `K ~ Binomial(n,p)`, with `p` fitted to the observed
+charged fraction of incoming hits. It sums probabilities for outcomes with
+`(n-K)*fastDamage + K*chargedDamage < HP`. This model assumes independent hits,
+full initial HP, no dodging or swapping, and one fixed enrage phase. The real
+boss is energy-gated, so these are explicitly approximate survival estimates,
+not exact probabilities of reaching a charged cycle. Hidden Power averages
+type-specific probabilities across all 16 possible types, not average damage.
+The UI bounds survival curves to 60 hits and cycle distributions to a 12+ tail.
+
+All diagnostics run on demand in the existing worker; no server or deployment
+changes are required. General rankings and the battle simulator are unchanged.
 
 ```powershell
 npm ci

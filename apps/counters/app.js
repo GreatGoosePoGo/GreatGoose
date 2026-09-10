@@ -20,6 +20,10 @@
   let bossLookup = new Map();
   let counterResult = null;
   let counterBusy = false;
+  let movesetBossId = null;
+  let initialMovesApplied = false;
+  const initialBossFast = params().get("bossFast") || "";
+  const initialBossCharged = params().get("bossCharged") || "";
   let includeMegas = initialFlag("megas");
   let includeShadows = initialFlag("shadows");
   let includeLegendaries = initialFlag("legendaries");
@@ -29,6 +33,11 @@
     boss: document.querySelector("#counter-boss"),
     bossOptions: document.querySelector("#counter-boss-options"),
     difficulty: document.querySelector("#counter-difficulty"),
+    bossFast: document.querySelector("#counter-boss-fast"),
+    bossCharged: document.querySelector("#counter-boss-charged"),
+    movesetDifficulty: document.querySelector("#boss-moveset-difficulty"),
+    movesetDifficultySummary: document.querySelector("#moveset-difficulty-summary"),
+    movesetDifficultyBody: document.querySelector("#moveset-difficulty-body"),
     level: document.querySelector("#counter-level"),
     weather: document.querySelector("#counter-weather"),
     friendship: document.querySelector("#counter-friendship"),
@@ -67,7 +76,7 @@
     elements.boss, elements.difficulty, elements.level, elements.weather,
     elements.friendship, elements.dodgeStrategy, elements.playerStrategy,
     elements.megaLevel, elements.megas, elements.shadows, elements.legendaries,
-    elements.legacy,
+    elements.legacy, elements.bossFast, elements.bossCharged,
   ];
 
   function params() {
@@ -165,6 +174,21 @@
     return bossLookup.get(elements.boss.value.trim().toLocaleLowerCase()) ?? null;
   }
 
+  function syncBossMoves() {
+    const boss = resolveBoss();
+    if (movesetBossId === (boss?.formId ?? null)) return;
+    const firstLoad = !initialMovesApplied;
+    if (boss) initialMovesApplied = true;
+    movesetBossId = boss?.formId ?? null;
+    for (const [select, moves, label, initial] of [
+      [elements.bossFast, boss?.fastMoves ?? [], "All fast moves", initialBossFast],
+      [elements.bossCharged, boss?.chargedMoves ?? [], "All charged moves", initialBossCharged],
+    ]) {
+      select.replaceChildren(new Option(label, ""), ...moves.map(move => new Option(`${move.name} · ${move.type}`, move.id)));
+      if (firstLoad && moves.some(move => move.id === initial)) select.value = initial;
+    }
+  }
+
   function typeIcon(type) {
     const normalized = String(type).trim().toLocaleLowerCase();
     const icon = document.createElement("span");
@@ -195,6 +219,7 @@
   }
 
   function syncScenarioPreview() {
+    syncBossMoves();
     const boss = resolveBoss();
     const level = Number(elements.level.value);
     const difficulty = elements.difficulty.value;
@@ -223,6 +248,8 @@
   function currentSettings() {
     return {
       raidDifficulty: elements.difficulty.value,
+      bossFastMoveId: elements.bossFast.value,
+      bossChargedMoveId: elements.bossCharged.value,
       level: Number(elements.level.value),
       weather: elements.weather.value,
       friendshipMultiplier: Number(elements.friendship.value),
@@ -254,6 +281,10 @@
     url.searchParams.set("shadows", settings.includeShadows ? "1" : "0");
     url.searchParams.set("legendaries", settings.includeLegendaries ? "1" : "0");
     url.searchParams.set("excludeLegacy", settings.excludeLegacy ? "1" : "0");
+    for (const [param, value] of [["bossFast", settings.bossFastMoveId], ["bossCharged", settings.bossChargedMoveId]]) {
+      if (value) url.searchParams.set(param, value);
+      else url.searchParams.delete(param);
+    }
     history.replaceState(null, "", url);
   }
 
@@ -264,6 +295,7 @@
       settings.dodgeStrategy, settings.playerStrategy, settings.megaLevel,
       Number(settings.includeMegas), Number(settings.includeShadows),
       Number(settings.includeLegendaries), Number(settings.excludeLegacy),
+      settings.bossFastMoveId || "all", settings.bossChargedMoveId || "all",
     ].join(":");
   }
 
@@ -272,13 +304,14 @@
   }
 
   function setLoading(boss) {
+    elements.movesetDifficulty.hidden = true;
     elements.section.setAttribute("aria-busy", "true");
     elements.error.hidden = true;
     elements.progress.hidden = false;
     elements.progressBar.value = 0;
     elements.progressText.textContent = "Preparing candidate movesets…";
     elements.title.textContent = `Simulating counters for ${boss.name}…`;
-    elements.summary.textContent = "Testing all ordinary boss movesets.";
+    elements.summary.textContent = "Testing the selected boss movesets.";
     elements.body.innerHTML = '<li class="empty-state">Running full raid battles in your browser…</li>';
     setOutcome("Running raid battles", "Preparing the strongest candidate movesets, then testing complete battles.");
     elements.generate.disabled = true;
@@ -379,7 +412,8 @@
     const identity = document.createElement("div");
     const nameLine = document.createElement("div");
     nameLine.className = "counter-name-line";
-    const name = document.createElement("span");
+    const name = document.createElement("button");
+    name.type = "button";
     name.className = "pokemon-name";
     name.textContent = row.name;
     nameLine.append(name);
@@ -421,7 +455,47 @@
       metricBlock("Win rate", `${row.winPercent.toFixed(1)}%`, "Share of simulated boss movesets and trials this team defeated."),
       metricBlock("Faints", row.averageFaints.toFixed(2), "Average attacker faints per simulated battle."),
     );
-    card.append(top, moves, metrics);
+    const disclosure = document.createElement("details");
+    disclosure.className = "counter-breakdown";
+    const summary = document.createElement("summary");
+    summary.textContent = "Matchup breakdown";
+    const panel = document.createElement("div");
+    panel.className = "breakdown-body";
+    disclosure.append(summary, panel);
+    const snapshot = counterResult;
+    let requested = false;
+    disclosure.addEventListener("toggle", async () => {
+      card.classList.toggle("expanded", disclosure.open);
+      name.setAttribute("aria-expanded", String(disclosure.open));
+      if (!disclosure.open || requested) return;
+      requested = true;
+      panel.setAttribute("aria-busy", "true");
+      panel.textContent = "Simulating this counter’s cycles and team outings…";
+      const pick = {formId: row.formId, fastMoveId: row.fastMoveId, chargedMoveId: row.chargedMoveId, shadow: row.shadow};
+      try {
+        const result = await workerRequest({mode: "breakdown", ...snapshot.settings, pick}, {
+          cacheKey: `breakdown:${JSON.stringify(snapshot.settings)}:${JSON.stringify(pick)}`,
+        });
+        if (snapshot !== counterResult || !card.isConnected) return;
+        renderBreakdown(panel, result);
+      } catch (error) {
+        panel.textContent = `Breakdown unavailable: ${error.message}. Close and reopen to retry.`;
+        requested = false;
+      } finally {
+        panel.setAttribute("aria-busy", "false");
+      }
+    });
+    const panelId = `counter-breakdown-${index}`;
+    panel.id = panelId;
+    name.setAttribute("aria-controls", panelId);
+    name.setAttribute("aria-expanded", "false");
+    name.addEventListener("click", () => { disclosure.open = !disclosure.open; });
+    card.addEventListener("click", event => {
+      if (!event.target.closest("button, details, a, select") && !window.getSelection()?.toString()) {
+        disclosure.open = !disclosure.open;
+      }
+    });
+    card.append(top, moves, metrics, disclosure);
     return card;
   }
 
@@ -429,7 +503,125 @@
     return [...select.options].find(option => option.value === String(value))?.textContent ?? String(value);
   }
 
+  function textElement(tag, text, className = "") {
+    const element = document.createElement(tag);
+    element.textContent = text;
+    if (className) element.className = className;
+    return element;
+  }
+
+  function dataTable(caption, headers, rows) {
+    const wrapper = document.createElement("div");
+    wrapper.className = "table-scroll";
+    wrapper.tabIndex = 0;
+    wrapper.setAttribute("role", "region");
+    wrapper.setAttribute("aria-label", caption);
+    const table = document.createElement("table");
+    table.append(textElement("caption", caption));
+    const head = document.createElement("thead");
+    const titles = document.createElement("tr");
+    headers.forEach(title => {
+      const th = textElement("th", title);
+      th.scope = "col";
+      titles.append(th);
+    });
+    head.append(titles);
+    const body = document.createElement("tbody");
+    rows.forEach(cells => {
+      const tr = document.createElement("tr");
+      cells.forEach((cell, index) => {
+        const td = textElement(index ? "td" : "th", cell);
+        if (!index) td.scope = "row";
+        tr.append(td);
+      });
+      body.append(tr);
+    });
+    table.append(head, body);
+    wrapper.append(table);
+    return wrapper;
+  }
+
+  function renderMovesetDifficulty() {
+    const rows = counterResult.movesetDifficulty;
+    elements.movesetDifficulty.hidden = !rows.length;
+    elements.movesetDifficultySummary.textContent = rows.length > 1
+      ? ` · hardest: ${rows[0].fastMove} / ${rows[0].chargedMove}` : " · one moveset selected";
+    elements.movesetDifficultyBody.replaceChildren(dataTable(
+      `${rows.length} tested movesets · same ${counterResult.rows.length} counters`,
+      ["Hardest first", "Boss moveset", "Difficulty index", "Mean battle DPS", "Mean faints"],
+      rows.map((pair, index) => [String(index + 1), `${pair.fastMove} / ${pair.chargedMove}`,
+        pair.difficultyIndex.toFixed(1), pair.averageBattleDps.toFixed(2), pair.averageFaints.toFixed(2)]),
+    ));
+  }
+
+  function renderBreakdown(panel, result) {
+    const number = value => value === null ? "Not observed" : value.toFixed(2);
+    const percentage = value => value === null ? "Not observed" : `${(100 * value).toFixed(1)}%`;
+    const damage = value => value === null ? "Not observed" : `${value.toFixed(0)} HP (${(100 * value / result.bossHp).toFixed(1)}%)`;
+    const range = (min, max) => min === max ? String(min) : `${min}–${max}`;
+    const avg = result.average;
+    const metrics = document.createElement("dl");
+    metrics.className = "breakdown-metrics";
+    metrics.append(
+      metricBlock("Charged cycles / fainted life", number(avg.chargedCyclesPerLife)),
+      metricBlock("Fast attacks / fainted life", number(avg.fastMovesPerLife)),
+      metricBlock("Damage / completed team outing", damage(avg.damagePerCompletedOuting)),
+      metricBlock("First team outing damage", damage(avg.firstOutingDamage)),
+    );
+    const completedLives = result.movesets.reduce((sum, pair) => sum + pair.completedLives, 0);
+    const unfinishedLives = result.movesets.reduce((sum, pair) => sum + pair.unfinishedLives, 0);
+    const completeOutings = result.movesets.reduce((sum, pair) => sum + pair.completedOutings, 0);
+    const partialOutings = result.movesets.reduce((sum, pair) => sum + pair.partialOutings, 0);
+    panel.replaceChildren(
+      textElement("h3", "Cycles, survival & team damage"),
+      textElement("p", `${result.simulatedBattles} detailed raids · ${result.trialsPerMoveset} per moveset · ${result.movesets.length} of ${result.totalBossMovesets} matching movesets tested. Averages give each tested moveset equal weight.`, "breakdown-note"),
+      metrics,
+      textElement("p", `A cycle is one landed charged attack, including fast attacks and energy gained from damage. ${completedLives} fainted lives measured; ${unfinishedLives} unfinished lives excluded. Hot-swap returns count toward the same life.`, "breakdown-note"),
+      textElement("p", `A team outing runs from entry with six fresh Pokémon until leaving for the lobby. ${completeOutings} completed outings; ${partialOutings} partial outings. First-outing damage includes wins/timeouts. Completed-only averages can favour shorter lives or outings. “Not observed” means at least one moveset had no completed sample; it does not mean zero damage or cycles.`, "breakdown-note"),
+    );
+    const cyclesTable = distribution => dataTable("Charged attacks landed before fainting · simulated frequency", ["Completed charged cycles", "Probability among fainted lives"],
+      distribution.filter(bin => bin.probability === null || bin.probability > 0).map(bin => [bin.cycles === 12 ? "12+" : String(bin.cycles), percentage(bin.probability)]));
+    const curveTable = phase => dataTable(`${phase.phase} phase · binomial survival estimate, no dodging`, ["Boss hits received (n)", "Chance HP remains above zero"],
+      phase.curve.filter(point => point.hits <= 6 || [8, 10, 12, 15, 20, 30, 40, 50, 60].includes(point.hits) || point === phase.curve.at(-1))
+        .map(point => [String(point.hits), percentage(point.survivalProbability)]));
+    const probabilities = document.createElement("details");
+    probabilities.className = "probability-details";
+    probabilities.append(textElement("summary", "Cycle probabilities & binomial survival — averaged across tested movesets"));
+    probabilities.append(cyclesTable(avg.cycleDistribution));
+    probabilities.append(textElement("p", "The binomial estimate treats each incoming hit as charged with probability p, fitted from the detailed raids. Real attacks depend on boss energy, so they are correlated. This is not a prediction of charged-cycle probabilities. It assumes full HP, no dodging or swapping, and a fixed normal/enraged phase; your selected strategies still apply to the simulations above.", "breakdown-note"));
+    probabilities.append(textElement("p", "K ~ Binomial(n, p). Survive when (n − K) × fast damage + K × charged damage < HP. Each moveset’s probability is calculated separately, then averaged. Hidden Power is averaged over 16 types. Curves show up to 60 hits.", "breakdown-note"));
+    avg.survival.forEach(phase => probabilities.append(curveTable(phase)));
+    panel.append(probabilities, textElement("h4", "Breakdown by boss moveset"));
+    for (const pair of result.movesets) {
+      const detail = document.createElement("details");
+      detail.className = "pair-breakdown";
+      detail.open = result.movesets.length === 1;
+      detail.append(textElement("summary", `${pair.fastMove} / ${pair.chargedMove} · ${number(pair.chargedCyclesPerLife)} charged cycles per fainted life`));
+      detail.append(dataTable("Observed in detailed raids", ["Metric", "Value"], [
+        ["Completed lives / unfinished lives", `${pair.completedLives} / ${pair.unfinishedLives}`],
+        ["Fast hits survived before fainting (mean)", number(pair.bossFastHitsSurvived)],
+        ["Charged hits survived before fainting (mean)", number(pair.bossChargedHitsSurvived)],
+        ["Charged share of incoming hits (p)", percentage(pair.observedChargedProbability)],
+        ["Damage per completed team outing", damage(pair.damagePerCompletedOuting)],
+        ["Damage per partial team outing", damage(pair.damagePerPartialOuting)],
+        ["Completed / partial team outings", `${pair.completedOutings} / ${pair.partialOutings}`],
+        ["First team outing damage", damage(pair.firstOutingDamage)],
+      ]));
+      for (const phase of pair.survival) {
+        detail.append(textElement("h4", `${phase.phase} phase · ${phase.hp} attacker HP`));
+        detail.append(textElement("p", `Fast hit: ${range(phase.fastDamageMin, phase.fastDamageMax)} damage. Charged hit: ${phase.chargedDamage} damage (${phase.dodgedChargedDamage} if successfully dodged). Survives ${phase.chargedHitsSurvived} charged hits alone; the next is lethal.`, "breakdown-note"));
+        detail.append(dataTable("Undodged hit limits from full HP · each row is an alternative", ["Boss charged hits", "Additional fast hits survivable"], phase.combos.map(combo => [
+          String(combo.chargedHits), combo.survives ? range(combo.fastHitsMin, combo.fastHitsMax) : "KO from charged hits alone",
+        ])));
+        detail.append(curveTable(phase));
+      }
+      detail.append(cyclesTable(pair.cycleDistribution));
+      panel.append(detail);
+    }
+  }
+
   function renderCounters() {
+    renderMovesetDifficulty();
     const fragment = document.createDocumentFragment();
     counterResult.rows.forEach((row, index) => fragment.append(counterCard(row, index)));
     if (!counterResult.rows.length) {
@@ -488,9 +680,13 @@
   }
 
   function settingsChanged() {
+    syncBossMoves();
     updateUrl();
     syncScenarioPreview();
     if (counterResult) {
+      counterResult = null;
+      elements.movesetDifficulty.hidden = true;
+      elements.body.innerHTML = '<li class="empty-state">Settings changed. Generate again to update counters and breakdowns.</li>';
       elements.summary.textContent = "Settings changed. Generate again to update these counters.";
       setOutcome("Settings changed", "Generate the rankings again to update the outcome and headline metrics.");
     }
@@ -519,7 +715,7 @@
   bindFilter(elements.legacy, () => excludeLegacy, value => { excludeLegacy = value; });
   for (const select of [
     elements.difficulty, elements.level, elements.weather, elements.friendship,
-    elements.dodgeStrategy, elements.playerStrategy, elements.megaLevel,
+    elements.dodgeStrategy, elements.playerStrategy, elements.megaLevel, elements.bossFast, elements.bossCharged,
   ]) {
     select.addEventListener("change", settingsChanged);
   }
