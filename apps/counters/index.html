@@ -180,6 +180,15 @@
                   <option value="4">4 · Super Max (++++)</option>
                 </select>
               </label>
+              <label class="select-control">
+                Party Power
+                <select id="counter-party-power">
+                  <option value="1" selected>1 player · Off</option>
+                  <option value="2">2-player party</option>
+                  <option value="3">3-player party</option>
+                  <option value="4">4-player party</option>
+                </select>
+              </label>
             </div>
 
             <div class="counter-tools">
@@ -233,7 +242,7 @@
           <li>Average on-field DPS is damage divided by active field time and excludes time spent on the bench after a hot swap. Peak DPS starts at zero energy immediately before an undodged boss charged hit. The attacker keeps using fast moves while that boss move repeats back-to-back; total damage and elapsed time are measured through the attacker’s first charged move. If it faints first, the scenario is unavailable.</li>
           <li>The displayed full-HP fast-only and charged-only limits are simple no-dodge comparisons. The typical mixed hit counts come from full simulations using the selected dodge and player strategies. Hidden Power is tested across its 16 possible types.</li>
           <li>Battle DPS includes fainting, switching, relobby downtime, and the selected dodge and player strategies.</li>
-          <li>The selected weather and friendship bonuses apply to every simulated battle. Party Power, Adventure Effects, and Purified Gems remain off.</li>
+          <li>The selected weather, friendship bonus, and Party Power party size apply to every simulated battle. One-player Party Power means off. Adventure Effects and Purified Gems remain off.</li>
           <li>Exclude legacy removes fast and charged moves marked Elite or legacy; currently available signature and special-form moves remain eligible.</li>
           <li>A fast analytical pass retains the strongest candidate movesets for full simulations; all displayed scores come from the raid simulator.</li>
           <li>Mega rows show standardized per-attacker potential. Six copies of the same Mega are a ranking abstraction, not a legal raid party.</li>

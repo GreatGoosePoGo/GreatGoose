@@ -71,7 +71,8 @@ test('specific raid counters are actual simulated, unique, sorted top-30 rows', 
     friendshipMultiplier: 1,
     weather: null,
     excludeLegacyMoves: false,
-    partyPower: false,
+    partyPowerPlayers: 1,
+    partyPowerFastMoveThreshold: 0,
     purifiedGems: false,
     analyticalPrefilter: true,
     maximumBossMovesets: 12,
@@ -128,6 +129,7 @@ test('raid counter battle conditions, strategies, levels, and legacy filter reac
       friendshipMultiplier: 1.10,
       dodgeStrategy: 'lethal_only',
       playerStrategy: 'hot_swap_cautious',
+      partyPowerPlayers: 4,
       excludeLegacy: true,
       includeMegas: true,
       includeShadows: true,
@@ -144,6 +146,8 @@ test('raid counter battle conditions, strategies, levels, and legacy filter reac
   assert.equal(result.assumptions.friendshipMultiplier, 1.10);
   assert.equal(result.assumptions.dodgeStrategy, 'lethal_only');
   assert.equal(result.assumptions.playerStrategy, 'hot_swap_cautious');
+  assert.equal(result.assumptions.partyPowerPlayers, 4);
+  assert.equal(result.assumptions.partyPowerFastMoveThreshold, 6);
   assert.equal(result.assumptions.excludeLegacyMoves, true);
   assert(result.rows.every(row => !row.eliteFast && !row.eliteCharged));
 });
@@ -165,6 +169,10 @@ test('raid counters reject unsupported levels and strategies', () => {
     () => calculateRaidCounters(catalog, {...common, playerStrategy: 'catch_tank'}),
     /Unsupported raid-counter player strategy/,
   );
+  assert.throws(
+    () => calculateRaidCounters(catalog, {...common, partyPowerPlayers: 5}),
+    /Party Power players must be 1 through 4/,
+  );
 });
 
 test('dedicated counter UI exposes the requested scenario controls', () => {
@@ -176,6 +184,7 @@ test('dedicated counter UI exposes the requested scenario controls', () => {
   for (const id of [
     'counter-boss', 'counter-difficulty', 'counter-level', 'counter-weather',
     'counter-friendship', 'counter-dodge-strategy', 'counter-player-strategy',
+    'counter-party-power',
     'counter-exclude-legacy', 'generate-counters', 'counter-body',
     'counter-boss-fast', 'counter-boss-charged', 'boss-moveset-difficulty',
   ]) {

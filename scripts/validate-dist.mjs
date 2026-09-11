@@ -129,6 +129,7 @@ for (const asset of ['styles.css', 'app.js']) {
 }
 for (const id of [
   'counter-boss', 'counter-difficulty', 'counter-level', 'counter-weather',
+  'counter-party-power',
   'counter-friendship', 'counter-dodge-strategy', 'counter-player-strategy',
   'counter-exclude-legacy', 'generate-counters', 'counter-body',
 ]) {

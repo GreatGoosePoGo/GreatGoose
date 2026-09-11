@@ -114,6 +114,14 @@ select { min-width: 10rem; padding: .55rem .7rem; border: 1px solid var(--line);
 .type-button:hover, .type-button:focus-visible { border-color: #7aaee1; background: var(--blue-soft); }
 .type-button[aria-pressed="true"] { border-color: var(--blue); color: #111111; background: var(--blue-selected); }
 
+.battle-controls { display: flex; align-items: end; flex-wrap: wrap; gap: .65rem; margin-top: .8rem; padding-top: .9rem; border-top: 1px solid #e2e5e9; }
+.battle-controls .select-control { flex: 1 1 9rem; }
+.battle-controls select { width: 100%; min-width: 0; }
+.number-with-unit { display: flex; align-items: center; overflow: hidden; border: 1px solid var(--line); border-radius: .55rem; background: white; }
+.number-with-unit:focus-within { border-color: var(--blue); outline: 2px solid var(--blue-soft); outline-offset: 1px; }
+.number-with-unit input { width: 100%; min-width: 5rem; padding: .55rem .2rem .55rem .7rem; border: 0; outline: 0; color: inherit; background: transparent; font: inherit; }
+.number-with-unit span { padding-right: .7rem; color: var(--muted); font-size: .75rem; font-weight: 600; }
+
 .ranking-tools { display: flex; align-items: end; justify-content: space-between; gap: 1rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e2e5e9; }
 .filter-group { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem; }
 .filter-label { margin-right: .15rem; color: var(--muted); font-size: .76rem; font-weight: 750; text-transform: uppercase; }
@@ -213,7 +221,8 @@ html[data-ranking-mode="anti"] .controls,
 html[data-ranking-mode="anti"] .results { background: rgba(24, 33, 43, .96); box-shadow: 0 14px 42px rgba(0, 0, 0, .28); }
 html[data-ranking-mode="anti"] select,
 html[data-ranking-mode="anti"] .metric-help,
-html[data-ranking-mode="anti"] .search-control input { color: #edf3f8; background: #101821; }
+html[data-ranking-mode="anti"] .search-control input,
+html[data-ranking-mode="anti"] .number-with-unit { color: #edf3f8; background: #101821; }
 html[data-ranking-mode="anti"] .metric-help { border-color: #718091; }
 html[data-ranking-mode="anti"] .metric-help-text { color: #e4ebf1; background: #202b37; box-shadow: 0 10px 32px rgba(0, 0, 0, .45); }
 html[data-ranking-mode="anti"] .type-button,
@@ -225,6 +234,7 @@ html[data-ranking-mode="anti"] .filter-button:focus-visible { border-color: #79b
 html[data-ranking-mode="anti"] .type-button[aria-pressed="true"],
 html[data-ranking-mode="anti"] .filter-button[aria-pressed="true"] { border-color: #8bc5ff; color: #ffffff; background: #326b9f; }
 html[data-ranking-mode="anti"] .ranking-tools { border-top-color: #334150; }
+html[data-ranking-mode="anti"] .battle-controls { border-top-color: #334150; }
 html[data-ranking-mode="anti"] th,
 html[data-ranking-mode="anti"] td { border-bottom-color: #344251; }
 html[data-ranking-mode="anti"] th { color: #bec9d3; background: #111923; }

@@ -1,4 +1,7 @@
 import {PythonRandom} from './random.js';
+import {
+    PARTY_POWER_PLAYERS, partyPowerThreshold, type PartyPowerPlayers,
+} from './party_power.js';
 import {RELEASED_MEGA_PLUS_FORM_IDS, type MegaLevel} from './rankings.js';
 import {createRaidEngine, type RaidEngine, type Move} from './super_mega_raid_simulator.js';
 import type {
@@ -43,6 +46,8 @@ export interface RaidCounterSettings {
     dodgeStrategy?: RaidCounterDodgeStrategy;
     playerStrategy?: RaidCounterPlayerStrategy;
     excludeLegacy?: boolean;
+    /** 1 disables Party Power; 2-4 use the normal in-game group thresholds. */
+    partyPowerPlayers?: PartyPowerPlayers;
     /** Test/diagnostic override. The website intentionally uses the defaults. */
     trialsPerBossMoveset?: number;
     /** Test/diagnostic override. The website intentionally uses the defaults. */
@@ -118,7 +123,8 @@ export interface RaidCounterResult {
         friendshipMultiplier: number;
         weather: Weather;
         excludeLegacyMoves: boolean;
-        partyPower: false;
+        partyPowerPlayers: PartyPowerPlayers;
+        partyPowerFastMoveThreshold: number;
         purifiedGems: false;
         analyticalPrefilter: boolean;
         maximumBossMovesets: number;
@@ -159,6 +165,7 @@ export interface BossMovePair {
 export function counterSimulation(
     engine: RaidEngine, candidate: Candidate, pair: BossMovePair,
     level: RaidCounterLevel, megaLevel: MegaLevel, trial: number,
+    partyPowerPlayers: PartyPowerPlayers = 1,
 ) {
     const species = new engine.Species(candidate.entry.name, candidate.entry.stats.attack,
         candidate.entry.stats.defense, candidate.entry.stats.stamina,
@@ -183,7 +190,9 @@ export function counterSimulation(
     // The seed belongs to the catalog pair, not its position in a filtered list.
     const simulation = new engine.Simulation(pair.engineFast, pair.engineCharged,
         new PythonRandom(20260909 + pair.seedIndex * 1009 + trial * 7919), profiles);
-    simulation.players = [new engine.Player(team)];
+    const player = new engine.Player(team);
+    player.party_power_threshold = partyPowerThreshold(partyPowerPlayers);
+    simulation.players = [player];
     return simulation;
 }
 
@@ -291,23 +300,40 @@ function simpleCycleDps(
     chargedDamage: number,
     chargedEnergy: number,
     chargedSeconds: number,
+    partyPowerFastMoveThreshold: number,
 ): number {
     let energy = 0;
     let damage = 0;
     let time = 0;
-    const seen = new Map<number, {damage: number; time: number}>();
+    let partyPowerProgress = 0;
+    let partyPowerActive = false;
+    const seen = new Map<string, {damage: number; time: number}>();
     for (let step = 0; step < 1000; step += 1) {
-        const previous = seen.get(energy);
+        const key = `${energy}:${partyPowerProgress}:${Number(partyPowerActive)}`;
+        const previous = seen.get(key);
         if (previous) return (damage - previous.damage) / (time - previous.time);
-        seen.set(energy, {damage, time});
+        seen.set(key, {damage, time});
         if (energy >= chargedEnergy) {
             energy -= chargedEnergy;
-            damage += chargedDamage;
+            damage += chargedDamage * (partyPowerActive ? 2 : 1);
             time += chargedSeconds;
+            partyPowerActive = false;
+            if (partyPowerFastMoveThreshold > 0
+                && partyPowerProgress >= partyPowerFastMoveThreshold) {
+                partyPowerActive = true;
+                partyPowerProgress = 0;
+            }
         } else {
             energy = Math.min(100, energy + fastEnergy);
             damage += fastDamage;
             time += fastSeconds;
+            if (partyPowerFastMoveThreshold > 0) {
+                partyPowerProgress = Math.min(partyPowerFastMoveThreshold, partyPowerProgress + 1);
+                if (!partyPowerActive && partyPowerProgress >= partyPowerFastMoveThreshold) {
+                    partyPowerActive = true;
+                    partyPowerProgress = 0;
+                }
+            }
         }
     }
     return 0;
@@ -421,6 +447,11 @@ export function prepareRaidCounterScenario(
         throw new Error(`Unsupported raid-counter player strategy: ${playerStrategy}`);
     }
     const excludeLegacy = Boolean(settings.excludeLegacy);
+    const partyPowerPlayers = settings.partyPowerPlayers ?? 1;
+    if (!PARTY_POWER_PLAYERS.includes(partyPowerPlayers)) {
+        throw new Error(`Party Power players must be 1 through 4: ${partyPowerPlayers}`);
+    }
+    const partyPowerFastMoveThreshold = partyPowerThreshold(partyPowerPlayers);
     const trialsPerBossMoveset = settings.trialsPerBossMoveset ?? DEFAULT_TRIALS;
     if (!Number.isInteger(trialsPerBossMoveset) || trialsPerBossMoveset < 1 || trialsPerBossMoveset > 10) {
         throw new Error('Trials per boss moveset must be an integer from 1 through 10.');
@@ -476,7 +507,8 @@ export function prepareRaidCounterScenario(
     const bossMovePairs = evenlySample(allBossMovePairs, MAX_BOSS_MOVESETS);
     return {engine, boss, bossFastMoves, bossChargedMoves, allBossMovePairs, bossMovePairs,
         includeMegas, includeShadows, includeLegendaries, megaLevel, level, friendshipMultiplier,
-        weather, dodgeStrategy, playerStrategy, excludeLegacy, trialsPerBossMoveset, prefilterLimit};
+        weather, dodgeStrategy, playerStrategy, excludeLegacy, partyPowerPlayers,
+        partyPowerFastMoveThreshold, trialsPerBossMoveset, prefilterLimit};
 }
 
 export function calculateRaidCounters(
@@ -487,7 +519,8 @@ export function calculateRaidCounters(
 ): RaidCounterResult {
     const {engine, boss, bossFastMoves, bossChargedMoves, allBossMovePairs, bossMovePairs,
         includeMegas, includeShadows, includeLegendaries, megaLevel, level, friendshipMultiplier,
-        weather, dodgeStrategy, playerStrategy, excludeLegacy, trialsPerBossMoveset, prefilterLimit}
+        weather, dodgeStrategy, playerStrategy, excludeLegacy, partyPowerPlayers,
+        partyPowerFastMoveThreshold, trialsPerBossMoveset, prefilterLimit}
         = prepareRaidCounterScenario(catalog, settings);
 
     const bossDefense = (boss.stats.defense + 15) * engine.BOSS_CPM
@@ -537,6 +570,7 @@ export function calculateRaidCounters(
                     const offenseProxy = simpleCycleDps(
                         outgoing(fastMove), fastMove.energy, fastMove.duration_ms / 1000,
                         outgoing(chargedMove), Math.abs(chargedMove.energy), chargedMove.duration_ms / 1000,
+                        partyPowerFastMoveThreshold,
                     );
                     const transitionSeconds = 5 + 7.5;
                     const effectiveProxy = offenseProxy
@@ -570,7 +604,9 @@ export function calculateRaidCounters(
             let pairSeconds = 0;
             let pairFaints = 0;
             for (let trial = 0; trial < trialsPerBossMoveset; trial += 1) {
-                const simulation = counterSimulation(engine, candidate, pair, level, megaLevel, trial);
+                const simulation = counterSimulation(
+                    engine, candidate, pair, level, megaLevel, trial, partyPowerPlayers,
+                );
                 const result = simulation.run();
                 const damage = Math.min(engine.BOSS_HP, Math.max(0, engine.BOSS_HP - result.boss_hp));
                 totalDamage += damage;
@@ -662,7 +698,7 @@ export function calculateRaidCounters(
         candidateMovesets: candidates.length,
         simulatedMovesets: selected.length,
         simulatedBattles: selected.length * bossMovePairs.length * trialsPerBossMoveset,
-        settings: {...settings},
+        settings: {...settings, partyPowerPlayers},
         movesetDifficulty: rows.length ? movesetDifficulty : [],
         rows,
         assumptions: {
@@ -677,7 +713,8 @@ export function calculateRaidCounters(
             friendshipMultiplier,
             weather,
             excludeLegacyMoves: excludeLegacy,
-            partyPower: false,
+            partyPowerPlayers,
+            partyPowerFastMoveThreshold,
             purifiedGems: false,
             analyticalPrefilter: candidates.length > selected.length,
             maximumBossMovesets: MAX_BOSS_MOVESETS,

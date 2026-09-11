@@ -10,6 +10,9 @@
   const BOSS_ATTACK_LEVELS = ["low", "medium", "high"];
   const BOSS_MOVE_TYPES = ["typeless", ...TYPES];
   const MEGA_LEVELS = [1, 2, 3, 4];
+  const LEVELS = [20, 25, 30, 35, 40, 45, 50];
+  const PARTY_POWER_PLAYERS = [1, 2, 3, 4];
+  const PARTY_SIZES = [1, 2, 3, 4, 5, 6];
   const worker = new Worker("engine/rankings_worker.js", {type: "module"});
   const cache = new Map();
   const pending = new Map();
@@ -23,6 +26,10 @@
   let bossAttack = initialBossAttack();
   let bossMoveType = initialBossMoveType();
   let megaLevel = initialMegaLevel();
+  let level = initialNumber("level", LEVELS, 40);
+  let partyPowerPlayers = initialNumber("partyPower", PARTY_POWER_PLAYERS, 1);
+  let partySize = initialNumber("partySize", PARTY_SIZES, 6);
+  let relobbySeconds = initialRelobby();
   let searchQuery = initialSearch();
   let sortMetric = initialSort();
   let currentResult = null;
@@ -39,6 +46,10 @@
     bossAttack: document.querySelector("#boss-attack"),
     bossMoveType: document.querySelector("#boss-move-type"),
     megaLevel: document.querySelector("#mega-level"),
+    level: document.querySelector("#ranking-level"),
+    partyPower: document.querySelector("#ranking-party-power"),
+    partySize: document.querySelector("#ranking-party-size"),
+    relobby: document.querySelector("#ranking-relobby"),
     search: document.querySelector("#pokemon-search"),
     section: document.querySelector(".results"),
     selectedType: document.querySelector("#selected-type"),
@@ -76,6 +87,18 @@
     return MEGA_LEVELS.includes(requested) ? requested : 1;
   }
 
+  function initialNumber(name, allowed, fallback) {
+    const requested = Number(new URL(location.href).searchParams.get(name));
+    return allowed.includes(requested) ? requested : fallback;
+  }
+
+  function initialRelobby() {
+    const requested = Number(new URL(location.href).searchParams.get("relobby"));
+    return Number.isFinite(requested) && requested >= 0 && Number.isInteger(requested * 2)
+      ? requested
+      : 10;
+  }
+
   function initialSort() {
     const requested = new URL(location.href).searchParams.get("sort");
     return ["idealDps", "simpleDps", "effectiveDps"].includes(requested)
@@ -97,6 +120,10 @@
     url.searchParams.set("boss", bossAttack);
     url.searchParams.set("bossType", bossMoveType);
     url.searchParams.set("megaLevel", String(megaLevel));
+    url.searchParams.set("level", String(level));
+    url.searchParams.set("partyPower", String(partyPowerPlayers));
+    url.searchParams.set("partySize", String(partySize));
+    url.searchParams.set("relobby", String(relobbySeconds));
     url.searchParams.set("sort", sortMetric);
     if (searchQuery) url.searchParams.set("q", searchQuery);
     else url.searchParams.delete("q");
@@ -122,11 +149,12 @@
     elements.selectedType.textContent = rankingMode === "anti" ? `Attackers against ${label(selectedType)}` : `${label(selectedType)} attackers`;
     elements.title.textContent = "Calculating rankings…";
     elements.summary.textContent = "";
-    elements.body.innerHTML = '<tr class="loading-row"><td colspan="7">Checking every eligible Level 40 moveset…</td></tr>';
+    elements.body.innerHTML = `<tr class="loading-row"><td colspan="7">Checking every eligible Level ${level} moveset…</td></tr>`;
   }
 
   function cacheKey(type) {
-    return [rankingMode, type, includeMegas, includeShadows, includeLegendaries, bossAttack, bossMoveType, megaLevel]
+    return [rankingMode, type, includeMegas, includeShadows, includeLegendaries,
+      bossAttack, bossMoveType, megaLevel, level, partyPowerPlayers, partySize, relobbySeconds]
       .map(value => typeof value === "boolean" ? Number(value) : value)
       .join(":");
   }
@@ -147,6 +175,10 @@
         bossAttack,
         bossMoveType,
         megaLevel,
+        level,
+        partyPowerPlayers,
+        partySize,
+        relobbySeconds,
       });
     });
   }
@@ -301,7 +333,10 @@
     const shadowSummary = currentResult.includeShadows
       ? ` · ${currentResult.shadowRows.toLocaleString()} Shadow variants`
       : "";
-    elements.summary.textContent = `${label(currentResult.bossAttack)} boss Attack · ${label(currentResult.bossMoveType)} boss moves · Mega Level ${currentResult.megaLevel} · ${currentResult.candidateMovesets.toLocaleString()} movesets checked${shadowSummary} · ${currentResult.excludedLowQuality.toLocaleString()} excluded below the 10% first-charged cutoff`;
+    const partyPowerSummary = currentResult.partyPowerPlayers === 1
+      ? "Party Power off"
+      : `${currentResult.partyPowerPlayers}-player Party Power`;
+    elements.summary.textContent = `Level ${currentResult.level} · ${partyPowerSummary} · ${currentResult.partySize} Pokémon · ${currentResult.relobbySeconds}s relobby · ${label(currentResult.bossAttack)} boss Attack · ${label(currentResult.bossMoveType)} boss moves · Mega Level ${currentResult.megaLevel} · ${currentResult.candidateMovesets.toLocaleString()} movesets checked${shadowSummary} · ${currentResult.excludedLowQuality.toLocaleString()} excluded below the 10% first-charged cutoff`;
   }
 
   elements.mode.addEventListener("click", () => {
@@ -327,6 +362,34 @@
   elements.megaLevel.value = String(megaLevel);
   elements.megaLevel.addEventListener("change", () => {
     megaLevel = Number(elements.megaLevel.value);
+    selectType(selectedType);
+  });
+  elements.level.value = String(level);
+  elements.level.addEventListener("change", () => {
+    level = Number(elements.level.value);
+    selectType(selectedType);
+  });
+  elements.partyPower.value = String(partyPowerPlayers);
+  elements.partyPower.addEventListener("change", () => {
+    partyPowerPlayers = Number(elements.partyPower.value);
+    selectType(selectedType);
+  });
+  elements.partySize.value = String(partySize);
+  elements.partySize.addEventListener("change", () => {
+    partySize = Number(elements.partySize.value);
+    selectType(selectedType);
+  });
+  elements.relobby.value = String(relobbySeconds);
+  elements.relobby.addEventListener("change", () => {
+    const requested = Number(elements.relobby.value);
+    if (!Number.isFinite(requested) || requested < 0 || !Number.isInteger(requested * 2)) {
+      elements.relobby.setCustomValidity("Use a non-negative time in 0.5-second increments.");
+      elements.relobby.reportValidity();
+      elements.relobby.value = String(relobbySeconds);
+      return;
+    }
+    elements.relobby.setCustomValidity("");
+    relobbySeconds = requested;
     selectType(selectedType);
   });
   const filters = [

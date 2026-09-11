@@ -1,4 +1,7 @@
 import type {CalculatorEntry, CalculatorMove} from './types.js';
+import {
+    PARTY_POWER_PLAYERS, partyPowerThreshold, type PartyPowerPlayers,
+} from './party_power.js';
 
 export const RANKING_TYPES = [
     'normal', 'fire', 'water', 'electric', 'grass', 'ice', 'fighting',
@@ -16,6 +19,9 @@ export type BossAttackLevel = typeof BOSS_ATTACK_LEVELS[number];
 
 export const MEGA_LEVELS = [1, 2, 3, 4] as const;
 export type MegaLevel = typeof MEGA_LEVELS[number];
+
+export const RANKING_LEVELS = [20, 25, 30, 35, 40, 45, 50] as const;
+export type RankingLevel = typeof RANKING_LEVELS[number];
 
 /**
  * Mega forms whose Super Max eligibility and additional charged move were
@@ -43,7 +49,10 @@ export const RELEASED_MEGA_PLUS_FORM_IDS: ReadonlySet<string> = new Set([
 export interface RankingSettings {
     attackType: RankingType;
     mode?: 'attack' | 'anti';
-    level?: 40;
+    level?: RankingLevel;
+    partyPowerPlayers?: PartyPowerPlayers;
+    partySize?: number;
+    relobbySeconds?: number;
     includeMegas?: boolean;
     includeShadows?: boolean;
     includeLegendaries?: boolean;
@@ -75,7 +84,10 @@ export interface RankingRow {
 export interface RankingResult {
     attackType: RankingType;
     mode: 'attack' | 'anti';
-    level: 40;
+    level: RankingLevel;
+    partyPowerPlayers: PartyPowerPlayers;
+    partySize: number;
+    relobbySeconds: number;
     includeMegas: boolean;
     includeShadows: boolean;
     includeLegendaries: boolean;
@@ -99,6 +111,9 @@ export interface RankingResult {
         minimumChargedProbability: number;
         switchSeconds: number;
         relobbySeconds: number;
+        partySize: number;
+        partyPowerPlayers: PartyPowerPlayers;
+        partyPowerFastMoveThreshold: number;
         targetDefenses: number[];
         bossAttackCoefficient: number;
         shadowOutgoingMultiplier: number;
@@ -118,6 +133,7 @@ interface MoveDamage {
 interface Appearance {
     fastMoves: number;
     chargedMoves: number;
+    poweredChargedMoves: number;
     fieldTime: number;
 }
 
@@ -137,9 +153,24 @@ interface Pulse {
     damage: number;
 }
 
-const LEVEL = 40 as const;
-const LEVEL_40_CPM = 0.79030001;
-const LEVEL_42_CPM = 0.8003;
+const CPM_BY_LEVEL: Readonly<Record<RankingLevel, number>> = {
+    20: 0.59740001,
+    25: 0.667934,
+    30: 0.7317,
+    35: 0.76156384,
+    40: 0.79030001,
+    45: 0.81529999,
+    50: 0.84029999,
+};
+const SUPER_MAX_CPM_BY_LEVEL: Readonly<Record<RankingLevel, number>> = {
+    20: 0.64065295,
+    25: 0.69414365,
+    30: 0.74766582,
+    35: 0.77492635,
+    40: 0.8003,
+    45: 0.82529999,
+    50: 0.84029999,
+};
 const ATTACK_IV = 15 as const;
 const DEFENSE_IV = 15 as const;
 const STAMINA_IV = 15 as const;
@@ -160,8 +191,8 @@ const BOSS_ATTACK_COEFFICIENTS: Readonly<Record<BossAttackLevel, number>> = {
     high: 1125,
 };
 const SWITCH_SECONDS = 1;
-const RELOBBY_SECONDS = 10;
-const TEAM_SIZE = 6;
+const DEFAULT_RELOBBY_SECONDS = 10;
+const DEFAULT_PARTY_SIZE = 6;
 const SHADOW_OUTGOING_MULTIPLIER = 1.2;
 const SHADOW_INCOMING_MULTIPLIER = 1.2;
 const EPSILON = 1e-9;
@@ -244,9 +275,9 @@ function playerChargedMoves(entry: CalculatorEntry): CalculatorMove[] {
     ]);
 }
 
-function effectiveStats(entry: CalculatorEntry, megaLevel: MegaLevel): EffectiveStats {
+function effectiveStats(entry: CalculatorEntry, level: RankingLevel, megaLevel: MegaLevel): EffectiveStats {
     const cpm = megaLevel === 4 && RELEASED_MEGA_PLUS_FORM_IDS.has(entry.form_id)
-        ? LEVEL_42_CPM : LEVEL_40_CPM;
+        ? SUPER_MAX_CPM_BY_LEVEL[level] : CPM_BY_LEVEL[level];
     return {
         attack: (entry.stats.attack + ATTACK_IV) * cpm,
         defense: (entry.stats.defense + DEFENSE_IV) * cpm,
@@ -314,25 +345,44 @@ function preparedMove(
 }
 
 /** Exact steady-state fast/charged cycle DPS with no incoming damage. */
-function simpleCycleDps(fast: MoveDamage, charged: MoveDamage): number {
+function simpleCycleDps(fast: MoveDamage, charged: MoveDamage, partyPowerFastMoveThreshold: number): number {
     let energy = 0;
     let damage = 0;
     let time = 0;
-    const firstSeen = new Map<number, {damage: number; time: number}>();
+    let partyPowerProgress = 0;
+    let partyPowerActive = false;
+    const firstSeen = new Map<string, {damage: number; time: number}>();
 
     for (let steps = 0; steps < 1000; steps += 1) {
-        const seen = firstSeen.get(energy);
+        const key = `${energy}:${partyPowerProgress}:${Number(partyPowerActive)}`;
+        const seen = firstSeen.get(key);
         if (seen) return (damage - seen.damage) / (time - seen.time);
-        firstSeen.set(energy, {damage, time});
+        firstSeen.set(key, {damage, time});
 
         if (energy >= charged.energy) {
             energy -= charged.energy;
-            damage += charged.damage;
+            damage += charged.damage * (partyPowerActive ? 2 : 1);
             time += charged.duration;
+            partyPowerActive = false;
+            if (partyPowerFastMoveThreshold > 0
+                && partyPowerProgress >= partyPowerFastMoveThreshold) {
+                partyPowerActive = true;
+                partyPowerProgress = 0;
+            }
         } else {
             energy = Math.min(100, energy + fast.energy);
             damage += fast.damage;
             time += fast.duration;
+            if (partyPowerFastMoveThreshold > 0) {
+                partyPowerProgress = Math.min(
+                    partyPowerFastMoveThreshold,
+                    partyPowerProgress + 1,
+                );
+                if (!partyPowerActive && partyPowerProgress >= partyPowerFastMoveThreshold) {
+                    partyPowerActive = true;
+                    partyPowerProgress = 0;
+                }
+            }
         }
     }
     throw new Error('Simple cycle did not repeat.');
@@ -478,12 +528,16 @@ function appearanceScenario(
     bossAttackCoefficient: number,
     seed: number,
     continuationCache: Map<string, number>,
+    partyPowerFastMoveThreshold: number,
 ): Appearance {
     let hp = stats.hp;
     let energy = 0;
     let time = 0;
     let fastMoves = 0;
     let chargedMoves = 0;
+    let poweredChargedMoves = 0;
+    let partyPowerProgress = 0;
+    let partyPowerActive = false;
     let pulse = firstPulse(seed, stats, bossAttackCoefficient, shadow);
 
     for (let actions = 0; actions < 10000 && hp > 0; actions += 1) {
@@ -493,7 +547,7 @@ function appearanceScenario(
 
         while (pulse.time < actionEnd - EPSILON) {
             hp -= pulse.damage;
-            if (hp <= 0) return {fastMoves, chargedMoves, fieldTime: pulse.time};
+            if (hp <= 0) return {fastMoves, chargedMoves, poweredChargedMoves, fieldTime: pulse.time};
             energy = Math.min(100, energy + Math.floor(pulse.damage / 2));
             pulse = followingPulse(pulse, seed, stats, bossAttackCoefficient, shadow);
         }
@@ -502,13 +556,30 @@ function appearanceScenario(
         if (selected === fast) {
             fastMoves += 1;
             energy = Math.min(100, energy + fast.energy);
+            if (partyPowerFastMoveThreshold > 0) {
+                partyPowerProgress = Math.min(
+                    partyPowerFastMoveThreshold,
+                    partyPowerProgress + 1,
+                );
+                if (!partyPowerActive && partyPowerProgress >= partyPowerFastMoveThreshold) {
+                    partyPowerActive = true;
+                    partyPowerProgress = 0;
+                }
+            }
         } else {
             chargedMoves += 1;
+            if (partyPowerActive) poweredChargedMoves += 1;
+            partyPowerActive = false;
+            if (partyPowerFastMoveThreshold > 0
+                && partyPowerProgress >= partyPowerFastMoveThreshold) {
+                partyPowerActive = true;
+                partyPowerProgress = 0;
+            }
         }
 
         while (Math.abs(pulse.time - time) <= EPSILON) {
             hp -= pulse.damage;
-            if (hp <= 0) return {fastMoves, chargedMoves, fieldTime: time};
+            if (hp <= 0) return {fastMoves, chargedMoves, poweredChargedMoves, fieldTime: time};
             energy = Math.min(100, energy + Math.floor(pulse.damage / 2));
             pulse = followingPulse(pulse, seed, stats, bossAttackCoefficient, shadow);
         }
@@ -526,11 +597,11 @@ function appearanceScenario(
                 continuationCache,
             );
             if (probability + EPSILON < MINIMUM_CHARGED_PROBABILITY) {
-                return {fastMoves, chargedMoves, fieldTime: time};
+                return {fastMoves, chargedMoves, poweredChargedMoves, fieldTime: time};
             }
         }
     }
-    return {fastMoves, chargedMoves, fieldTime: time};
+    return {fastMoves, chargedMoves, poweredChargedMoves, fieldTime: time};
 }
 
 function expectedAppearance(
@@ -539,10 +610,12 @@ function expectedAppearance(
     charged: MoveDamage,
     shadow: boolean,
     bossAttackCoefficient: number,
+    partyPowerFastMoveThreshold: number,
 ): ExpectedAppearance {
     const continuationCache = new Map<string, number>();
     let fastMoves = 0;
     let chargedMoves = 0;
+    let poweredChargedMoves = 0;
     let fieldTime = 0;
     let firstChargedSuccesses = 0;
     for (let scenario = 0; scenario < PULSE_SCHEDULE_COUNT; scenario += 1) {
@@ -554,15 +627,18 @@ function expectedAppearance(
             bossAttackCoefficient,
             4099 + scenario * 65537,
             continuationCache,
+            partyPowerFastMoveThreshold,
         );
         fastMoves += appearance.fastMoves;
         chargedMoves += appearance.chargedMoves;
+        poweredChargedMoves += appearance.poweredChargedMoves;
         fieldTime += appearance.fieldTime;
         if (appearance.chargedMoves > 0) firstChargedSuccesses += 1;
     }
     return {
         fastMoves: fastMoves / PULSE_SCHEDULE_COUNT,
         chargedMoves: chargedMoves / PULSE_SCHEDULE_COUNT,
+        poweredChargedMoves: poweredChargedMoves / PULSE_SCHEDULE_COUNT,
         fieldTime: fieldTime / PULSE_SCHEDULE_COUNT,
         firstChargedProbability: firstChargedSuccesses / PULSE_SCHEDULE_COUNT,
     };
@@ -572,10 +648,15 @@ function mean(values: readonly number[]): number {
     return values.reduce((total, value) => total + value, 0) / values.length;
 }
 
-function effectiveDps(damage: number, appearance: Appearance): number {
-    const totalDamage = TEAM_SIZE * damage;
-    const activeTime = TEAM_SIZE * appearance.fieldTime;
-    const transitionTime = (TEAM_SIZE - 1) * SWITCH_SECONDS + RELOBBY_SECONDS;
+function effectiveDps(
+    damage: number,
+    appearance: Appearance,
+    partySize: number,
+    relobbySeconds: number,
+): number {
+    const totalDamage = partySize * damage;
+    const activeTime = partySize * appearance.fieldTime;
+    const transitionTime = (partySize - 1) * SWITCH_SECONDS + relobbySeconds;
     return totalDamage / (activeTime + transitionTime);
 }
 
@@ -597,7 +678,24 @@ export function calculateRankings(
     if (mode !== 'attack' && mode !== 'anti') throw new Error(`Unknown ranking mode: ${mode}`);
     const attackType = normalizeType(settings.attackType) as RankingType;
     if (!RANKING_TYPES.includes(attackType)) throw new Error(`Unknown ranking type: ${settings.attackType}`);
-    if (settings.level !== undefined && settings.level !== LEVEL) throw new Error('The first rankings version supports Level 40 only.');
+    const level = settings.level ?? 40;
+    if (!RANKING_LEVELS.includes(level)) {
+        throw new Error(`Ranking level must be 20 through 50 in increments of 5: ${level}`);
+    }
+    const partyPowerPlayers = settings.partyPowerPlayers ?? 1;
+    if (!PARTY_POWER_PLAYERS.includes(partyPowerPlayers)) {
+        throw new Error(`Party Power players must be 1 through 4: ${partyPowerPlayers}`);
+    }
+    const partyPowerFastMoveThreshold = partyPowerThreshold(partyPowerPlayers);
+    const partySize = settings.partySize ?? DEFAULT_PARTY_SIZE;
+    if (!Number.isInteger(partySize) || partySize < 1 || partySize > 6) {
+        throw new Error(`Party size must be an integer from 1 through 6: ${partySize}`);
+    }
+    const relobbySeconds = settings.relobbySeconds ?? DEFAULT_RELOBBY_SECONDS;
+    if (!Number.isFinite(relobbySeconds) || relobbySeconds < 0
+        || Math.abs(relobbySeconds * 2 - Math.round(relobbySeconds * 2)) > EPSILON) {
+        throw new Error(`Relobby time must be a non-negative multiple of 0.5 seconds: ${relobbySeconds}`);
+    }
     const bossAttack = settings.bossAttack ?? 'medium';
     if (!BOSS_ATTACK_LEVELS.includes(bossAttack)) throw new Error(`Unknown boss Attack setting: ${bossAttack}`);
     const bossMoveType = settings.bossMoveType ?? 'typeless';
@@ -626,7 +724,7 @@ export function calculateRankings(
 
         const shadowStates = includeShadows && shadowFormIds.has(entry.form_id)
             ? [false, true] : [false];
-        const stats = effectiveStats(entry, megaLevel);
+        const stats = effectiveStats(entry, level, megaLevel);
         const typedBossAttackCoefficient = bossAttackCoefficient
             * bossMoveEffectiveness(bossMoveType, entry.types);
         for (const shadow of shadowStates) {
@@ -655,6 +753,7 @@ export function calculateRankings(
                         timingCharged,
                         shadow,
                         typedBossAttackCoefficient,
+                        partyPowerFastMoveThreshold,
                     );
                     if (appearance.firstChargedProbability + EPSILON < MINIMUM_CHARGED_PROBABILITY) {
                         excludedLowQuality += 1;
@@ -670,7 +769,7 @@ export function calculateRankings(
                     }));
                     const appearanceDamage = mean(damageModels.map(({fast, charged}) =>
                         appearance.fastMoves * fast.damage
-                        + appearance.chargedMoves * charged.damage));
+                        + (appearance.chargedMoves + appearance.poweredChargedMoves) * charged.damage));
                     const row: RankingRow = {
                         formId: entry.form_id,
                         dexNumber: entry.dex_number,
@@ -690,8 +789,10 @@ export function calculateRankings(
                         legendary,
                         idealDps: appearanceDamage / appearance.fieldTime,
                         simpleDps: mean(damageModels.map(({fast, charged}) =>
-                            simpleCycleDps(fast, charged))),
-                        effectiveDps: effectiveDps(appearanceDamage, appearance),
+                            simpleCycleDps(fast, charged, partyPowerFastMoveThreshold))),
+                        effectiveDps: effectiveDps(
+                            appearanceDamage, appearance, partySize, relobbySeconds,
+                        ),
                     };
                     const key = `${entry.form_id}:${shadow ? 'shadow' : 'normal'}`;
                     const previous = bestByForm.get(key);
@@ -711,7 +812,10 @@ export function calculateRankings(
     return {
         attackType,
         mode,
-        level: LEVEL,
+        level,
+        partyPowerPlayers,
+        partySize,
+        relobbySeconds,
         includeMegas,
         includeShadows,
         includeLegendaries,
@@ -734,7 +838,10 @@ export function calculateRankings(
             continuationSamples: CONTINUATION_SAMPLES,
             minimumChargedProbability: MINIMUM_CHARGED_PROBABILITY,
             switchSeconds: SWITCH_SECONDS,
-            relobbySeconds: RELOBBY_SECONDS,
+            relobbySeconds,
+            partySize,
+            partyPowerPlayers,
+            partyPowerFastMoveThreshold,
             targetDefenses: [...TARGET_DEFENSES],
             bossAttackCoefficient,
             shadowOutgoingMultiplier: SHADOW_OUTGOING_MULTIPLIER,

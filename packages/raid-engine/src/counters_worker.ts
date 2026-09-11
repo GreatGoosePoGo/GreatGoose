@@ -54,6 +54,7 @@ self.onmessage = async (event: MessageEvent) => {
         id, mode, bossFormId, raidDifficulty, includeMegas, includeShadows,
         includeLegendaries, megaLevel, level, friendshipMultiplier, weather,
         dodgeStrategy, playerStrategy, excludeLegacy,
+        partyPowerPlayers,
         trialsPerBossMoveset, prefilterLimit,
         bossFastMoveId, bossChargedMoveId, pick,
     } = event.data ?? {};
@@ -76,6 +77,7 @@ self.onmessage = async (event: MessageEvent) => {
                 dodgeStrategy,
                 playerStrategy,
                 excludeLegacy: Boolean(excludeLegacy),
+                partyPowerPlayers,
                 trialsPerBossMoveset,
                 prefilterLimit,
                 bossFastMoveId,

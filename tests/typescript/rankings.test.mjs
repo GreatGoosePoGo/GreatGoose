@@ -5,6 +5,7 @@ import {Worker} from 'node:worker_threads';
 import {once} from 'node:events';
 import {
   calculateRankings,
+  RANKING_LEVELS,
   RANKING_TYPES,
   RELEASED_MEGA_PLUS_FORM_IDS,
 } from '../../build/rankings.js';
@@ -100,12 +101,44 @@ test('movesets that cannot complete one charged attack are excluded', () => {
   assert.deepEqual(result.rows, []);
 });
 
-test('v1 rejects unsupported levels and attack types', () => {
-  assert.throws(() => calculateRankings(catalog, {attackType: 'fire', level: 50}), /Level 40 only/);
+test('rankings accept supported levels and reject invalid settings', () => {
+  assert.deepEqual(RANKING_LEVELS, [20, 25, 30, 35, 40, 45, 50]);
+  const level20 = calculateRankings(catalog, {attackType: 'fire', level: 20});
+  const level50 = calculateRankings(catalog, {attackType: 'fire', level: 50});
+  assert.equal(level20.level, 20);
+  assert.equal(level50.level, 50);
+  assert(level50.rows[0].simpleDps > level20.rows[0].simpleDps);
+  assert.throws(() => calculateRankings(catalog, {attackType: 'fire', level: 22}), /level must be 20 through 50/);
   assert.throws(() => calculateRankings(catalog, {attackType: 'bird'}), /Unknown ranking type/);
   assert.throws(() => calculateRankings(catalog, {attackType: 'fire', bossAttack: 'extreme'}), /Unknown boss Attack/);
   assert.throws(() => calculateRankings(catalog, {attackType: 'fire', bossMoveType: 'sound'}), /Unknown boss move type/);
   assert.throws(() => calculateRankings(catalog, {attackType: 'fire', megaLevel: 5}), /Unknown Mega Level/);
+  assert.throws(() => calculateRankings(catalog, {attackType: 'fire', partyPowerPlayers: 5}), /Party Power players/);
+  assert.throws(() => calculateRankings(catalog, {attackType: 'fire', partySize: 0}), /Party size/);
+  assert.throws(() => calculateRankings(catalog, {attackType: 'fire', relobbySeconds: 1.2}), /multiple of 0.5/);
+});
+
+test('Party Power, party size, and relobby time affect general ranking metrics', () => {
+  const base = calculateRankings(catalog, {
+    attackType: 'dragon', partyPowerPlayers: 1, partySize: 6, relobbySeconds: 10,
+  });
+  const powered = calculateRankings(catalog, {
+    attackType: 'dragon', partyPowerPlayers: 4, partySize: 6, relobbySeconds: 10,
+  });
+  const quickRelobby = calculateRankings(catalog, {
+    attackType: 'dragon', partyPowerPlayers: 1, partySize: 1, relobbySeconds: 0,
+  });
+  const formId = base.rows.find(row => powered.rows.some(other => other.formId === row.formId))?.formId;
+  assert(formId);
+  const unpoweredRow = base.rows.find(row => row.formId === formId);
+  const poweredRow = powered.rows.find(row => row.formId === formId);
+  assert(poweredRow.simpleDps > unpoweredRow.simpleDps);
+  assert(poweredRow.idealDps >= unpoweredRow.idealDps);
+  assert.equal(powered.partyPowerPlayers, 4);
+  assert.equal(powered.assumptions.partyPowerFastMoveThreshold, 6);
+  assert.equal(quickRelobby.partySize, 1);
+  assert.equal(quickRelobby.relobbySeconds, 0);
+  assert(quickRelobby.rows.every(row => Math.abs(row.effectiveDps - row.idealDps) < 1e-9));
 });
 
 test('released Mega plus moves scale with Mega Level and Super Max stats', () => {
@@ -290,6 +323,10 @@ test('deployed rankings worker loads only its static catalog', async () => {
       bossAttack: 'high',
       bossMoveType: 'dragon',
       megaLevel: 4,
+      level: 50,
+      partyPowerPlayers: 4,
+      partySize: 3,
+      relobbySeconds: 6.5,
     });
     const [response] = await responsePromise;
     assert.equal(response.id, 1);
@@ -298,6 +335,10 @@ test('deployed rankings worker loads only its static catalog', async () => {
     assert.equal(response.result.bossAttack, 'high');
     assert.equal(response.result.bossMoveType, 'dragon');
     assert.equal(response.result.megaLevel, 4);
+    assert.equal(response.result.level, 50);
+    assert.equal(response.result.partyPowerPlayers, 4);
+    assert.equal(response.result.partySize, 3);
+    assert.equal(response.result.relobbySeconds, 6.5);
     assert.equal(response.result.assumptions.megaPlusPowerMultiplier, 1.3);
     assert.equal(response.result.assumptions.superMaxLevelBoost, 2);
     assert(response.result.shadowRows > 0);
@@ -340,6 +381,10 @@ test('rankings UI uses compact selection, metric help, and effective DPS by defa
   assert.match(page, /id="boss-move-type"/);
   assert.match(page, /value="fairy">Fairy/);
   assert.match(page, /id="mega-level"/);
+  for (const id of ['ranking-level', 'ranking-party-power', 'ranking-party-size', 'ranking-relobby']) {
+    assert.match(page, new RegExp(`id="${id}"`));
+  }
+  assert.match(page, /id="ranking-relobby"[^>]*step="0\.5"/);
   assert.match(page, /class="metric-help"[^>]*>\?<\/button>/);
   assert.match(page, /Ideal DPS<\/strong> represents the maximum possible DPS/);
   assert.match(page, /Simple DPS<\/strong> represents the DPS obtained if the boss doesn't attack/);

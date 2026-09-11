@@ -12,6 +12,7 @@
     "no_strategy", "hot_swap_greedy", "hot_swap_cautious", "hot_swap_very_cautious",
   ];
   const MEGA_LEVELS = [1, 2, 3, 4];
+  const PARTY_POWER_PLAYERS = [1, 2, 3, 4];
   const worker = new Worker("engine/counters_worker.js", {type: "module"});
   const cache = new Map();
   const pending = new Map();
@@ -44,6 +45,7 @@
     dodgeStrategy: document.querySelector("#counter-dodge-strategy"),
     playerStrategy: document.querySelector("#counter-player-strategy"),
     megaLevel: document.querySelector("#counter-mega-level"),
+    partyPower: document.querySelector("#counter-party-power"),
     megas: document.querySelector("#counter-include-megas"),
     shadows: document.querySelector("#counter-include-shadows"),
     legendaries: document.querySelector("#counter-include-legendaries"),
@@ -75,7 +77,7 @@
   const settingControls = [
     elements.boss, elements.difficulty, elements.level, elements.weather,
     elements.friendship, elements.dodgeStrategy, elements.playerStrategy,
-    elements.megaLevel, elements.megas, elements.shadows, elements.legendaries,
+    elements.megaLevel, elements.partyPower, elements.megas, elements.shadows, elements.legendaries,
     elements.legacy, elements.bossFast, elements.bossCharged,
   ];
 
@@ -244,7 +246,10 @@
       .replace(/^None$/, "No friendship");
     const dodge = labelFrom(elements.dodgeStrategy, elements.dodgeStrategy.value)
       .replace(/^Dodge nothing$/, "No dodging");
-    elements.settingsSummary.textContent = `Level ${level} · ${weather} · ${friendship} · ${dodge}`;
+    const partyPower = Number(elements.partyPower.value) === 1
+      ? "Party Power off"
+      : `${elements.partyPower.value}-player Party Power`;
+    elements.settingsSummary.textContent = `Level ${level} · ${weather} · ${friendship} · ${dodge} · ${partyPower}`;
   }
 
   function currentSettings() {
@@ -258,6 +263,7 @@
       dodgeStrategy: elements.dodgeStrategy.value,
       playerStrategy: elements.playerStrategy.value,
       megaLevel: Number(elements.megaLevel.value),
+      partyPowerPlayers: Number(elements.partyPower.value),
       includeMegas,
       includeShadows,
       includeLegendaries,
@@ -279,6 +285,7 @@
     url.searchParams.set("dodge", settings.dodgeStrategy);
     url.searchParams.set("strategy", settings.playerStrategy);
     url.searchParams.set("megaLevel", String(settings.megaLevel));
+    url.searchParams.set("partyPower", String(settings.partyPowerPlayers));
     url.searchParams.set("megas", settings.includeMegas ? "1" : "0");
     url.searchParams.set("shadows", settings.includeShadows ? "1" : "0");
     url.searchParams.set("legendaries", settings.includeLegendaries ? "1" : "0");
@@ -295,6 +302,7 @@
       "counters", boss.formId, settings.raidDifficulty, settings.level,
       settings.weather || "none", settings.friendshipMultiplier,
       settings.dodgeStrategy, settings.playerStrategy, settings.megaLevel,
+      settings.partyPowerPlayers,
       Number(settings.includeMegas), Number(settings.includeShadows),
       Number(settings.includeLegendaries), Number(settings.excludeLegacy),
       settings.bossFastMoveId || "all", settings.bossChargedMoveId || "all",
@@ -708,6 +716,7 @@
   elements.dodgeStrategy.value = initialString("dodge", DODGE_STRATEGIES, "none");
   elements.playerStrategy.value = initialString("strategy", PLAYER_STRATEGIES, "no_strategy");
   elements.megaLevel.value = String(initialNumber("megaLevel", MEGA_LEVELS, 1));
+  elements.partyPower.value = String(initialNumber("partyPower", PARTY_POWER_PLAYERS, 1));
   syncFilterButtons();
   syncScenarioPreview();
 
@@ -717,7 +726,8 @@
   bindFilter(elements.legacy, () => excludeLegacy, value => { excludeLegacy = value; });
   for (const select of [
     elements.difficulty, elements.level, elements.weather, elements.friendship,
-    elements.dodgeStrategy, elements.playerStrategy, elements.megaLevel, elements.bossFast, elements.bossCharged,
+    elements.dodgeStrategy, elements.playerStrategy, elements.megaLevel, elements.partyPower,
+    elements.bossFast, elements.bossCharged,
   ]) {
     select.addEventListener("change", settingsChanged);
   }

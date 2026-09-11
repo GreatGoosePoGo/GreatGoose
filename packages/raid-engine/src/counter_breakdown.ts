@@ -199,7 +199,8 @@ export function calculateCounterBreakdown(
     if (!Number.isInteger(trialsPerMoveset) || trialsPerMoveset < 1 || trialsPerMoveset > 128) {
         throw new Error('Detail trials must be an integer from 1 through 128.');
     }
-    const {engine, bossMovePairs, allBossMovePairs, level, megaLevel} = prepareRaidCounterScenario(catalog, settings);
+    const {engine, bossMovePairs, allBossMovePairs, level, megaLevel, partyPowerPlayers}
+        = prepareRaidCounterScenario(catalog, settings);
     const candidate = counterCandidate(catalog, pick, settings, shadows, legendaries);
     const movesets = bossMovePairs.map(pair => {
         const lives: Life[] = [];
@@ -210,7 +211,9 @@ export function calculateCounterBreakdown(
         let totalSeconds = 0;
         let totalDamage = 0;
         for (let trial = 0; trial < trialsPerMoveset; trial++) {
-            const simulation = counterSimulation(engine, candidate, pair, level, megaLevel, trial);
+            const simulation = counterSimulation(
+                engine, candidate, pair, level, megaLevel, trial, partyPowerPlayers,
+            );
             const observer = observeCounterTrial(simulation);
             const result = simulation.run();
             const observation = observer.finish(result.finish_time);
@@ -228,7 +231,9 @@ export function calculateCounterBreakdown(
         const completed = outings.filter(outing => outing.completed);
         const partial = outings.filter(outing => !outing.completed);
         const observedChargedProbability = fastHits + chargedHits ? chargedHits / (fastHits + chargedHits) : null;
-        const sample = counterSimulation(engine, candidate, pair, level, megaLevel, 0);
+        const sample = counterSimulation(
+            engine, candidate, pair, level, megaLevel, 0, partyPowerPlayers,
+        );
         const pokemon = sample.players[0].pokemon;
         const hp = pokemon.max_hp;
         // Hidden Power is fixed within a raid, uniformly random across raids.

@@ -96,6 +96,44 @@
           </div>
         </div>
         <div id="types" class="type-grid" role="group" aria-label="Attack type"></div>
+        <div class="battle-controls" aria-label="Attacker and party settings">
+          <label class="select-control">
+            Attacker level
+            <select id="ranking-level">
+              <option value="20">Level 20</option>
+              <option value="25">Level 25</option>
+              <option value="30">Level 30</option>
+              <option value="35">Level 35</option>
+              <option value="40" selected>Level 40</option>
+              <option value="45">Level 45</option>
+              <option value="50">Level 50</option>
+            </select>
+          </label>
+          <label class="select-control">
+            Party Power
+            <select id="ranking-party-power">
+              <option value="1" selected>1 player · Off</option>
+              <option value="2">2-player party</option>
+              <option value="3">3-player party</option>
+              <option value="4">4-player party</option>
+            </select>
+          </label>
+          <label class="select-control">
+            Pokémon per party
+            <select id="ranking-party-size">
+              <option value="1">1 Pokémon</option>
+              <option value="2">2 Pokémon</option>
+              <option value="3">3 Pokémon</option>
+              <option value="4">4 Pokémon</option>
+              <option value="5">5 Pokémon</option>
+              <option value="6" selected>6 Pokémon</option>
+            </select>
+          </label>
+          <label class="select-control">
+            Relobby time
+            <span class="number-with-unit"><input id="ranking-relobby" type="number" min="0" step="0.5" value="10" inputmode="decimal"><span>seconds</span></span>
+          </label>
+        </div>
         <div class="ranking-tools">
           <div class="filter-group" role="group" aria-label="Included Pokémon categories">
             <span class="filter-label">Include</span>
@@ -130,7 +168,7 @@
                 <th scope="col">Charged move</th>
                 <th scope="col" title="Expected on-field damage per second across fixed boss Defense and incoming-damage scenarios, with a 10% continuation cutoff.">Ideal DPS</th>
                 <th scope="col" title="Steady-cycle damage per second when the boss never attacks.">Simple DPS</th>
-                <th scope="col" title="Ideal damage adjusted for five switches and a ten-second relobby per six-Pokémon team.">Effective DPS</th>
+                <th scope="col" title="Ideal damage adjusted for the selected party size, switching, and relobby time.">Effective DPS</th>
               </tr>
             </thead>
             <tbody id="ranking-body"></tbody>
