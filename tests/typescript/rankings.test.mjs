@@ -385,6 +385,7 @@ test('rankings UI uses compact selection, metric help, and effective DPS by defa
     assert.match(page, new RegExp(`id="${id}"`));
   }
   assert.match(page, /id="ranking-relobby"[^>]*step="0\.5"/);
+  assert.match(app, /raw === null \|\| raw\.trim\(\) === ""\) return 10/);
   assert.match(page, /class="metric-help"[^>]*>\?<\/button>/);
   assert.match(page, /Ideal DPS<\/strong> represents the maximum possible DPS/);
   assert.match(page, /Simple DPS<\/strong> represents the DPS obtained if the boss doesn't attack/);

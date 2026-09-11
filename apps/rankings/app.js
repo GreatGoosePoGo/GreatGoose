@@ -93,7 +93,9 @@
   }
 
   function initialRelobby() {
-    const requested = Number(new URL(location.href).searchParams.get("relobby"));
+    const raw = new URL(location.href).searchParams.get("relobby");
+    if (raw === null || raw.trim() === "") return 10;
+    const requested = Number(raw);
     return Number.isFinite(requested) && requested >= 0 && Number.isInteger(requested * 2)
       ? requested
       : 10;
