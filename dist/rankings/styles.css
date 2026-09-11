@@ -90,7 +90,15 @@ select { min-width: 10rem; padding: .55rem .7rem; border: 1px solid var(--line);
 .metric-help:hover + .metric-help-text,
 .metric-help:focus + .metric-help-text { opacity: 1; transform: translateY(0); }
 
-.type-grid { display: flex; flex-wrap: wrap; gap: .35rem; max-width: 51rem; margin-top: .8rem; }
+.type-mode-heading { display: flex; align-items: center; gap: .7rem; }
+.mode-switch { width: 44px; height: 26px; flex-shrink: 0; padding: 3px; border: 0; border-radius: 99px; background: #767b83; cursor: pointer; transition: background .15s; }
+.mode-switch span { display: block; width: 20px; height: 20px; border-radius: 50%; background: white; box-shadow: 0 1px 3px #0003; transition: transform .15s; }
+.mode-switch[aria-checked="true"] { background: #24834d; }
+.mode-switch[aria-checked="true"] span { transform: translateX(18px); }
+.mode-switch:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { .mode-switch, .mode-switch span { transition: none; } }
+.type-grid { display: flex; flex-wrap: nowrap; gap: .2rem; width: 100%; min-width: 0; overflow-x: auto; margin-top: .8rem; padding: .2rem 0 .45rem; }
+.type-grid .type-button { flex: 1 0 auto; padding: .4rem .35rem; white-space: nowrap; }
 .type-button {
   padding: .32rem .58rem;
   border: 1px solid var(--line);
@@ -134,7 +142,9 @@ table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nu
 th, td { padding: .78rem .8rem; border-bottom: 1px solid #e5eae6; text-align: left; white-space: nowrap; }
 th { color: #505761; background: #f7f8fa; font-size: .72rem; letter-spacing: .04em; text-transform: uppercase; }
 td { font-size: .88rem; }
-tbody tr:hover { background: #f3f7fc; }
+tbody tr:nth-child(odd) { background: #fff; }
+tbody tr:nth-child(even) { background: #edf1f5; }
+tbody tr:hover { background: #e2edfa; }
 tbody tr:last-child td { border-bottom: 0; }
 .rank { width: 3rem; color: var(--muted); text-align: right; }
 .pokemon { min-width: 12rem; font-weight: 800; }

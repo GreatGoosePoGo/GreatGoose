@@ -22,7 +22,7 @@
       <section class="intro">
         <div>
           <h1>Attacker rankings</h1>
-          <p>Compare every eligible moveset by the type of its charged attack. The selected type is treated as super effective against a neutral synthetic target.</p>
+          <p>Compare attackers by their charged attack type, or switch to Anti type to rank them against a defending type.</p>
         </div>
         <a class="raid-link" href="../raids/">Open raid simulator →</a>
       </section>
@@ -30,8 +30,11 @@
       <section class="controls" aria-labelledby="type-heading">
         <div class="control-heading">
           <div>
-            <h2 id="type-heading">Attack type</h2>
-            <p>Only movesets with a charged attack of this type are ranked.</p>
+            <div class="type-mode-heading">
+              <h2 id="type-heading">Attack type</h2>
+              <button id="anti-type" class="mode-switch" type="button" role="switch" aria-checked="false" aria-label="Anti type mode" aria-describedby="type-description"><span></span></button>
+            </div>
+            <p id="type-description">Only movesets with a charged attack of this type are ranked.</p>
           </div>
           <div class="select-controls">
             <label class="select-control">

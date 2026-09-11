@@ -42,6 +42,7 @@ export const RELEASED_MEGA_PLUS_FORM_IDS: ReadonlySet<string> = new Set([
 
 export interface RankingSettings {
     attackType: RankingType;
+    mode?: 'attack' | 'anti';
     level?: 40;
     includeMegas?: boolean;
     includeShadows?: boolean;
@@ -73,6 +74,7 @@ export interface RankingRow {
 
 export interface RankingResult {
     attackType: RankingType;
+    mode: 'attack' | 'anti';
     level: 40;
     includeMegas: boolean;
     includeShadows: boolean;
@@ -274,15 +276,18 @@ function moveDamage(
     targetDefense: number,
     attack: number,
     megaLevel: MegaLevel,
+    mode: 'attack' | 'anti' = 'attack',
 ): number {
     let moveType = normalizeType(move.type);
     // In an ideal type ranking, Hidden Power is the selected legal type. It can
     // never be Normal or Fairy in Pokémon GO.
-    if (move.id === 'HIDDEN_POWER_FAST' && attackType !== 'normal' && attackType !== 'fairy') {
+    if (mode === 'attack' && move.id === 'HIDDEN_POWER_FAST' && attackType !== 'normal' && attackType !== 'fairy') {
         moveType = attackType;
     }
     const stab = entry.types.some(type => normalizeType(type) === moveType) ? STAB : 1;
-    const effectiveness = moveType === attackType ? SUPER_EFFECTIVE : 1;
+    const effectiveness = mode === 'anti'
+        ? bossMoveEffectiveness(moveType as RankingType, [attackType])
+        : moveType === attackType ? SUPER_EFFECTIVE : 1;
     const shadowMultiplier = shadow ? SHADOW_OUTGOING_MULTIPLIER : 1;
     return Math.floor(
         0.5 * movePower(move, megaLevel) * attack / targetDefense
@@ -298,10 +303,11 @@ function preparedMove(
     targetDefense: number,
     attack: number,
     megaLevel: MegaLevel,
+    mode: 'attack' | 'anti' = 'attack',
 ): MoveDamage {
     return {
         move,
-        damage: moveDamage(entry, move, attackType, shadow, targetDefense, attack, megaLevel),
+        damage: moveDamage(entry, move, attackType, shadow, targetDefense, attack, megaLevel, mode),
         energy: Math.abs(move.energy),
         duration: move.duration_ms / 1000,
     };
@@ -587,6 +593,8 @@ export function calculateRankings(
     shadowFormIds: ReadonlySet<string> = new Set<string>(),
     legendaryDexNumbers: ReadonlySet<number> = new Set<number>(),
 ): RankingResult {
+    const mode = settings.mode ?? 'attack';
+    if (mode !== 'attack' && mode !== 'anti') throw new Error(`Unknown ranking mode: ${mode}`);
     const attackType = normalizeType(settings.attackType) as RankingType;
     if (!RANKING_TYPES.includes(attackType)) throw new Error(`Unknown ranking type: ${settings.attackType}`);
     if (settings.level !== undefined && settings.level !== LEVEL) throw new Error('The first rankings version supports Level 40 only.');
@@ -613,7 +621,7 @@ export function calculateRankings(
         if (!includeMegas && mega) continue;
         if (!includeLegendaries && legendary) continue;
         const chargedMoves = playerChargedMoves(entry)
-            .filter(move => normalizeType(move.type) === attackType && move.energy < 0);
+            .filter(move => (mode === 'anti' || normalizeType(move.type) === attackType) && move.energy < 0);
         if (chargedMoves.length === 0) continue;
 
         const shadowStates = includeShadows && shadowFormIds.has(entry.form_id)
@@ -622,14 +630,24 @@ export function calculateRankings(
         const typedBossAttackCoefficient = bossAttackCoefficient
             * bossMoveEffectiveness(bossMoveType, entry.types);
         for (const shadow of shadowStates) {
-            for (const fastMove of playerFastMoves(entry).filter(move => move.energy > 0)) {
+            for (const candidateFast of playerFastMoves(entry).filter(move => move.energy > 0)) {
+                // Hidden Power's timing/energy are type-independent. The legal type
+                // with greatest STAB × effectiveness dominates for every DPS metric.
+                let fastMove = candidateFast;
+                if (mode === 'anti' && candidateFast.id === 'HIDDEN_POWER_FAST') {
+                    const score = (type: RankingType) => bossMoveEffectiveness(type, [attackType])
+                        * (entry.types.some(t => normalizeType(t) === type) ? STAB : 1);
+                    const type = RANKING_TYPES.filter(t => t !== 'normal' && t !== 'fairy')
+                        .sort((a, b) => score(b) - score(a))[0];
+                    fastMove = {...candidateFast, type, name: `Hidden Power (${type.charAt(0).toUpperCase() + type.slice(1)})`};
+                }
                 for (const chargedMove of chargedMoves) {
                     candidateMovesets += 1;
                     const timingFast = preparedMove(
-                        entry, fastMove, attackType, shadow, TARGET_DEFENSES[0], stats.attack, megaLevel,
+                        entry, fastMove, attackType, shadow, TARGET_DEFENSES[0], stats.attack, megaLevel, mode,
                     );
                     const timingCharged = preparedMove(
-                        entry, chargedMove, attackType, shadow, TARGET_DEFENSES[0], stats.attack, megaLevel,
+                        entry, chargedMove, attackType, shadow, TARGET_DEFENSES[0], stats.attack, megaLevel, mode,
                     );
                     const appearance = expectedAppearance(
                         stats,
@@ -644,10 +662,10 @@ export function calculateRankings(
                     }
                     const damageModels = TARGET_DEFENSES.map(targetDefense => ({
                         fast: preparedMove(
-                            entry, fastMove, attackType, shadow, targetDefense, stats.attack, megaLevel,
+                            entry, fastMove, attackType, shadow, targetDefense, stats.attack, megaLevel, mode,
                         ),
                         charged: preparedMove(
-                            entry, chargedMove, attackType, shadow, targetDefense, stats.attack, megaLevel,
+                            entry, chargedMove, attackType, shadow, targetDefense, stats.attack, megaLevel, mode,
                         ),
                     }));
                     const appearanceDamage = mean(damageModels.map(({fast, charged}) =>
@@ -659,7 +677,7 @@ export function calculateRankings(
                         name: entry.name,
                         pokemonTypes: entry.types,
                         fastMove: fastMove.name,
-                        fastMoveType: fastMove.id === 'HIDDEN_POWER_FAST'
+                        fastMoveType: mode === 'attack' && fastMove.id === 'HIDDEN_POWER_FAST'
                             && attackType !== 'normal' && attackType !== 'fairy'
                             ? attackType : normalizeType(fastMove.type),
                         chargedMove: displayedMoveName(chargedMove, megaLevel),
@@ -692,6 +710,7 @@ export function calculateRankings(
 
     return {
         attackType,
+        mode,
         level: LEVEL,
         includeMegas,
         includeShadows,

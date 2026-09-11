@@ -9,7 +9,7 @@
   function connect() {
     if (worker) return worker;
     if (location.protocol === 'file:') throw new Error('Run npm start and open http://localhost:8000 to load the website.');
-    worker = new Worker(new URL('engine-2df9d23c3087/worker.js', document.baseURI), {type:'module'});
+    worker = new Worker(new URL('engine-cf05f2f8aa0c/worker.js', document.baseURI), {type:'module'});
     worker.onmessage = ({data}) => {
       const job = pending.get(data.id);if (!job) return;
       pending.delete(data.id);

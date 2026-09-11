@@ -51,7 +51,7 @@ function rankingData(): Promise<RankingData> {
 self.onmessage = async (event: MessageEvent) => {
     const {
         id, attackType, includeMegas, includeShadows, includeLegendaries,
-        bossAttack, bossMoveType, megaLevel,
+        bossAttack, bossMoveType, megaLevel, mode,
     } = event.data ?? {};
     try {
         const {catalog, shadowFormIds, legendaryDexNumbers} = await rankingData();
@@ -59,6 +59,7 @@ self.onmessage = async (event: MessageEvent) => {
             catalog,
             {
                 attackType,
+                mode,
                 level: 40,
                 includeMegas: includeMegas !== false,
                 includeShadows: Boolean(includeShadows),

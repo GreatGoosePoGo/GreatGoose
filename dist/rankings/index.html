@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Pokémon GO Attacker Rankings | Great Goose</title>
     <meta name="description" content="Pokémon GO attacker rankings using ideal, simple-cycle and effective DPS.">
-    <link rel="stylesheet" href="styles.css?v=2df9d23c3087">
-    <script src="app.js?v=2df9d23c3087" defer></script>
+    <link rel="stylesheet" href="styles.css?v=cf05f2f8aa0c">
+    <script src="app.js?v=cf05f2f8aa0c" defer></script>
   </head>
   <body>
     <header class="site-header">
@@ -22,7 +22,7 @@
       <section class="intro">
         <div>
           <h1>Attacker rankings</h1>
-          <p>Compare every eligible moveset by the type of its charged attack. The selected type is treated as super effective against a neutral synthetic target.</p>
+          <p>Compare attackers by their charged attack type, or switch to Anti type to rank them against a defending type.</p>
         </div>
         <a class="raid-link" href="../raids/">Open raid simulator →</a>
       </section>
@@ -30,8 +30,11 @@
       <section class="controls" aria-labelledby="type-heading">
         <div class="control-heading">
           <div>
-            <h2 id="type-heading">Attack type</h2>
-            <p>Only movesets with a charged attack of this type are ranked.</p>
+            <div class="type-mode-heading">
+              <h2 id="type-heading">Attack type</h2>
+              <button id="anti-type" class="mode-switch" type="button" role="switch" aria-checked="false" aria-label="Anti type mode" aria-describedby="type-description"><span></span></button>
+            </div>
+            <p id="type-description">Only movesets with a charged attack of this type are ranked.</p>
           </div>
           <div class="select-controls">
             <label class="select-control">

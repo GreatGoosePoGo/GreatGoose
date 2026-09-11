@@ -12,7 +12,7 @@
     "no_strategy", "hot_swap_greedy", "hot_swap_cautious", "hot_swap_very_cautious",
   ];
   const MEGA_LEVELS = [1, 2, 3, 4];
-  const worker = new Worker("engine-2df9d23c3087/counters_worker.js", {type: "module"});
+  const worker = new Worker("engine-cf05f2f8aa0c/counters_worker.js", {type: "module"});
   const cache = new Map();
   const pending = new Map();
   let requestId = 0;

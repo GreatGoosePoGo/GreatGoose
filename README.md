@@ -234,3 +234,14 @@ from their own fast attacks and doubles powered charged attacks. The turn-by-tur
 mode uses only player 1 and disables Party Power because it is a solo encounter.
 Setup/result links retain individual settings, and older links with global
 friendship and Adventure Effects still load. Cloning player 1 copies their settings.
+
+### Attack type and Anti type rankings
+
+The general rankings switch selects either charged-attack type rankings or
+rankings against a pure defending type. Anti type evaluates all legal movesets,
+applying the type chart to both attacks before damage rounding. It retains the
+same synthetic Defense ensemble and incoming-damage model; Boss Move Type remains
+an independent setting. Hidden Power uses its best legal type for the matchup,
+shown beside its name. Each form/Shadow variant retains one best moveset under
+the existing Ideal DPS selection rule. The mode is preserved in the page URL and
+cached separately. The type buttons occupy one horizontally scrollable row.

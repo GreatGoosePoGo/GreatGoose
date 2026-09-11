@@ -15,6 +15,7 @@
   const pending = new Map();
   let requestId = 0;
   let selectedType = initialType();
+  let rankingMode = new URL(location.href).searchParams.get("mode") === "anti" ? "anti" : "attack";
   let includeMegas = initialFlag("megas");
   let includeShadows = initialFlag("shadows");
   let includeLegendaries = initialFlag("legendaries");
@@ -27,6 +28,9 @@
 
   const elements = {
     types: document.querySelector("#types"),
+    mode: document.querySelector("#anti-type"),
+    typeHeading: document.querySelector("#type-heading"),
+    typeDescription: document.querySelector("#type-description"),
     sort: document.querySelector("#sort"),
     megas: document.querySelector("#include-megas"),
     shadows: document.querySelector("#include-shadows"),
@@ -85,6 +89,7 @@
   function updateUrl() {
     const url = new URL(location.href);
     url.searchParams.set("type", selectedType);
+    url.searchParams.set("mode", rankingMode);
     url.searchParams.set("megas", includeMegas ? "1" : "0");
     url.searchParams.set("shadows", includeShadows ? "1" : "0");
     url.searchParams.set("legendaries", includeLegendaries ? "1" : "0");
@@ -113,14 +118,14 @@
   function setLoading() {
     elements.section.setAttribute("aria-busy", "true");
     elements.error.hidden = true;
-    elements.selectedType.textContent = `${label(selectedType)} attackers`;
+    elements.selectedType.textContent = rankingMode === "anti" ? `Attackers against ${label(selectedType)}` : `${label(selectedType)} attackers`;
     elements.title.textContent = "Calculating rankings…";
     elements.summary.textContent = "";
     elements.body.innerHTML = '<tr class="loading-row"><td colspan="7">Checking every eligible Level 40 moveset…</td></tr>';
   }
 
   function cacheKey(type) {
-    return [type, includeMegas, includeShadows, includeLegendaries, bossAttack, bossMoveType, megaLevel]
+    return [rankingMode, type, includeMegas, includeShadows, includeLegendaries, bossAttack, bossMoveType, megaLevel]
       .map(value => typeof value === "boolean" ? Number(value) : value)
       .join(":");
   }
@@ -134,6 +139,7 @@
       worker.postMessage({
         id,
         attackType: type,
+        mode: rankingMode,
         includeMegas,
         includeShadows,
         includeLegendaries,
@@ -162,6 +168,13 @@
 
   async function selectType(type) {
     selectedType = type;
+    currentResult = null;
+    elements.mode.setAttribute("aria-checked", String(rankingMode === "anti"));
+    elements.typeHeading.textContent = rankingMode === "anti" ? "Anti type" : "Attack type";
+    elements.types.setAttribute("aria-label", rankingMode === "anti" ? "Defending type" : "Attack type");
+    elements.typeDescription.textContent = rankingMode === "anti"
+      ? "All movesets against a single defending type, including weaknesses and resistances. Boss Move Type controls incoming damage separately."
+      : "Only movesets with a charged attack of this type are ranked.";
     const requestedKey = cacheKey(type);
     updateUrl();
     document.querySelectorAll(".type-button").forEach(button => {
@@ -279,7 +292,7 @@
 
     elements.body.replaceChildren(fragment);
     elements.section.setAttribute("aria-busy", "false");
-    elements.selectedType.textContent = `${label(currentResult.attackType)} attackers`;
+    elements.selectedType.textContent = currentResult.mode === "anti" ? `Attackers against ${label(currentResult.attackType)}` : `${label(currentResult.attackType)} attackers`;
     elements.title.textContent = searchQuery
       ? `${visibleRows.length.toLocaleString()} of ${rankedRows.length.toLocaleString()} ranked Pokémon`
       : `${rankedRows.length.toLocaleString()} ranked Pokémon`;
@@ -289,6 +302,10 @@
     elements.summary.textContent = `${label(currentResult.bossAttack)} boss Attack · ${label(currentResult.bossMoveType)} boss moves · Mega Level ${currentResult.megaLevel} · ${currentResult.candidateMovesets.toLocaleString()} movesets checked${shadowSummary} · ${currentResult.excludedLowQuality.toLocaleString()} excluded below the 10% first-charged cutoff`;
   }
 
+  elements.mode.addEventListener("click", () => {
+    rankingMode = rankingMode === "anti" ? "attack" : "anti";
+    selectType(selectedType);
+  });
   elements.sort.value = sortMetric;
   elements.sort.addEventListener("change", () => {
     sortMetric = elements.sort.value;

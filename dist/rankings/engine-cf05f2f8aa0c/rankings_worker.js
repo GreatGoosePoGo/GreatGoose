@@ -31,11 +31,12 @@ function rankingData() {
     });
 }
 self.onmessage = async (event) => {
-    const { id, attackType, includeMegas, includeShadows, includeLegendaries, bossAttack, bossMoveType, megaLevel, } = event.data ?? {};
+    const { id, attackType, includeMegas, includeShadows, includeLegendaries, bossAttack, bossMoveType, megaLevel, mode, } = event.data ?? {};
     try {
         const { catalog, shadowFormIds, legendaryDexNumbers } = await rankingData();
         const result = calculateRankings(catalog, {
             attackType,
+            mode,
             level: 40,
             includeMegas: includeMegas !== false,
             includeShadows: Boolean(includeShadows),
