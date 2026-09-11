@@ -1,19 +1,26 @@
 /** Application boundary used by the browser worker and optional Node callers. */
 import { createRaidEngine } from './super_mega_raid_simulator.js';
 import { parseSeed } from './compatibility.js';
+import {isPlayerMoveAvailable} from './move_availability.js';
 import type { CalculatorEntry, RaidConfig, SimulationRequest, TeamMember } from './types.js';
 export function publicCatalog(catalog: CalculatorEntry[]) {
     return catalog.map(entry => {
         const fast = [...entry.fast_moves, ...(entry.exclusive_fast_moves || [])];
         const charged = [...entry.charged_moves, ...(entry.exclusive_charged_moves || []), ...(entry.mega_charged_moves || [])];
+        const shadowFast = fast.filter(move => isPlayerMoveAvailable(move, {shadow: true}));
+        const shadowCharged = charged.filter(move => isPlayerMoveAvailable(move, {shadow: true}));
         return {
             form_id: entry.form_id, dex_number: entry.dex_number, name: entry.name, types: entry.types,
             fast_moves: fast.map(m => m.name), charged_moves: charged.map(m => m.name),
+            shadow_fast_moves: shadowFast.map(m => m.name),
+            shadow_charged_moves: shadowCharged.map(m => m.name),
             mega_charged_moves: (entry.mega_charged_moves || []).map(m => m.name),
             boss_fast_moves: entry.fast_moves.filter(m => !m.elite).map(m => m.name),
             boss_charged_moves: entry.charged_moves.filter(m => !m.elite).map(m => m.name),
             fast_move_data: fast.map(({ id, name }) => ({ id, name })),
             charged_move_data: charged.map(({ id, name }) => ({ id, name })),
+            shadow_fast_move_data: shadowFast.map(({ id, name }) => ({ id, name })),
+            shadow_charged_move_data: shadowCharged.map(({ id, name }) => ({ id, name })),
         };
     });
 }
@@ -89,7 +96,9 @@ export function battle_config(request: SimulationRequest, catalog: CalculatorEnt
             if (!p || typeof p !== 'object')
                 throw new Error(`Player ${playerIndex + 1}, slot ${slotIndex + 1} is invalid.`);
             const entry = publicById.get(p.name);
-            if (!entry || !entry.fast_moves.includes(p.fast_move) || !entry.charged_moves.includes(p.charged_move))
+            const fastMoves = p.shadow === true ? entry?.shadow_fast_moves : entry?.fast_moves;
+            const chargedMoves = p.shadow === true ? entry?.shadow_charged_moves : entry?.charged_moves;
+            if (!entry || !fastMoves?.includes(p.fast_move) || !chargedMoves?.includes(p.charged_move))
                 throw new Error(`Choose a valid Pokémon and its legal moves for player ${playerIndex + 1}, slot ${slotIndex + 1}.`);
             const level = finite(p.level, 'Pokémon level');
             if (level < 1 || level > 55 || !Number.isInteger(level * 2))

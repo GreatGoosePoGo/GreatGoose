@@ -1,4 +1,5 @@
 import type {CalculatorEntry, CalculatorMove} from './types.js';
+import {isPlayerMoveAvailable} from './move_availability.js';
 import {
     PARTY_POWER_PLAYERS, partyPowerThreshold, type PartyPowerPlayers,
 } from './party_power.js';
@@ -259,20 +260,20 @@ function uniqueMoves(moves: CalculatorMove[]): CalculatorMove[] {
     return [...result.values()];
 }
 
-function playerFastMoves(entry: CalculatorEntry): CalculatorMove[] {
+function playerFastMoves(entry: CalculatorEntry, shadow = false): CalculatorMove[] {
     return uniqueMoves([
         ...entry.fast_moves,
         ...(entry.exclusive_fast_moves ?? []),
-    ]);
+    ]).filter(move => isPlayerMoveAvailable(move, {shadow}));
 }
 
-function playerChargedMoves(entry: CalculatorEntry): CalculatorMove[] {
+function playerChargedMoves(entry: CalculatorEntry, shadow = false): CalculatorMove[] {
     return uniqueMoves([
         ...entry.charged_moves,
         ...(entry.exclusive_charged_moves ?? []),
         ...(RELEASED_MEGA_PLUS_FORM_IDS.has(entry.form_id)
             ? entry.mega_charged_moves ?? [] : []),
-    ]);
+    ]).filter(move => isPlayerMoveAvailable(move, {shadow}));
 }
 
 function effectiveStats(entry: CalculatorEntry, level: RankingLevel, megaLevel: MegaLevel): EffectiveStats {
@@ -713,22 +714,21 @@ export function calculateRankings(
 
     for (const entry of catalog) {
         if (!entry?.stats || !Array.isArray(entry.fast_moves) || !Array.isArray(entry.charged_moves)) continue;
+        if (entry.released !== true) continue;
         if (INTERNAL_SHADOW_FORM_IDS.has(entry.form_id)) continue;
         const mega = isMegaOrPrimal(entry);
         const legendary = legendaryDexNumbers.has(entry.dex_number);
         if (!includeMegas && mega) continue;
         if (!includeLegendaries && legendary) continue;
-        const chargedMoves = playerChargedMoves(entry)
-            .filter(move => (mode === 'anti' || normalizeType(move.type) === attackType) && move.energy < 0);
-        if (chargedMoves.length === 0) continue;
-
         const shadowStates = includeShadows && shadowFormIds.has(entry.form_id)
             ? [false, true] : [false];
         const stats = effectiveStats(entry, level, megaLevel);
         const typedBossAttackCoefficient = bossAttackCoefficient
             * bossMoveEffectiveness(bossMoveType, entry.types);
         for (const shadow of shadowStates) {
-            for (const candidateFast of playerFastMoves(entry).filter(move => move.energy > 0)) {
+            const chargedMoves = playerChargedMoves(entry, shadow)
+                .filter(move => (mode === 'anti' || normalizeType(move.type) === attackType) && move.energy < 0);
+            for (const candidateFast of playerFastMoves(entry, shadow).filter(move => move.energy > 0)) {
                 // Hidden Power's timing/energy are type-independent. The legal type
                 // with greatest STAB × effectiveness dominates for every DPS metric.
                 let fastMove = candidateFast;

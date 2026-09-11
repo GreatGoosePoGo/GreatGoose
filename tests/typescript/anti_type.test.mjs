@@ -7,7 +7,7 @@ import {calculateRankings} from '../../build/rankings.js';
 const catalog=JSON.parse(readFileSync(new URL('../../simulator/calculator_data.json',import.meta.url)));
 const base=catalog.find(p=>p.form_id==='MEWTWO');
 const move=(type,fast=false)=>({id: type+(fast?'_FAST':''),name:type,type,power:fast?10:100,energy:fast?25:-50,duration_ms:fast?1000:2000});
-const fixture=(fast,charged)=>({...base,form_id:'TEST',name:'Test',types:['psychic'],fast_moves:[fast],charged_moves:charged,exclusive_fast_moves:[],exclusive_charged_moves:[],mega_charged_moves:[]});
+const fixture=(fast,charged)=>({...base,form_id:'TEST',name:'Test',released:true,types:['psychic'],fast_moves:[fast],charged_moves:charged,exclusive_fast_moves:[],exclusive_charged_moves:[],mega_charged_moves:[]});
 test('anti type checks all charged types and applies effectiveness to both moves before rounding',()=>{
  const entry=fixture(move('fire',true),[move('fire'),move('electric'),move('normal')]);
  const result=calculateRankings([entry],{attackType:'water',mode:'anti'});

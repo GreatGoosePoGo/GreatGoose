@@ -22,7 +22,15 @@ test('raid boss catalog exposes forms with complete ordinary movesets', () => {
   assert.equal(mewtwo.chargedMoves.length, 5);
   assert(mewtwo.fastMoves.every(move => move.id && move.name && move.type));
   assert(!bosses.some(boss => boss.formId === 'RAIKOU_S'));
+  assert(!bosses.some(boss => boss.formId === 'PHIONE'));
+  assert(bosses.every(boss => catalog.find(entry => entry.form_id === boss.formId)?.released));
   assert(bosses.every(boss => boss.fastMoveCount > 0 && boss.chargedMoveCount > 0));
+});
+
+test('raid counters reject unreleased bosses', () => {
+  assert.throws(() => calculateRaidCounters(catalog, {
+    bossFormId: 'PHIONE', raidDifficulty: 'Tier 5', trialsPerBossMoveset: 1, prefilterLimit: 30,
+  }), /valid raid boss/);
 });
 
 test('specific raid counters are actual simulated, unique, sorted top-30 rows', () => {
@@ -52,6 +60,7 @@ test('specific raid counters are actual simulated, unique, sorted top-30 rows', 
   assert(progress.length > 0);
   assert.deepEqual(progress.at(-1), [result.simulatedMovesets, result.simulatedMovesets]);
   for (const row of result.rows) {
+    assert.equal(catalog.find(entry => entry.form_id === row.formId)?.released, true);
     assert(Number.isFinite(row.battleDps) && row.battleDps > 0);
     assert(row.averageDamagePercent > 0 && row.averageDamagePercent <= 100);
     assert(row.averageFaints >= 0);

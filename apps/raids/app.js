@@ -282,16 +282,17 @@ function updateTeamMoves(row) {
   }
   const fastSelect = row.querySelector(".fast-move");
   const chargedSelect = row.querySelector(".charged-move");
+  const shadow = row.querySelector(".shadow").checked;
   const selectedFast = fastSelect.value;
   const selectedCharged = chargedSelect.value;
   const hasMegaChargedMove = pokemon.mega_charged_moves.length > 0;
   megaLevelField.hidden = !hasMegaChargedMove;
   if (!hasMegaChargedMove) megaLevelSelect.value = "1";
 
-  fillSelect(fastSelect, pokemon.fast_moves, selectedFast);
+  fillSelect(fastSelect, shadow ? pokemon.shadow_fast_moves : pokemon.fast_moves, selectedFast);
   fillSelect(
     chargedSelect,
-    pokemon.charged_moves,
+    shadow ? pokemon.shadow_charged_moves : pokemon.charged_moves,
     selectedCharged,
     moveName => pokemon.mega_charged_moves.includes(moveName)
       ? poweredMoveName(moveName, Number(megaLevelSelect.value))
@@ -384,9 +385,12 @@ function applyPokemonConfig(row, decoded) {
     throw new Error(`Pokémon form "${decoded.formId}" is not in this calculator.`);
   }
 
-  const fastMoveName = moveNameForId(pokemon.fast_move_data, decoded.fastMoveId);
+  const fastMoveName = moveNameForId(
+    decoded.shadow ? pokemon.shadow_fast_move_data : pokemon.fast_move_data,
+    decoded.fastMoveId,
+  );
   const chargedMoveName = moveNameForId(
-    pokemon.charged_move_data,
+    decoded.shadow ? pokemon.shadow_charged_move_data : pokemon.charged_move_data,
     decoded.chargedMoveId,
   );
   if (!fastMoveName) {
@@ -505,6 +509,7 @@ function addPokemon(playerSection, defaultId = null, config = null) {
     const pokemon = pokemonForInput(pokemonInput);
     if (!pokemon) return;
     pokemonInput.value = `${event.target.checked ? "Shadow " : ""}${labelForPokemon(pokemon)}`;
+    updateTeamMoves(row);
   });
   row.querySelector(".mega-level").addEventListener("change", () => {
     updateTeamMoves(row);

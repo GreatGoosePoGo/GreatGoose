@@ -3,6 +3,7 @@ import {
     PARTY_POWER_PLAYERS, partyPowerThreshold, type PartyPowerPlayers,
 } from './party_power.js';
 import {RELEASED_MEGA_PLUS_FORM_IDS, type MegaLevel} from './rankings.js';
+import {isPlayerMoveAvailable} from './move_availability.js';
 import {createRaidEngine, type RaidEngine, type Move} from './super_mega_raid_simulator.js';
 import type {
     CalculatorEntry, CalculatorMove, DodgeStrategy, PlayerStrategy,
@@ -201,9 +202,13 @@ export function counterCandidate(
     settings: RaidCounterSettings, shadows: ReadonlySet<string>, legendaries: ReadonlySet<number>,
 ): Candidate {
     const entry = catalog.find(entry => entry.form_id === pick.formId);
-    if (!entry || INTERNAL_SHADOW_FORM_IDS.has(entry.form_id)) throw new Error('Unknown counter Pokémon.');
-    const fastMove = playerFastMoves(entry, settings.excludeLegacy).find(move => move.id === pick.fastMoveId);
-    const chargedMove = playerChargedMoves(entry, settings.excludeLegacy).find(move => move.id === pick.chargedMoveId);
+    if (!entry || entry.released !== true || INTERNAL_SHADOW_FORM_IDS.has(entry.form_id)) {
+        throw new Error('Unknown or unreleased counter Pokémon.');
+    }
+    const fastMove = playerFastMoves(entry, settings.excludeLegacy, pick.shadow)
+        .find(move => move.id === pick.fastMoveId);
+    const chargedMove = playerChargedMoves(entry, settings.excludeLegacy, pick.shadow)
+        .find(move => move.id === pick.chargedMoveId);
     const mega = isMegaOrPrimal(entry);
     const legendary = legendaries.has(entry.dex_number);
     if (!fastMove || !chargedMove) throw new Error('Unknown or excluded counter moveset.');
@@ -261,22 +266,22 @@ function uniqueMoves(moves: CalculatorMove[]): CalculatorMove[] {
     return [...result.values()];
 }
 
-function playerFastMoves(entry: CalculatorEntry, excludeLegacy = false): CalculatorMove[] {
+function playerFastMoves(entry: CalculatorEntry, excludeLegacy = false, shadow = false): CalculatorMove[] {
     return uniqueMoves([
         ...entry.fast_moves,
         ...(entry.exclusive_fast_moves ?? []),
     ]).filter(move => move.energy > 0 && move.duration_ms > 0
-        && (!excludeLegacy || !move.elite));
+        && isPlayerMoveAvailable(move, {shadow, excludeLegacy}));
 }
 
-function playerChargedMoves(entry: CalculatorEntry, excludeLegacy = false): CalculatorMove[] {
+function playerChargedMoves(entry: CalculatorEntry, excludeLegacy = false, shadow = false): CalculatorMove[] {
     return uniqueMoves([
         ...entry.charged_moves,
         ...(entry.exclusive_charged_moves ?? []),
         ...(RELEASED_MEGA_PLUS_FORM_IDS.has(entry.form_id)
             ? entry.mega_charged_moves ?? [] : []),
     ]).filter(move => move.energy < 0 && move.duration_ms > 0
-        && (!excludeLegacy || !move.elite));
+        && isPlayerMoveAvailable(move, {shadow, excludeLegacy}));
 }
 
 function ordinaryBossMoves(moves: CalculatorMove[]): CalculatorMove[] {
@@ -377,6 +382,7 @@ function evenlySample<T>(values: T[], limit: number): T[] {
 export function raidBossCatalog(catalog: CalculatorEntry[]): RaidBossOption[] {
     return catalog
         .filter(entry => entry?.stats
+            && entry.released === true
             && !INTERNAL_SHADOW_FORM_IDS.has(entry.form_id)
             && ordinaryBossMoves(entry.fast_moves ?? []).length > 0
             && ordinaryBossMoves(entry.charged_moves ?? []).length > 0)
@@ -407,7 +413,7 @@ export function prepareRaidCounterScenario(
     if (!RAID_COUNTER_DIFFICULTIES.includes(settings.raidDifficulty)) {
         throw new Error(`Unknown raid difficulty: ${settings.raidDifficulty}`);
     }
-    const boss = catalog.find(entry => entry.form_id === settings.bossFormId);
+    const boss = catalog.find(entry => entry.form_id === settings.bossFormId && entry.released === true);
     if (!boss) throw new Error('Choose a valid raid boss.');
     const allFast = ordinaryBossMoves(boss.fast_moves ?? []);
     const allCharged = ordinaryBossMoves(boss.charged_moves ?? []);
@@ -530,17 +536,17 @@ export function calculateRaidCounters(
     const playerCpm = PLAYER_CPM_BY_LEVEL[level];
     const candidates: Candidate[] = [];
     for (const entry of catalog) {
-        if (!entry?.stats || INTERNAL_SHADOW_FORM_IDS.has(entry.form_id)) continue;
+        if (!entry?.stats || entry.released !== true || INTERNAL_SHADOW_FORM_IDS.has(entry.form_id)) continue;
         const mega = isMegaOrPrimal(entry);
         const legendary = legendaryDexNumbers.has(entry.dex_number);
         if (!includeMegas && mega) continue;
         if (!includeLegendaries && legendary) continue;
-        const fastMoves = playerFastMoves(entry, excludeLegacy);
-        const chargedMoves = playerChargedMoves(entry, excludeLegacy);
-        if (fastMoves.length === 0 || chargedMoves.length === 0) continue;
         const shadowStates = includeShadows && !mega && shadowFormIds.has(entry.form_id)
             ? [false, true] : [false];
         for (const shadow of shadowStates) {
+            const fastMoves = playerFastMoves(entry, excludeLegacy, shadow);
+            const chargedMoves = playerChargedMoves(entry, excludeLegacy, shadow);
+            if (fastMoves.length === 0 || chargedMoves.length === 0) continue;
             const attack = (entry.stats.attack + 15) * playerCpm;
             const defense = (entry.stats.defense + 15) * playerCpm;
             const hp = Math.max(10, Math.floor((entry.stats.stamina + 15) * playerCpm));

@@ -197,6 +197,49 @@ tbody tr:last-child td { border-bottom: 0; }
 .loading-row td { padding: 3rem 1rem; color: var(--muted); text-align: center; }
 .error { margin: 1rem; padding: .9rem 1rem; border: 1px solid #e1a9a9; border-radius: .65rem; color: #792626; background: #fff0f0; }
 
+.strategy-warning {
+  width: min(34rem, calc(100% - 2rem));
+  padding: 1.35rem;
+  border: 1px solid #d3a13a;
+  border-radius: .9rem;
+  color: #20242a;
+  background: #ffffff;
+  box-shadow: 0 24px 70px rgba(17, 24, 32, .28);
+}
+.strategy-warning::backdrop { background: rgba(14, 20, 27, .58); backdrop-filter: blur(2px); }
+.strategy-warning-heading { display: flex; align-items: center; gap: .7rem; }
+.warning-mark {
+  display: grid;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex: 0 0 1.75rem;
+  place-items: center;
+  border-radius: 50%;
+  color: #3c2b06;
+  background: #f2c45e;
+  font-size: 1rem;
+  font-weight: 900;
+}
+.strategy-warning-copy { margin-top: .9rem; color: #4f5863; font-size: 1rem; line-height: 1.55; }
+.strategy-warning-copy p { margin: 0; }
+.strategy-warning-copy p + p { margin-top: .75rem; }
+.warning-preference { display: flex; align-items: center; gap: .55rem; margin-top: 1.1rem; color: #30363d; font-size: .9rem; font-weight: 650; cursor: pointer; }
+.warning-preference input { width: 1.05rem; height: 1.05rem; margin: 0; accent-color: var(--blue); }
+.warning-acknowledge {
+  width: 100%;
+  margin-top: 1rem;
+  padding: .72rem 1rem;
+  border: 1px solid #18558f;
+  border-radius: .6rem;
+  color: #ffffff;
+  background: var(--blue);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+.warning-acknowledge:hover { filter: brightness(.94); }
+.warning-acknowledge:focus-visible { outline: 3px solid var(--blue-soft); outline-offset: 2px; }
+
 /* Anti type is the other side of attacker rankings, so it gets the other theme. */
 html[data-ranking-mode="anti"] {
   color: #edf3f8;
@@ -246,6 +289,10 @@ html[data-ranking-mode="anti"] .mega-word { color: #64c9ff; }
 html[data-ranking-mode="anti"] .elite-star { color: #f5d66f; }
 html[data-ranking-mode="anti"] .metric.primary { color: #ffffff; }
 html[data-ranking-mode="anti"] .error { border-color: #934c55; color: #ffd7dc; background: #401f25; }
+html[data-ranking-mode="anti"] .strategy-warning { border-color: #b88a33; color: #edf3f8; background: #18212b; }
+html[data-ranking-mode="anti"] .strategy-warning-copy { color: #bdc7d1; }
+html[data-ranking-mode="anti"] .warning-preference { color: #e0e7ed; }
+html[data-ranking-mode="anti"] .warning-mark { color: #241900; background: #e6b84f; }
 
 @media (max-width: 44rem) {
   main { margin-top: 1.5rem; }

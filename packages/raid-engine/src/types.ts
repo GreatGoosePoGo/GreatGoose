@@ -53,6 +53,10 @@ export interface CalculatorMove {
     duration_ms: number;
     type: string;
     elite?: boolean;
+    /** One-off distribution that cannot be recreated with an Elite TM. */
+    glitch_legacy?: boolean;
+    /** Explicitly false when this move has never been obtainable on a Shadow. */
+    shadow_compatible?: boolean;
     /** Raid power at Mega Levels 1–4 for a temporary Mega "+" move. */
     plus_powers?: number[];
 }
@@ -60,6 +64,8 @@ export interface CalculatorEntry {
     form_id: string;
     name: string;
     dex_number: number;
+    /** Current Pokémon GO release status from the pinned DialgaDex snapshot. */
+    released: boolean;
     types: string[];
     stats: {
         attack: number;

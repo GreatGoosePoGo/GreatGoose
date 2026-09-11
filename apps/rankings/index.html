@@ -177,5 +177,21 @@
       </section>
 
     </main>
+
+    <dialog id="strategy-warning" class="strategy-warning" aria-labelledby="strategy-warning-title" aria-describedby="strategy-warning-copy">
+      <div class="strategy-warning-heading">
+        <span class="warning-mark" aria-hidden="true">!</span>
+        <h2 id="strategy-warning-title">Before you use these rankings</h2>
+      </div>
+      <div id="strategy-warning-copy" class="strategy-warning-copy">
+        <p>These rankings assume you switch out a Pokémon once it becomes clear that it cannot reach another charged attack before fainting. This avoids spending its remaining time on fast attacks that will never become another charged attack.</p>
+        <p>This differs from traditional ranking sites, which generally keep each Pokémon on the field until it faints. Your real results will depend on whether you make this switch consistently. For a comparison that ignores boss attacks entirely, use <strong>Simple DPS</strong>.</p>
+      </div>
+      <label class="warning-preference">
+        <input id="strategy-warning-dismiss" type="checkbox">
+        <span>Don’t show this again</span>
+      </label>
+      <button id="strategy-warning-acknowledge" class="warning-acknowledge" type="button">Got it</button>
+    </dialog>
   </body>
 </html>

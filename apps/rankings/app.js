@@ -13,6 +13,7 @@
   const LEVELS = [20, 25, 30, 35, 40, 45, 50];
   const PARTY_POWER_PLAYERS = [1, 2, 3, 4];
   const PARTY_SIZES = [1, 2, 3, 4, 5, 6];
+  const STRATEGY_WARNING_KEY = "greatgoose.rankings.strategy-warning.dismissed.v1";
   const worker = new Worker("engine/rankings_worker.js", {type: "module"});
   const cache = new Map();
   const pending = new Map();
@@ -57,7 +58,37 @@
     summary: document.querySelector("#summary"),
     body: document.querySelector("#ranking-body"),
     error: document.querySelector("#error"),
+    strategyWarning: document.querySelector("#strategy-warning"),
+    dismissStrategyWarning: document.querySelector("#strategy-warning-dismiss"),
+    acknowledgeStrategyWarning: document.querySelector("#strategy-warning-acknowledge"),
   };
+
+  function warningWasDismissed() {
+    try {
+      return localStorage.getItem(STRATEGY_WARNING_KEY) === "1";
+    } catch {
+      return false;
+    }
+  }
+
+  function rememberWarningPreference() {
+    if (!elements.dismissStrategyWarning.checked) return;
+    try {
+      localStorage.setItem(STRATEGY_WARNING_KEY, "1");
+    } catch {
+      // The warning can still close when storage is blocked or unavailable.
+    }
+  }
+
+  function showStrategyWarning() {
+    if (warningWasDismissed()) return;
+    elements.dismissStrategyWarning.checked = false;
+    if (typeof elements.strategyWarning.showModal === "function") {
+      elements.strategyWarning.showModal();
+    } else {
+      elements.strategyWarning.setAttribute("open", "");
+    }
+  }
 
   function initialType() {
     const requested = new URL(location.href).searchParams.get("type")?.toLowerCase();
@@ -413,6 +444,11 @@
     updateUrl();
     if (currentResult) render();
   });
+  elements.acknowledgeStrategyWarning.addEventListener("click", () => {
+    rememberWarningPreference();
+    elements.strategyWarning.close();
+  });
   typeButtons();
   selectType(selectedType);
+  showStrategyWarning();
 })();

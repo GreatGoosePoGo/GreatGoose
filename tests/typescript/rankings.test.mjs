@@ -16,6 +16,15 @@ const shadowFormIds = new Set(shadowAvailability.form_ids);
 const rankingCategories = JSON.parse(readFileSync(new URL('../../simulator/ranking_categories.json', import.meta.url)));
 const legendaryDexNumbers = new Set(rankingCategories.legendary_dex_numbers);
 
+test('catalog release status is complete and rankings exclude unreleased forms', () => {
+  assert(catalog.every(entry => typeof entry.released === 'boolean'));
+  assert.equal(catalog.find(entry => entry.form_id === 'MEWTWO').released, true);
+  assert.equal(catalog.find(entry => entry.form_id === 'PHIONE').released, false);
+
+  const result = calculateRankings(catalog, {attackType: 'water'});
+  assert(result.rows.every(row => catalog.find(entry => entry.form_id === row.formId)?.released));
+});
+
 test('Twilight Trails raid stats and move availability are current', () => {
   const entries = new Map(catalog.map(entry => [entry.form_id, entry]));
   const moves = formId => [
@@ -76,6 +85,7 @@ test('rankings evaluate every attack type and return one valid best moveset per 
     assert(result.rows.length > 0);
     assert.equal(new Set(result.rows.map(row => row.formId)).size, result.rows.length);
     for (const row of result.rows) {
+      assert.equal(catalog.find(entry => entry.form_id === row.formId)?.released, true);
       assert.equal(row.chargedMoveType, attackType);
       assert(Number.isFinite(row.idealDps) && row.idealDps > 0);
       assert(Number.isFinite(row.simpleDps) && row.simpleDps > 0);
@@ -90,7 +100,7 @@ test('rankings evaluate every attack type and return one valid best moveset per 
 
 test('movesets that cannot complete one charged attack are excluded', () => {
   const fragile = {
-    form_id: 'FRAGILE_TEST', dex_number: 1, name: 'Fragile Test', types: ['normal'],
+    form_id: 'FRAGILE_TEST', dex_number: 1, name: 'Fragile Test', released: true, types: ['normal'],
     stats: {attack: 100, defense: 1, stamina: 1},
     fast_moves: [{id: 'SLOW_FAST', name: 'Slow Fast', type: 'normal', power: 1, energy: 1, duration_ms: 5000}],
     charged_moves: [{id: 'TEST_BLAST', name: 'Test Blast', type: 'fire', power: 100, energy: -100, duration_ms: 5000}],
@@ -176,7 +186,7 @@ test('released Mega plus moves scale with Mega Level and Super Max stats', () =>
 
 test('simple DPS averages exact rounded damage across the target Defense ensemble', () => {
   const attacker = {
-    form_id: 'ROUNDING_TEST', dex_number: 1, name: 'Rounding Test', types: ['fire'],
+    form_id: 'ROUNDING_TEST', dex_number: 1, name: 'Rounding Test', released: true, types: ['fire'],
     stats: {attack: 185, defense: 200, stamina: 200},
     fast_moves: [{id: 'TEST_FAST', name: 'Test Fast', type: 'fire', power: 10, energy: 100, duration_ms: 1000}],
     charged_moves: [{id: 'TEST_CHARGED', name: 'Test Charged', type: 'fire', power: 100, energy: -100, duration_ms: 1000}],
@@ -212,7 +222,7 @@ test('boss Attack changes incoming-damage metrics but not simple DPS', () => {
 
 test('boss move type applies defensive type effectiveness only to incoming metrics', () => {
   const attacker = {
-    form_id: 'TYPING_TEST', dex_number: 1, name: 'Typing Test', types: ['fire'],
+    form_id: 'TYPING_TEST', dex_number: 1, name: 'Typing Test', released: true, types: ['fire'],
     stats: {attack: 250, defense: 200, stamina: 200},
     fast_moves: [{id: 'TEST_FAST', name: 'Test Fast', type: 'fire', power: 10, energy: 10, duration_ms: 1000}],
     charged_moves: [{id: 'TEST_CHARGED', name: 'Test Charged', type: 'fire', power: 100, energy: -50, duration_ms: 2000}],
@@ -401,4 +411,13 @@ test('rankings UI uses compact selection, metric help, and effective DPS by defa
   assert.match(app, /document\.documentElement\.dataset\.rankingMode = rankingMode/);
   assert.match(styles, /html\[data-ranking-mode="anti"\]\s*\{[^}]*color-scheme:\s*dark/s);
   assert.match(styles, /html\[data-ranking-mode="anti"\] tbody tr:nth-child\(even\)/);
+  assert.match(page, /id="strategy-warning"[^>]*aria-labelledby="strategy-warning-title"/);
+  assert.match(page, /cannot reach another charged attack before fainting/);
+  assert.match(page, /id="strategy-warning-dismiss"[^>]*type="checkbox"/);
+  assert.match(page, /id="strategy-warning-acknowledge"[^>]*>Got it<\/button>/);
+  assert.match(app, /greatgoose\.rankings\.strategy-warning\.dismissed\.v1/);
+  assert.match(app, /localStorage\.getItem\(STRATEGY_WARNING_KEY\)/);
+  assert.match(app, /localStorage\.setItem\(STRATEGY_WARNING_KEY, "1"\)/);
+  assert.match(app, /elements\.dismissStrategyWarning\.checked = false/);
+  assert.match(styles, /html\[data-ranking-mode="anti"\] \.strategy-warning/);
 });

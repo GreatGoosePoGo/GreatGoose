@@ -26,6 +26,13 @@
     }
   },
   "rankings_external_sources": {
+    "pokemon_release_snapshot": {
+      "released_through": "2026-09-10",
+      "source_repository": "https://github.com/mgrann03/pokemon-resources",
+      "source_commit": "71e6177fcb4764baf30dde79da0eb68b1faaf2fb",
+      "source_file": "pogo_pkm.json",
+      "notes": "Each calculator form is matched by Pokédex number, typing, and base stats, then by form identifier where release states differ. General rankings and raid counters hard-exclude forms marked unreleased."
+    },
     "mega_plus_release_snapshot": {
       "released_through": "2026-09-08",
       "official_sources": [
