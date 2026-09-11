@@ -1,6 +1,8 @@
 import {createHash} from 'node:crypto';
 import {cp, mkdir, readFile, readdir, rm, writeFile} from 'node:fs/promises';
-import {join, relative} from 'node:path';
+import {extname, join, relative, sep} from 'node:path';
+
+const TEXT_EXTENSIONS = new Set(['.css', '.html', '.js', '.json', '.map', '.svg', '.txt']);
 
 async function filesBelow(folder) {
   const result = [];
@@ -11,6 +13,35 @@ async function filesBelow(folder) {
   }
   return result;
 }
+
+function normalizeText(text) {
+  return text.replace(/\r\n?/g, '\n');
+}
+
+async function normalizeCompilerOutput() {
+  for (const path of await filesBelow('build')) {
+    if (!TEXT_EXTENSIONS.has(extname(path))) continue;
+    let text = normalizeText(await readFile(path, 'utf8'));
+    if (path.endsWith('.map')) {
+      const sourceMap = JSON.parse(text);
+      if (Array.isArray(sourceMap.sourcesContent)) {
+        sourceMap.sourcesContent = sourceMap.sourcesContent.map(source => (
+          typeof source === 'string' ? normalizeText(source) : source
+        ));
+      }
+      text = JSON.stringify(sourceMap);
+    }
+    await writeFile(path, text);
+  }
+}
+
+async function digestContents(path) {
+  const contents = await readFile(path);
+  if (!TEXT_EXTENSIONS.has(extname(path))) return contents;
+  return normalizeText(contents.toString('utf8'));
+}
+
+await normalizeCompilerOutput();
 
 // A versioned engine directory is important: query parameters on worker.js do
 // not automatically propagate to its relative imports. Giving the whole module
@@ -27,8 +58,8 @@ const inputs = [
 ].sort();
 const digest = createHash('sha256');
 for (const path of inputs) {
-  digest.update(relative('.', path));
-  digest.update(await readFile(path));
+  digest.update(relative('.', path).split(sep).join('/'));
+  digest.update(await digestContents(path));
 }
 const version = digest.digest('hex').slice(0, 12);
 const engineDirectory = `engine-${version}`;

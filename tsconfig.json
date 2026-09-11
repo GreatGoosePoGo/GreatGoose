@@ -14,7 +14,8 @@
     "rootDir": "packages/raid-engine/src",
     "skipLibCheck": true,
     "noEmitOnError": true,
-    "inlineSources": true
+    "inlineSources": true,
+    "newLine": "lf"
   },
   "include": [
     "packages/raid-engine/src/**/*.ts"
