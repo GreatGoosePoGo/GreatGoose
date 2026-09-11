@@ -6,6 +6,72 @@ export function survivedHitLimit(hp, damage) {
         throw new Error('HP and damage must be positive and finite.');
     return Math.max(0, Math.ceil(hp / damage) - 1);
 }
+/** First-charge burst after an immediate boss charged hit, with that move chained. */
+export function hitAssistedChargeScenario(hp, bossChargedDamage, bossChargedSeconds, fastEnergy, attackerFastDamage, attackerFastSeconds, chargedEnergy, attackerChargedDamage, attackerChargedSeconds) {
+    if (![hp, bossChargedDamage, bossChargedSeconds, chargedEnergy,
+        fastEnergy, attackerFastDamage, attackerFastSeconds,
+        attackerChargedDamage, attackerChargedSeconds].every(Number.isFinite)
+        || hp <= 0 || bossChargedDamage <= 0 || bossChargedSeconds <= 0
+        || fastEnergy <= 0 || attackerFastDamage <= 0 || attackerFastSeconds <= 0
+        || chargedEnergy <= 0 || chargedEnergy > 100
+        || attackerChargedDamage <= 0 || attackerChargedSeconds <= 0) {
+        throw new Error('Invalid hit-assisted charge inputs.');
+    }
+    const energyPerHit = Math.floor(bossChargedDamage / 2);
+    const survivableHits = survivedHitLimit(hp, bossChargedDamage);
+    let hpRemaining = hp;
+    let energy = 0;
+    let bossHits = 0;
+    let fastMoves = 0;
+    let damage = 0;
+    const takeBossHit = () => {
+        bossHits += 1;
+        hpRemaining -= bossChargedDamage;
+        if (hpRemaining > 0)
+            energy = Math.min(100, energy + energyPerHit);
+        return hpRemaining > 0;
+    };
+    // The clock begins when the first charged hit lands at zero energy.
+    if (!takeBossHit())
+        return { reachable: false, energyPerHit, energyFromBoss: 0,
+            bossHits, survivableHits, fastMoves, seconds: null, damage: 0, dps: null };
+    let time = 0;
+    let nextBossHit = bossChargedSeconds;
+    let charged = energy >= chargedEnergy;
+    if (charged)
+        energy -= chargedEnergy;
+    let nextPlayerHit = charged ? attackerChargedSeconds : attackerFastSeconds;
+    for (let events = 0; events < 1000; events += 1) {
+        // Matching the raid engine, an already-started player action lands before
+        // a boss hit at the exact same timestamp.
+        if (nextPlayerHit <= nextBossHit + 1e-9) {
+            time = nextPlayerHit;
+            if (charged) {
+                damage += attackerChargedDamage;
+                return { reachable: true, energyPerHit,
+                    energyFromBoss: Math.min(100, bossHits * energyPerHit),
+                    bossHits, survivableHits, fastMoves, seconds: time, damage,
+                    dps: damage / time };
+            }
+            fastMoves += 1;
+            damage += attackerFastDamage;
+            energy = Math.min(100, energy + fastEnergy);
+            charged = energy >= chargedEnergy;
+            if (charged)
+                energy -= chargedEnergy;
+            nextPlayerHit = time + (charged ? attackerChargedSeconds : attackerFastSeconds);
+        }
+        else {
+            time = nextBossHit;
+            if (!takeBossHit())
+                return { reachable: false, energyPerHit,
+                    energyFromBoss: Math.min(100, (bossHits - 1) * energyPerHit),
+                    bossHits, survivableHits, fastMoves, seconds: null, damage, dps: null };
+            nextBossHit += bossChargedSeconds;
+        }
+    }
+    throw new Error('Hit-assisted charge scenario did not converge.');
+}
 /** Stable convolution for K ~ Binomial(n,p); handles p=0/1 and either damage ordering. */
 export function binomialSurvival(hp, fastDamage, chargedDamage, p, hits) {
     if (![hp, fastDamage, chargedDamage, p].every(Number.isFinite)
@@ -37,7 +103,7 @@ export function observeCounterTrial(simulation) {
         let life = currentLives.get(index);
         if (!life) {
             life = { fast: 0, charged: 0, fastSurvived: 0, chargedSurvived: 0,
-                fainted: false, fieldSeconds: 0, damage: 0, damageEvents: [] };
+                fainted: false, fieldSeconds: 0, damage: 0 };
             currentLives.set(index, life);
             lives.push(life);
         }
@@ -73,7 +139,6 @@ export function observeCounterTrial(simulation) {
             const damage = hpBefore - Math.max(0, simulation.boss_hp);
             if (damage > 0) {
                 life.damage += damage;
-                life.damageEvents.push({ time: simulation.current_time, damage });
             }
         }
         if (outing)
@@ -120,27 +185,6 @@ export function observeCounterTrial(simulation) {
 const mean = (values) => values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
 const averageNullable = (values) => values.every(value => value !== null)
     ? mean(values) : null;
-const percentile = (values, fraction) => {
-    if (!values.length)
-        return null;
-    const sorted = [...values].sort((a, b) => a - b);
-    return sorted[Math.ceil((sorted.length - 1) * fraction)];
-};
-const peakWindowDps = (life, windowSeconds = 10) => {
-    let start = 0;
-    let damage = 0;
-    let peak = 0;
-    for (let end = 0; end < life.damageEvents.length; end += 1) {
-        const event = life.damageEvents[end];
-        damage += event.damage;
-        while (life.damageEvents[start].time < event.time - windowSeconds) {
-            damage -= life.damageEvents[start].damage;
-            start += 1;
-        }
-        peak = Math.max(peak, damage / windowSeconds);
-    }
-    return peak;
-};
 export function calculateCounterBreakdown(catalog, settings, pick, shadows = new Set(), legendaries = new Set(), trialsPerMoveset = 32) {
     if (!Number.isInteger(trialsPerMoveset) || trialsPerMoveset < 1 || trialsPerMoveset > 128) {
         throw new Error('Detail trials must be an integer from 1 through 128.');
@@ -188,6 +232,10 @@ export function calculateCounterBreakdown(catalog, settings, pick, shadows = new
             });
             const chargedDamage = engine.incoming_damage_for_pokemon(pair.engineCharged, pokemon, enraged, false, 1);
             const dodgedChargedDamage = engine.incoming_damage_for_pokemon(pair.engineCharged, pokemon, enraged, true, 1);
+            sample.enraged = enraged;
+            const attackerFastDamage = sample.outgoing_damage(pokemon.fast_move, 0, false);
+            const attackerChargedDamage = sample.outgoing_damage(pokemon.charged_move, 0, false);
+            const hitAssistedCharge = hitAssistedChargeScenario(hp, chargedDamage, pair.engineCharged.duration, pokemon.fast_move.energy, attackerFastDamage, pokemon.fast_move.duration, pokemon.charged_move.energy, attackerChargedDamage, pokemon.charged_move.duration);
             const combos = Array.from({ length: Math.min(12, survivedHitLimit(hp, chargedDamage) + 1) + 1 }, (_, charges) => {
                 const hpRemaining = hp - charges * chargedDamage;
                 return { chargedHits: charges, survives: hpRemaining > 0,
@@ -201,6 +249,7 @@ export function calculateCounterBreakdown(catalog, settings, pick, shadows = new
             return { phase: enraged ? 'Enraged' : 'Normal', hp,
                 fastDamageMin: Math.min(...fastDamages), fastDamageMax: Math.max(...fastDamages),
                 chargedDamage, dodgedChargedDamage,
+                hitAssistedCharge,
                 chargedHitsSurvived: survivedHitLimit(hp, chargedDamage), combos, curve,
                 curveTruncated: limit === 60 && survivedHitLimit(hp, Math.min(chargedDamage, ...fastDamages)) >= 60 };
         });
@@ -217,9 +266,7 @@ export function calculateCounterBreakdown(catalog, settings, pick, shadows = new
                 ? usableDpsLives.reduce((sum, life) => sum + life.damage, 0)
                     / usableDpsLives.reduce((sum, life) => sum + life.fieldSeconds, 0)
                 : null,
-            // A high-end repeatable burst: the 90th percentile of each life's best
-            // fixed 10-second damage window, rather than one lucky instantaneous hit.
-            peakOnFieldDps: percentile(usableDpsLives.map(life => peakWindowDps(life)), .9),
+            hitAssistedDps: survival[0].hitAssistedCharge.dps,
             bossFastHitsSurvived: mean(fainted.map(life => life.fastSurvived)),
             bossChargedHitsSurvived: mean(fainted.map(life => life.chargedSurvived)),
             completedOutings: completed.length, partialOutings: partial.length,
@@ -228,9 +275,13 @@ export function calculateCounterBreakdown(catalog, settings, pick, shadows = new
             firstOutingDamage: mean(firstOutingDamage),
             battleDps: totalDamage / Math.max(1e-9, totalSeconds),
             observedChargedProbability, cycleDistribution, survival, };
-    });
+    }).sort((a, b) => a.battleDps - b.battleDps
+        || a.fastMove.localeCompare(b.fastMove) || a.chargedMove.localeCompare(b.chargedMove));
+    const reachableHitAssisted = movesets.map(pair => pair.hitAssistedDps)
+        .filter((value) => value !== null);
     return {
-        pick, bossHp: engine.BOSS_HP, trialsPerMoveset, simulatedBattles: movesets.length * trialsPerMoveset,
+        pick, attackerFastMove: candidate.fastMove.name, attackerChargedMove: candidate.chargedMove.name,
+        bossHp: engine.BOSS_HP, trialsPerMoveset, simulatedBattles: movesets.length * trialsPerMoveset,
         totalBossMovesets: allBossMovePairs.length, movesets,
         // Equal weighting across tested movesets; null if any pair is entirely censored.
         average: {
@@ -238,7 +289,8 @@ export function calculateCounterBreakdown(catalog, settings, pick, shadows = new
             fastMovesPerLife: averageNullable(movesets.map(pair => pair.fastMovesPerLife)),
             fieldSecondsPerLife: averageNullable(movesets.map(pair => pair.fieldSecondsPerLife)),
             averageOnFieldDps: averageNullable(movesets.map(pair => pair.averageOnFieldDps)),
-            peakOnFieldDps: averageNullable(movesets.map(pair => pair.peakOnFieldDps)),
+            hitAssistedDps: mean(reachableHitAssisted),
+            hitAssistedReachableMovesets: reachableHitAssisted.length,
             bossFastHitsSurvived: averageNullable(movesets.map(pair => pair.bossFastHitsSurvived)),
             bossChargedHitsSurvived: averageNullable(movesets.map(pair => pair.bossChargedHitsSurvived)),
             damagePerCompletedOuting: averageNullable(movesets.map(pair => pair.damagePerCompletedOuting)),

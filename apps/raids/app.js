@@ -25,8 +25,7 @@ const SHARE_SELECTS = {
   dodge: "#dodge-strategy",
   strategy: "#player-strategy",
   weather: "#weather",
-  friendship: "#friendship",
-  adventure: "#adventure-effect",
+  seasonal: "#seasonal-friendship",
   gems: "#purified-gems",
   log: "#battle-log-mode",
 };
@@ -191,6 +190,7 @@ function createPokemonSearch(
   input.addEventListener("input", () => {
     delete input.dataset.pokemonId;
     input.setCustomValidity("");
+    onSelect(null);
     renderMatches();
   });
 
@@ -339,7 +339,7 @@ function updatePurifiedGems() {
   purifiedGemsSelect.disabled = !isShadowRaid;
   if (!isShadowRaid) purifiedGemsSelect.value = "none";
   document.querySelector("#purified-gems-note").textContent = isShadowRaid
-    ? "Each trainer uses a gem immediately after enrage and then every 5 seconds, up to 5. The boss is subdued at 8 total gems; two or more players can therefore subdue it."
+    ? "Shadow boss bonuses and enrage rules are applied automatically. Each trainer uses a gem immediately after enrage and then every 5 seconds, up to 5. The boss is subdued at 8 total gems; two or more players can therefore subdue it."
     : "Purified Gems are available only in Shadow raids.";
 }
 
@@ -428,7 +428,7 @@ async function exportPokemonCode(row) {
   }
 }
 
-function addPokemon(playerSection, defaultId = "MEWTWO", config = null) {
+function addPokemon(playerSection, defaultId = null, config = null) {
   const teamElement = playerSection.querySelector(".team");
   if (teamElement.children.length >= 6) return;
   const row = document.createElement("div");
@@ -500,7 +500,7 @@ function addPokemon(playerSection, defaultId = "MEWTWO", config = null) {
     { shadowCheckbox: row.querySelector(".shadow") },
   );
   row.pokemonSearch = search;
-  search.selectById(byId.has(defaultId) ? defaultId : catalog[0].form_id);
+  if (defaultId) search.selectById(defaultId);
   row.querySelector(".shadow").addEventListener("change", event => {
     const pokemon = pokemonForInput(pokemonInput);
     if (!pokemon) return;
@@ -537,7 +537,7 @@ function addPokemon(playerSection, defaultId = "MEWTWO", config = null) {
   updatePlayerStrategy();
 }
 
-function addPlayer(configs = null, defaultId = "MEWTWO") {
+function addPlayer(configs = null, defaultId = null, settings = {}) {
   if (playerSections().length >= 20) return;
   const section = document.createElement("section");
   section.className = "player-section";
@@ -549,8 +549,41 @@ function addPlayer(configs = null, defaultId = "MEWTWO") {
         <button class="small-button remove-player" type="button">Remove player</button>
       </div>
     </div>
+    <div class="field-grid settings-grid player-settings">
+      <label>Friendship bonus
+        <select class="player-friendship">
+          <option value="1">None (+0%)</option>
+          <option value="1.03">Good Friends (+3%)</option>
+          <option value="1.05">Great Friends (+5%)</option>
+          <option value="1.07">Ultra Friends (+7%)</option>
+          <option value="1.1">Best Friends (+10%)</option>
+          <option value="1.12">Forever Friends (+12%)</option>
+        </select>
+      </label>
+      <label>Adventure Effect
+        <select class="player-adventure">
+          <option value="none">None</option>
+          <option value="behemoth_blade">Behemoth Blade (1.1× Attack)</option>
+          <option value="behemoth_bash">Behemoth Bash (1.1× Defense)</option>
+          <option value="dynamic_punch">Dynamic Punch+ (1.15× Attack vs Mega)</option>
+        </select>
+      </label>
+      <label>Party Power group
+        <select class="player-party">
+          <option value="0">Off</option>
+          ${Array.from({length:10}, (_,i) => `<option value="${i+1}">Party ${i+1}</option>`).join("")}
+        </select>
+      </label>
+    </div>
+    <p class="setting-note">Choose this player's highest friendship with someone in the raid. Each Party Power group needs 2–4 players; powered charged attacks deal double damage automatically.</p>
     <div class="team"></div>
   `;
+  for (const [key, selector, fallback] of [["f", ".player-friendship", "1"], ["a", ".player-adventure", "none"], ["p", ".player-party", "0"]]) {
+    const select = section.querySelector(selector);
+    const value = String(settings[key] ?? fallback);
+    if (![...select.options].some(option => option.value === value)) throw new Error(`Unsupported player setting: ${key}.`);
+    select.value = value;
+  }
   playersElement.append(section);
   section.querySelector(".add-pokemon").addEventListener("click", () => addPokemon(section));
   section.querySelector(".remove-player").addEventListener("click", () => {
@@ -571,7 +604,7 @@ function cloneFirstPlayer() {
   const rows = [...first.querySelectorAll(".pokemon-row")];
   if (!rows.every(row => row.pokemonSearch.requireSelection())) return;
   try {
-    addPlayer(rows.map(codeConfigForRow));
+    addPlayer(rows.map(codeConfigForRow), null, playerSettings(first));
   } catch (error) {
     alert(error.message);
   }
@@ -608,13 +641,13 @@ function shareState(seedOverride = undefined) {
       m: movesetModeSelect.value,
     },
     t: players,
+    p: playerSections().map(playerSettings),
     o: {
       n: Number(simulationCountInput.value),
       d: selectValue(SHARE_SELECTS.dodge),
       s: selectValue(SHARE_SELECTS.strategy),
       w: selectValue(SHARE_SELECTS.weather),
-      f: selectValue(SHARE_SELECTS.friendship),
-      a: selectValue(SHARE_SELECTS.adventure),
+      sf: selectValue(SHARE_SELECTS.seasonal),
       g: selectValue(SHARE_SELECTS.gems),
       l: selectValue(SHARE_SELECTS.log),
       z: seedOverride === undefined ? requestedSeed : String(seedOverride),
@@ -672,8 +705,7 @@ function applySharedSetup(state) {
   setSharedSelect(SHARE_SELECTS.dodge, options.d, "dodge strategy");
   setSharedSelect(SHARE_SELECTS.strategy, options.s, "player strategy");
   setSharedSelect(SHARE_SELECTS.weather, options.w, "weather");
-  setSharedSelect(SHARE_SELECTS.friendship, options.f, "friendship");
-  setSharedSelect(SHARE_SELECTS.adventure, options.a, "adventure effect");
+  setSharedSelect(SHARE_SELECTS.seasonal, options.sf ?? "normal", "seasonal friendship");
   updatePurifiedGems();
   setSharedSelect(SHARE_SELECTS.gems, options.g, "Purified Gems");
   setSharedSelect(SHARE_SELECTS.log, options.l, "battle log");
@@ -684,7 +716,11 @@ function applySharedSetup(state) {
   document.querySelector("#random-seed").value = seed;
 
   playersElement.replaceChildren();
-  decodedTeams.forEach(team => addPlayer(team));
+  if (state.p !== undefined && (!Array.isArray(state.p) || state.p.length !== decodedTeams.length)) {
+    throw new Error("Shared player settings must match the number of teams.");
+  }
+  decodedTeams.forEach((team, i) => addPlayer(team, null,
+    state.p ? requireObject(state.p[i], "Player settings") : { f: String(Number(options.f ?? 1)), a: options.a ?? "none" }));
   updatePlayerStrategy();
   updateSimulationScope();
 }
@@ -740,7 +776,7 @@ async function initialize() {
     updateBossMoves,
   );
   bossInput.pokemonSearch = bossSearch;
-  bossSearch.selectById(byId.has("KYOGRE") ? "KYOGRE" : catalog[0].form_id);
+  updateBossMoves();
   let shared = { loaded: false, autoRun: false };
   try {
     shared = setupFromLocation();
@@ -748,7 +784,7 @@ async function initialize() {
   } catch (error) {
     setShareStatus(error.message, true);
   }
-  if (!shared.loaded) addPlayer(null, "GROUDON_PRIMAL");
+  if (!shared.loaded) { playersElement.replaceChildren(); addPlayer(); }
   addPlayerButton.disabled = false;
   clonePlayerButton.disabled = false;
   if (shared.autoRun) window.setTimeout(() => form.requestSubmit(), 0);
@@ -773,13 +809,29 @@ function teamPayload(playerSection) {
   });
 }
 
+function playerSettings(section) {
+  return {
+    f: section.querySelector(".player-friendship").value,
+    a: section.querySelector(".player-adventure").value,
+    p: section.querySelector(".player-party").value,
+  };
+}
+
 function playersPayload() {
-  return playerSections().map(section => ({ team: teamPayload(section) }));
+  return playerSections().map(section => {
+    const settings = playerSettings(section);
+    return {
+      team: teamPayload(section), friendship: Number(settings.f),
+      zacian_adventure_effect: settings.a === "behemoth_blade",
+      behemoth_bash_adventure_effect: settings.a === "behemoth_bash",
+      dynamic_punch_adventure_effect: settings.a === "dynamic_punch",
+      party_group: Number(settings.p),
+    };
+  });
 }
 
 function battlePayload() {
   const randomSeed = document.querySelector("#random-seed").value.trim();
-  const adventureEffect = document.querySelector("#adventure-effect").value;
   return {
     raid_difficulty: raidDifficultySelect.value,
     boss: pokemonForInput(bossInput).form_id,
@@ -791,10 +843,7 @@ function battlePayload() {
     dodge_strategy: document.querySelector("#dodge-strategy").value,
     player_strategy: playerStrategySelect.value,
     weather: document.querySelector("#weather").value,
-    friendship: Number(document.querySelector("#friendship").value),
-    zacian_adventure_effect: adventureEffect === "behemoth_blade",
-    behemoth_bash_adventure_effect: adventureEffect === "behemoth_bash",
-    dynamic_punch_adventure_effect: adventureEffect === "dynamic_punch",
+    seasonal_friendship: selectValue(SHARE_SELECTS.seasonal) === "double",
     use_purified_gems: purifiedGemsSelect.value === "use",
     battle_log_mode: document.querySelector("#battle-log-mode").value,
     random_seed: randomSeed || null,
@@ -813,7 +862,10 @@ globalThis.RaidSetup = {
       throw new Error("Check the boss, team and settings in the Raid simulator tab first.");
     }
     const payload = battlePayload();
-    if (singlePlayer) payload.players = payload.players.slice(0, 1);
+    if (singlePlayer) {
+      payload.players = payload.players.slice(0, 1);
+      payload.players[0].party_group = 0;
+    }
     return payload;
   },
 };

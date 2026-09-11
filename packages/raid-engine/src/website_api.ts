@@ -108,15 +108,25 @@ export function battle_config(request: SimulationRequest, catalog: CalculatorEnt
     const seed = request.random_seed == null || request.random_seed === '' ? freshSeed() : String(parseSeed(request.random_seed));
     if (BigInt(seed) < 0n || BigInt(seed) >= 2n ** 63n)
         throw new Error('Random seed must be from 0 through 9223372036854775807.');
-    const friendship = finite(request.friendship ?? 1, 'Friendship multiplier');
-    if (friendship <= 0)
-        throw new Error('Friendship multiplier must be positive.');
+    const friendships = requestedPlayers.map(player => {
+        const base = finite(player.friendship ?? request.friendship ?? 1, 'Friendship multiplier');
+        if (base < 1 || base > 1.24) throw new Error('Friendship multiplier must be between 1 and 1.24.');
+        return request.seasonal_friendship === true ? 1 + 2 * (base - 1) : base;
+    });
+    const groups = new Map<number, number[]>();
+    requestedPlayers.forEach((player, index) => {
+        const group = integer(player.party_group ?? 0, 0, 10, 'Party Power group');
+        if (group) groups.set(group, [...(groups.get(group) ?? []), index]);
+    });
+    for (const [group, members] of groups) {
+        if (members.length < 2 || members.length > 4) throw new Error(`Party ${group} needs 2–4 players; it currently has ${members.length}.`);
+    }
     return {
         trials, random_seed: seed, raid_difficulty: request.raid_difficulty ?? 'Tier 5', boss_form_id: request.boss,
         boss_fast_move_names: fast, boss_charged_move_names: charged, player_teams: teams,
-        friendship_multipliers: teams.map(() => friendship), zacian_adventure_effect: teams.map(() => request.zacian_adventure_effect === true),
-        behemoth_bash_adventure_effect: teams.map(() => request.behemoth_bash_adventure_effect === true), dynamic_punch_adventure_effect: teams.map(() => request.dynamic_punch_adventure_effect === true),
-        party_power_groups: [], weather: request.weather || null, dodge_strategy: request.dodge_strategy ?? 'none', player_strategy: strategy,
+        friendship_multipliers: friendships, zacian_adventure_effect: requestedPlayers.map(p => (p.zacian_adventure_effect ?? request.zacian_adventure_effect) === true),
+        behemoth_bash_adventure_effect: requestedPlayers.map(p => (p.behemoth_bash_adventure_effect ?? request.behemoth_bash_adventure_effect) === true), dynamic_punch_adventure_effect: requestedPlayers.map(p => (p.dynamic_punch_adventure_effect ?? request.dynamic_punch_adventure_effect) === true),
+        party_power_groups: [...groups.values()], weather: request.weather || null, dodge_strategy: request.dodge_strategy ?? 'none', player_strategy: strategy,
         use_purified_gems: request.use_purified_gems === true,
         catch_tank_team_indices: tankTeams, battle_log_mode: request.battle_log_mode ?? 'moves',
     };

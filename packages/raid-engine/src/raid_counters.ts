@@ -12,7 +12,7 @@ export const RAID_COUNTER_DIFFICULTIES: readonly RaidDifficulty[] = [
     'Tier 5 Shadow',
 ];
 
-export const RAID_COUNTER_LEVELS = [30, 40, 50] as const;
+export const RAID_COUNTER_LEVELS = [20, 25, 30, 35, 40, 45, 50] as const;
 export type RaidCounterLevel = typeof RAID_COUNTER_LEVELS[number];
 export const RAID_COUNTER_DODGE_STRATEGIES = [
     'none', 'all_survivable', 'super_effective', 'non_resisted', 'lethal_only',
@@ -206,8 +206,12 @@ export function counterCandidate(
 }
 
 const PLAYER_CPM_BY_LEVEL: Record<RaidCounterLevel, number> = {
+    20: 0.59740001,
+    25: 0.667934,
     30: 0.7317,
+    35: 0.76156384,
     40: 0.79030001,
+    45: 0.81529999,
     50: 0.84029999,
 };
 const TEAM_SIZE = 6;
@@ -400,7 +404,7 @@ export function prepareRaidCounterScenario(
     if (![1, 2, 3, 4].includes(megaLevel)) throw new Error(`Unknown Mega Level: ${megaLevel}`);
     const level = settings.level ?? 40;
     if (!RAID_COUNTER_LEVELS.includes(level)) {
-        throw new Error(`Raid-counter level must be 30, 40, or 50: ${level}`);
+        throw new Error(`Raid-counter level must be 20 through 50 in increments of 5: ${level}`);
     }
     const friendshipMultiplier = settings.friendshipMultiplier ?? 1;
     if (!(RAID_COUNTER_FRIENDSHIP_MULTIPLIERS as readonly number[]).includes(friendshipMultiplier)) {
@@ -486,8 +490,10 @@ export function calculateRaidCounters(
         weather, dodgeStrategy, playerStrategy, excludeLegacy, trialsPerBossMoveset, prefilterLimit}
         = prepareRaidCounterScenario(catalog, settings);
 
-    const bossDefense = (boss.stats.defense + 15) * engine.BOSS_CPM;
-    const bossAttack = (boss.stats.attack + 15) * engine.BOSS_CPM;
+    const bossDefense = (boss.stats.defense + 15) * engine.BOSS_CPM
+        * (engine.SHADOW_RAID ? engine.SHADOW_BOSS_DEFENSE_MULTIPLIER : 1);
+    const bossAttack = (boss.stats.attack + 15) * engine.BOSS_CPM
+        * (engine.SHADOW_RAID ? engine.SHADOW_BOSS_ATTACK_MULTIPLIER : 1);
     const playerCpm = PLAYER_CPM_BY_LEVEL[level];
     const candidates: Candidate[] = [];
     for (const entry of catalog) {

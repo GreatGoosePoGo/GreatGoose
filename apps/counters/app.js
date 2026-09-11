@@ -2,7 +2,7 @@
 (() => {
   "use strict";
 
-  const LEVELS = [30, 40, 50];
+  const LEVELS = [20, 25, 30, 35, 40, 45, 50];
   const WEATHER = ["", "Sunny/Clear", "Rainy", "Partly Cloudy", "Cloudy", "Windy", "Snow", "Fog"];
   const FRIENDSHIP = [1, 1.03, 1.05, 1.07, 1.10, 1.12];
   const DODGE_STRATEGIES = [
@@ -223,7 +223,9 @@
     const boss = resolveBoss();
     const level = Number(elements.level.value);
     const difficulty = elements.difficulty.value;
-    elements.bossLabel.textContent = `${difficulty} raid`;
+    elements.bossLabel.textContent = difficulty.endsWith("Shadow")
+      ? `${difficulty} raid · Shadow boss active`
+      : `${difficulty} raid`;
     if (boss) {
       elements.bossName.textContent = boss.name;
       elements.bossMark.textContent = boss.name.trim().charAt(0).toLocaleUpperCase() || "?";
@@ -559,12 +561,16 @@
     const seconds = value => value === null ? "Raid ends first" : `${value.toFixed(1)}s`;
     const range = (min, max) => min === max ? String(min) : `${min}–${max}`;
     const avg = result.average;
+    const hitAssistedValue = avg.hitAssistedDps === null
+      ? "Not survivable"
+      : `${avg.hitAssistedDps.toFixed(2)}${avg.hitAssistedReachableMovesets < result.movesets.length
+        ? ` (${avg.hitAssistedReachableMovesets}/${result.movesets.length} sets)` : ""}`;
     const metrics = document.createElement("dl");
     metrics.className = "breakdown-metrics player-metrics";
     metrics.append(
       metricBlock("Time on the field", seconds(avg.fieldSecondsPerLife), "Average active time before one attacker faints. Time spent waiting on the bench after a hot swap is excluded."),
       metricBlock("Average on-field DPS", number(avg.averageOnFieldDps), "Damage per second while this Pokémon is active. Switch and relobby time are excluded."),
-      metricBlock("Peak DPS", number(avg.peakOnFieldDps), "A strong 10-second burst: the 90th percentile of the best 10-second windows observed in individual lives."),
+      metricBlock("Peak DPS", hitAssistedValue, "Start at zero energy, take an immediate undodged boss charged hit, and keep attacking while the boss repeats it. This is your DPS through your first charged move."),
       metricBlock("Your charged moves", number(avg.chargedCyclesPerLife), "Average charged attacks landed by one attacker before it faints."),
     );
     const hitSummary = avg.bossFastHitsSurvived === null || avg.bossChargedHitsSurvived === null
@@ -578,20 +584,22 @@
       textElement("p", scope, "breakdown-scope"),
       metrics,
       textElement("p", hitSummary, "hit-summary"),
-      textElement("p", "Peak DPS is a strong 10-second burst, not one lucky instantaneous hit. Boss damage can raise it by supplying energy for an earlier charged move.", "breakdown-note"),
+      textElement("p", "Peak DPS starts at 0 energy immediately before an undodged boss charged hit. You keep using fast moves while the boss repeats that charged move back-to-back. We count your total damage and time through your first charged move; if you faint first, it is unavailable.", "breakdown-note"),
     );
-    panel.append(textElement("h4", result.movesets.length === 1 ? "Boss attacks" : "By boss moveset"));
-    for (const pair of result.movesets) {
+    panel.append(textElement("h4", result.movesets.length === 1 ? "Boss attacks" : "By boss moveset · hardest first"));
+    for (const [pairIndex, pair] of result.movesets.entries()) {
       const detail = document.createElement("details");
       detail.className = "pair-breakdown";
       detail.open = result.movesets.length === 1;
-      detail.append(textElement("summary", `${pair.fastMove} + ${pair.chargedMove} · ${seconds(pair.fieldSecondsPerLife)} on field · ${number(pair.averageOnFieldDps)} DPS`));
+      const order = result.movesets.length === 1 ? "" : `${pairIndex + 1}. `;
+      detail.append(textElement("summary", `${order}${pair.fastMove} + ${pair.chargedMove} · ${seconds(pair.fieldSecondsPerLife)} on field · ${number(pair.averageOnFieldDps)} DPS`));
       const pairMetrics = document.createElement("dl");
       pairMetrics.className = "pair-metrics";
       pairMetrics.append(
         metricBlock("Time on field", seconds(pair.fieldSecondsPerLife)),
         metricBlock("Average DPS", number(pair.averageOnFieldDps)),
-        metricBlock("Peak DPS", number(pair.peakOnFieldDps)),
+        metricBlock(pair.survival.length > 1 ? "Peak DPS (normal)" : "Peak DPS",
+          pair.hitAssistedDps === null ? "Not survivable" : pair.hitAssistedDps.toFixed(2)),
         metricBlock("Your charged moves", number(pair.chargedCyclesPerLife)),
       );
       detail.append(pairMetrics);
@@ -603,6 +611,11 @@
         const fastOnly = phase.combos[0];
         const phaseName = pair.survival.length > 1 ? `${phase.phase} phase: ` : "";
         detail.append(textElement("p", `${phaseName}From full HP with no dodge, survives ${range(fastOnly.fastHitsMin, fastOnly.fastHitsMax)} ${pair.fastMove} hits alone or ${phase.chargedHitsSurvived} ${pair.chargedMove} hits alone.`, "solo-hit-limit"));
+        const boost = phase.hitAssistedCharge;
+        const boostText = boost.reachable
+          ? `${phaseName}Starting at 0 energy: after ${boost.bossHits} × ${pair.chargedMove} and ${boost.fastMoves} × ${result.attackerFastMove}, ${result.attackerChargedMove} lands in ${boost.seconds.toFixed(1)}s — ${boost.dps.toFixed(2)} DPS.`
+          : `${phaseName}Starting at 0 energy, this attacker faints on boss charged hit ${boost.bossHits}, before ${result.attackerChargedMove} can land.`;
+        detail.append(textElement("p", boostText, `hit-assisted-result${boost.reachable ? "" : " unavailable"}`));
         detail.append(textElement("p", `Damage per hit: ${range(phase.fastDamageMin, phase.fastDamageMax)} fast · ${phase.chargedDamage} charged${phase.dodgedChargedDamage !== phase.chargedDamage ? ` · ${phase.dodgedChargedDamage} when dodged` : ""}.`, "breakdown-note compact"));
       }
       panel.append(detail);

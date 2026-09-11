@@ -314,6 +314,7 @@ form { display: grid; gap: 18px; }
 }
 
 .settings-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.player-settings { margin-top: 16px; }
 
 .setting-checkbox {
   display: flex;

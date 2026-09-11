@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {Worker} from 'node:worker_threads';
 import {once} from 'node:events';
-import {calculateRaidCounters, raidBossCatalog} from '../../build/raid_counters.js';
+import {calculateRaidCounters, raidBossCatalog, RAID_COUNTER_LEVELS} from '../../build/raid_counters.js';
 
 const catalog = JSON.parse(readFileSync(new URL('../../simulator/calculator_data.json', import.meta.url)));
 const shadowAvailability = JSON.parse(readFileSync(new URL('../../simulator/shadow_availability.json', import.meta.url)));
@@ -155,7 +155,8 @@ test('raid counters reject unsupported levels and strategies', () => {
     trialsPerBossMoveset: 1,
     prefilterLimit: 30,
   };
-  assert.throws(() => calculateRaidCounters(catalog, {...common, level: 35}), /level must be 30, 40, or 50/);
+  assert.deepEqual(RAID_COUNTER_LEVELS, [20, 25, 30, 35, 40, 45, 50]);
+  assert.throws(() => calculateRaidCounters(catalog, {...common, level: 55}), /level must be 20 through 50/);
   assert.throws(
     () => calculateRaidCounters(catalog, {...common, dodgeStrategy: 'downtime_saver'}),
     /Unsupported raid-counter dodge strategy/,
@@ -182,7 +183,9 @@ test('dedicated counter UI exposes the requested scenario controls', () => {
   }
   assert.doesNotMatch(page, /value="downtime_saver"/);
   assert.doesNotMatch(page, /value="catch_tank"/);
-  assert.match(page, /value="30">Level 30/);
+  for (const level of [20, 25, 30, 35, 40, 45, 50]) {
+    assert.match(page, new RegExp(`value="${level}"[^>]*>Level ${level}`));
+  }
   assert.match(page, /value="40" selected>Level 40/);
   assert.match(page, /value="50">Level 50/);
   assert.match(app, /engine\/counters_worker\.js/);
@@ -197,6 +200,7 @@ test('dedicated counter UI exposes the requested scenario controls', () => {
   assert.match(app, /snapshot !== counterResult/);
   assert.match(app, /bossFastMoveId: elements\.bossFast\.value/);
   assert.match(app, /bossChargedMoveId: elements\.bossCharged\.value/);
+  assert.match(app, /Shadow boss active/);
   assert.doesNotMatch(rankingsPage, /id="counter-panel"|id="view-counters"/);
   assert.match(rankingsPage, /href="\.\.\/counters\/">Counters/);
 });

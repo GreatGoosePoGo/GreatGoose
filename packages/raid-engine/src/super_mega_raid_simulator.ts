@@ -21,6 +21,8 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
     let BOSS_CHARGED_CHANCE: any;
     let BOSS_MAX_ENERGY: any;
     let ENRAGE_ATTACK_MULTIPLIER: any;
+    let SHADOW_BOSS_ATTACK_MULTIPLIER: number;
+    let SHADOW_BOSS_DEFENSE_MULTIPLIER: number;
     let SHADOW_ENRAGE_DEFENSE_BONUS: number;
     let SHADOW_ENRAGE_ATTACK_BONUS: number;
     let USE_PURIFIED_GEMS: boolean;
@@ -133,6 +135,8 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
     BOSS_CHARGED_CHANCE = 0.3;
     BOSS_MAX_ENERGY = 200.0;
     ENRAGE_ATTACK_MULTIPLIER = 1.8;
+    SHADOW_BOSS_ATTACK_MULTIPLIER = 1.2;
+    SHADOW_BOSS_DEFENSE_MULTIPLIER = 5 / 6;
     // Change only this value when testing a different Shadow enrage defense bonus.
     SHADOW_ENRAGE_DEFENSE_BONUS = 2.2;
     SHADOW_ENRAGE_ATTACK_BONUS = 0.8;
@@ -581,6 +585,8 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
             attack = py.add(attack, Math.floor(py.mul(attack, SHADOW_ENRAGE_ATTACK_BONUS)));
         else if (py.truth(enraged))
             attack = py.mul(attack, ENRAGE_ATTACK_MULTIPLIER);
+        if (py.truth(SHADOW_RAID))
+            attack = py.mul(attack, SHADOW_BOSS_ATTACK_MULTIPLIER);
         if (py.truth(pokemon.is_shadow)) {
             modifier = py.mul(modifier, 1.2);
         }
@@ -754,6 +760,8 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
                 defense = py.add(defense, Math.floor(py.mul(defense, SHADOW_ENRAGE_DEFENSE_BONUS)));
             else if (py.truth(this.enraged))
                 defense = py.mul(defense, 4);
+            if (py.truth(SHADOW_RAID))
+                defense = py.mul(defense, SHADOW_BOSS_DEFENSE_MULTIPLIER);
             modifier = type_effectiveness(move.move_type, BOSS_TYPES);
             if (py.truth(((py.has(species.types, move.move_type))))) {
                 modifier = py.mul(modifier, STAB);
@@ -1950,7 +1958,7 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
         sim.detailed = options.detailed ?? false;
         return sim;
     }
-    return { createSimulation, type_effectiveness, Move, Species, find_calculator_species, move_from_calculator, register_player_form, register_player_moves, register_new_mega_form, register_configured_player_forms, BattlePokemon, unpack_player_setup, effective_player_move_power, displayed_player_move_name, select_boss_moves, pokemon_go_damage, boss_type_modifier, weather_move_multiplier, DodgeProfile, incoming_damage_for_pokemon, precompute_dodge_profiles, Player, TrialResult, Simulation, replay_tick_text, build_replay_move_codes, render_battle_replay, simulate_moveset_details, simulate_moveset, aggregate_summary, moveset_seed, validate_settings, RAID_DIFFICULTIES, RAID_DIFFICULTY, RAID_SECONDS, BOSS_HP, BOSS_CPM, BOSS_NAME, BOSS_TYPES, BOSS_FAST_MOVES, BOSS_CHARGED_MOVES, BOSS_MAX_ENERGY, FAST_MOVE_DELAY, SWITCH_SECONDS, DODGE_SECONDS, REJOIN_TIMES, RANDOM_SEED, SHADOW_RAID, SUPER_MEGA_ENRAGE, ENRAGE_HP, SHADOW_UNENRAGE_HP, USE_PURIFIED_GEMS, PURIFIED_GEM_COOLDOWN, PURIFIED_GEM_LIMIT_PER_PLAYER, PURIFIED_GEMS_TO_SUBDUE, SHADOW_ENRAGE_DEFENSE_BONUS, ZACIAN_ADVENTURE_EFFECT, BEHEMOTH_BASH_ADVENTURE_EFFECT, DYNAMIC_PUNCH_ADVENTURE_EFFECT, HIDDEN_POWER_TYPES, MOVES, SPECIES };
+    return { createSimulation, type_effectiveness, Move, Species, find_calculator_species, move_from_calculator, register_player_form, register_player_moves, register_new_mega_form, register_configured_player_forms, BattlePokemon, unpack_player_setup, effective_player_move_power, displayed_player_move_name, select_boss_moves, pokemon_go_damage, boss_type_modifier, weather_move_multiplier, DodgeProfile, incoming_damage_for_pokemon, precompute_dodge_profiles, Player, TrialResult, Simulation, replay_tick_text, build_replay_move_codes, render_battle_replay, simulate_moveset_details, simulate_moveset, aggregate_summary, moveset_seed, validate_settings, RAID_DIFFICULTIES, RAID_DIFFICULTY, RAID_SECONDS, BOSS_HP, BOSS_CPM, BOSS_NAME, BOSS_TYPES, BOSS_FAST_MOVES, BOSS_CHARGED_MOVES, BOSS_MAX_ENERGY, FAST_MOVE_DELAY, SWITCH_SECONDS, DODGE_SECONDS, REJOIN_TIMES, RANDOM_SEED, SHADOW_RAID, SUPER_MEGA_ENRAGE, ENRAGE_HP, SHADOW_UNENRAGE_HP, USE_PURIFIED_GEMS, PURIFIED_GEM_COOLDOWN, PURIFIED_GEM_LIMIT_PER_PLAYER, PURIFIED_GEMS_TO_SUBDUE, SHADOW_BOSS_ATTACK_MULTIPLIER, SHADOW_BOSS_DEFENSE_MULTIPLIER, SHADOW_ENRAGE_DEFENSE_BONUS, ZACIAN_ADVENTURE_EFFECT, BEHEMOTH_BASH_ADVENTURE_EFFECT, DYNAMIC_PUNCH_ADVENTURE_EFFECT, HIDDEN_POWER_TYPES, MOVES, SPECIES };
 }
 export type RaidEngine = ReturnType<typeof createRaidEngine>;
 export type Simulation = InstanceType<RaidEngine["Simulation"]>;

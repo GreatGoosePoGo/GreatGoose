@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Pokémon GO Raid Counters | Great Goose</title>
     <meta name="description" content="Rank Pokémon GO raid counters with full battle simulations and configurable battle conditions.">
-    <link rel="stylesheet" href="styles.css?v=7c2ab367aee1">
-    <script src="app.js?v=7c2ab367aee1" defer></script>
+    <link rel="stylesheet" href="styles.css?v=2df9d23c3087">
+    <script src="app.js?v=2df9d23c3087" defer></script>
   </head>
   <body>
     <header class="site-header">
@@ -99,8 +99,12 @@
           <label class="select-control">
             Attacker level
             <select id="counter-level">
+              <option value="20">Level 20</option>
+              <option value="25">Level 25</option>
               <option value="30">Level 30</option>
+              <option value="35">Level 35</option>
               <option value="40" selected>Level 40</option>
+              <option value="45">Level 45</option>
               <option value="50">Level 50</option>
             </select>
           </label>
@@ -145,7 +149,7 @@
                   <option value="1.05">Great Friends (1.05×)</option>
                   <option value="1.07">Ultra Friends (1.07×)</option>
                   <option value="1.10">Best Friends (1.10×)</option>
-                  <option value="1.12">Seasonal Best Friends (1.12×)</option>
+                  <option value="1.12">Forever Friends (+12%)</option>
                 </select>
               </label>
               <label class="select-control">
@@ -226,7 +230,7 @@
           <li>Up to 12 evenly sampled ordinary boss fast/charged combinations are simulated three times; bosses with 12 or fewer use every combination.</li>
           <li>Boss move selectors restrict those combinations. Unselected moves are equally weighted across the tested combinations, including in counter breakdowns.</li>
           <li>Open a counter to run 32 detailed trials per tested boss moveset. Time on field and boss hits survived are averaged over Pokémon that actually fainted; a Pokémon still alive when the raid ends is not treated as if it fainted.</li>
-          <li>Average on-field DPS is damage divided by active field time and excludes time spent on the bench after a hot swap. Peak DPS is the 90th percentile of each life’s best fixed 10-second damage window, which captures repeatable bursts without using one instantaneous or exceptionally lucky hit.</li>
+          <li>Average on-field DPS is damage divided by active field time and excludes time spent on the bench after a hot swap. Peak DPS starts at zero energy immediately before an undodged boss charged hit. The attacker keeps using fast moves while that boss move repeats back-to-back; total damage and elapsed time are measured through the attacker’s first charged move. If it faints first, the scenario is unavailable.</li>
           <li>The displayed full-HP fast-only and charged-only limits are simple no-dodge comparisons. The typical mixed hit counts come from full simulations using the selected dodge and player strategies. Hidden Power is tested across its 16 possible types.</li>
           <li>Battle DPS includes fainting, switching, relobby downtime, and the selected dodge and player strategies.</li>
           <li>The selected weather and friendship bonuses apply to every simulated battle. Party Power, Adventure Effects, and Purified Gems remain off.</li>

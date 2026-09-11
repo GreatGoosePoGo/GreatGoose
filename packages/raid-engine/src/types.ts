@@ -86,6 +86,12 @@ export interface PokemonInput {
 }
 export interface PlayerInput {
     team: PokemonInput[];
+    friendship?: number;
+    zacian_adventure_effect?: boolean;
+    behemoth_bash_adventure_effect?: boolean;
+    dynamic_punch_adventure_effect?: boolean;
+    /** Players sharing a nonzero group (1–10) form a party of 2–4 trainers. */
+    party_group?: number;
 }
 export interface SimulationRequest {
     boss: string;
@@ -94,6 +100,7 @@ export interface SimulationRequest {
     /** Legacy single-player input. Use players for calculator raids with multiple trainers. */
     team?: PokemonInput[];
     players?: PlayerInput[];
+    seasonal_friendship?: boolean;
     raid_difficulty?: RaidDifficulty;
     weather?: Weather;
     simulation_count?: number;

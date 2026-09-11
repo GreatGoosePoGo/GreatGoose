@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {calculateCounterBreakdown, binomialSurvival, survivedHitLimit, observeCounterTrial} from '../../build/counter_breakdown.js';
+import {calculateCounterBreakdown, binomialSurvival, survivedHitLimit,
+    hitAssistedChargeScenario, observeCounterTrial} from '../../build/counter_breakdown.js';
 import {calculateRaidCounters, prepareRaidCounterScenario, counterCandidate, counterSimulation, raidBossCatalog} from '../../build/raid_counters.js';
 
 const catalog = JSON.parse(readFileSync(new URL('../../simulator/calculator_data.json', import.meta.url)));
@@ -25,6 +26,25 @@ test('binomial survival is exact for the stated independent-hit model, including
     assert.equal(binomialSurvival(100, 25, 25, .4, 4), 0);
     assert.equal(binomialSurvival(100, 25, 25, .4, 0), 1);
     assert.throws(() => binomialSurvival(100, 10, 40, 1.1, 4), /Invalid/);
+});
+
+test('hit-assisted DPS starts with a boss charged hit and includes fast moves until the first charged move', () => {
+    const reachable = hitAssistedChargeScenario(101, 40, 2, 10, 20, 1, 40, 120, 1);
+    assert.equal(reachable.reachable, true);
+    assert.equal(reachable.energyPerHit, 20);
+    assert.equal(reachable.bossHits, 2);
+    assert.equal(reachable.survivableHits, 2);
+    assert.equal(reachable.fastMoves, 2);
+    assert.equal(reachable.damage, 160);
+    assert.equal(reachable.seconds, 3);
+    near(reachable.dps, 160 / 3);
+
+    const lethal = hitAssistedChargeScenario(100, 60, 1, 1, 10, 2, 100, 120, 1);
+    assert.equal(lethal.reachable, false);
+    assert.equal(lethal.bossHits, 2);
+    assert.equal(lethal.survivableHits, 1);
+    assert.equal(lethal.fastMoves, 0);
+    assert.equal(lethal.dps, null);
 });
 
 test('boss move filters narrow the actual simulations and difficulty uses one fixed lineup', () => {
@@ -81,8 +101,8 @@ test('detail cycles and probabilities are moveset-specific, reproducible and equ
             assert(pair.chargedCyclesPerLife >= 0);
             assert(pair.fieldSecondsPerLife > 0);
             assert(pair.averageOnFieldDps > 0);
-            assert(pair.peakOnFieldDps > 0);
         }
+        assert.equal(pair.hitAssistedDps, pair.survival[0].hitAssistedCharge.dps);
         assert(pair.firstOutingDamage >= 0 && pair.firstOutingDamage <= details.bossHp);
         for (const phase of pair.survival) {
             for (let i = 1; i < phase.curve.length; i++) {
@@ -90,12 +110,18 @@ test('detail cycles and probabilities are moveset-specific, reproducible and equ
             }
         }
     }
+    for (let index = 1; index < details.movesets.length; index += 1) {
+        assert(details.movesets[index - 1].battleDps <= details.movesets[index].battleDps);
+    }
     if (details.movesets.every(pair => pair.completedLives)) {
         near(details.average.chargedCyclesPerLife, details.movesets.reduce((sum, pair) => sum + pair.chargedCyclesPerLife, 0) / details.movesets.length);
         near(details.average.fieldSecondsPerLife, details.movesets.reduce((sum, pair) => sum + pair.fieldSecondsPerLife, 0) / details.movesets.length);
         near(details.average.averageOnFieldDps, details.movesets.reduce((sum, pair) => sum + pair.averageOnFieldDps, 0) / details.movesets.length);
-        near(details.average.peakOnFieldDps, details.movesets.reduce((sum, pair) => sum + pair.peakOnFieldDps, 0) / details.movesets.length);
     }
+    const reachable = details.movesets.filter(pair => pair.hitAssistedDps !== null);
+    assert.equal(details.average.hitAssistedReachableMovesets, reachable.length);
+    if (reachable.length) near(details.average.hitAssistedDps,
+        reachable.reduce((sum, pair) => sum + pair.hitAssistedDps, 0) / reachable.length);
     near(details.average.firstOutingDamage, details.movesets.reduce((sum, pair) => sum + pair.firstOutingDamage, 0) / details.movesets.length);
 });
 

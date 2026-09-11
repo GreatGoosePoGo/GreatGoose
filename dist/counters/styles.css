@@ -522,6 +522,20 @@ select:focus,
   font-size: .9rem;
   font-weight: 700;
 }
+.hit-assisted-result {
+  margin: .55rem .3rem .2rem;
+  padding: .65rem .75rem;
+  border-left: 3px solid #2b8a5a;
+  color: #163b29;
+  background: #eaf7f0;
+  font-size: .9rem;
+  font-weight: 700;
+}
+.hit-assisted-result.unavailable {
+  border-left-color: #9a6a23;
+  color: #583c15;
+  background: #fbf3e5;
+}
 .breakdown-note.compact { margin: .15rem .3rem .85rem; }
 .table-scroll { overflow-x: auto; margin: .6rem 0 1rem; max-width: 100%; }
 .table-scroll table { width: 100%; border-collapse: collapse; font-size: .875rem; }

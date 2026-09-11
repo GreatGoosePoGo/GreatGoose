@@ -145,23 +145,10 @@
               </select>
             </label>
             <label>
-              Friendship
-              <select id="friendship">
-                <option value="1">None</option>
-                <option value="1.03">Good Friends</option>
-                <option value="1.05">Great Friends</option>
-                <option value="1.07">Ultra Friends</option>
-                <option value="1.10">Best Friends</option>
-                <option value="1.12">Seasonal Best Friends (1.12×)</option>
-              </select>
-            </label>
-            <label>
-              Adventure Effect
-              <select id="adventure-effect">
-                <option value="none" selected>None</option>
-                <option value="behemoth_blade">Behemoth Blade (1.1× Attack)</option>
-                <option value="behemoth_bash">Behemoth Bash (1.1× Defense)</option>
-                <option value="dynamic_punch">Dynamic Punch+ (1.15× Attack vs Mega)</option>
+              Seasonal friendship bonus
+              <select id="seasonal-friendship">
+                <option value="normal">Normal bonus</option>
+                <option value="double">Double friendship bonus</option>
               </select>
             </label>
             <label id="purified-gems-field">
@@ -201,6 +188,7 @@
               >
             </label>
           </div>
+          <p class="setting-note">Double friendship bonus doubles only the bonus: +3% becomes +6%, +10% becomes +20%. Leave normal selected unless the event offers this bonus.</p>
           <p id="strategy-description" class="setting-note"></p>
           <p id="purified-gems-note" class="setting-note"></p>
           <p class="setting-note">
@@ -274,7 +262,7 @@
         <section class="panel turn-panel">
           <div class="section-heading">
             <div><h2>Turn-by-turn raid</h2>
-              <p>Use the boss, team and bonuses from Raid simulator. You control one player; the boss acts automatically. Dodge and swap strategies are off here.</p>
+              <p>Uses the boss and Player 1’s team and bonuses from Raid simulator. You control one player; the boss acts automatically. Automatic dodge/swap strategies and Party Power are off in this solo mode.</p>
             </div>
           </div>
           <div class="turn-toolbar">

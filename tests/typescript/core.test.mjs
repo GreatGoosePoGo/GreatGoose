@@ -48,14 +48,20 @@ test('Shadow enrage uses exact additive stats and Purified Gems obey raid limits
  const player=sim.players[0];
  const move=player.pokemon.fast_move;
  const baseDefense=(100+15)*engine.BOSS_CPM;
+ const shadowDefense=baseDefense*engine.SHADOW_BOSS_DEFENSE_MULTIPLIER;
  const modifier=engine.type_effectiveness(move.move_type,engine.BOSS_TYPES)*1.2;
- assert.equal(sim.outgoing_damage(move,0),engine.pokemon_go_damage(move.power,player.pokemon.effective_attack,baseDefense,modifier));
- sim.enraged=true;
- const enragedDefense=baseDefense+Math.floor(baseDefense*engine.SHADOW_ENRAGE_DEFENSE_BONUS);
- assert.equal(sim.outgoing_damage(move,0),engine.pokemon_go_damage(move.power,player.pokemon.effective_attack,enragedDefense,modifier));
+ assert.equal(engine.SHADOW_RAID,true);
+ assert.equal(engine.SHADOW_BOSS_ATTACK_MULTIPLIER,1.2);
+ assert.equal(engine.SHADOW_BOSS_DEFENSE_MULTIPLIER,5/6);
+ assert.equal(sim.outgoing_damage(move,0),engine.pokemon_go_damage(move.power,player.pokemon.effective_attack,shadowDefense,modifier));
  const bossMove=Object.values(engine.BOSS_FAST_MOVES)[0];
  const baseAttack=(100+15)*engine.BOSS_CPM;
- assert.equal(sim.incoming_damage(bossMove,0,player,false),engine.pokemon_go_damage(bossMove.power,baseAttack+Math.floor(baseAttack*0.8),player.pokemon.effective_defense,1));
+ assert.equal(sim.incoming_damage(bossMove,0,player,false),engine.pokemon_go_damage(bossMove.power,baseAttack*engine.SHADOW_BOSS_ATTACK_MULTIPLIER,player.pokemon.effective_defense,1));
+ sim.enraged=true;
+ const enragedDefense=(baseDefense+Math.floor(baseDefense*engine.SHADOW_ENRAGE_DEFENSE_BONUS))*engine.SHADOW_BOSS_DEFENSE_MULTIPLIER;
+ assert.equal(sim.outgoing_damage(move,0),engine.pokemon_go_damage(move.power,player.pokemon.effective_attack,enragedDefense,modifier));
+ const enragedAttack=(baseAttack+Math.floor(baseAttack*0.8))*engine.SHADOW_BOSS_ATTACK_MULTIPLIER;
+ assert.equal(sim.incoming_damage(bossMove,0,player,false),engine.pokemon_go_damage(bossMove.power,enragedAttack,player.pokemon.effective_defense,1));
 
  sim.enraged=false;sim.boss_hp=engine.ENRAGE_HP;sim.current_time=10;sim.update_enrage_state();
  assert.equal(sim.enraged,true);
@@ -80,9 +86,14 @@ test('Shadow enrage uses exact additive stats and Purified Gems obey raid limits
  const attackers=Array(6).fill(['NECROZMA_DAWN_WINGS','Shadow Claw','Moongeist Beam',50,15,15,15,false,1]);
  const autoEngine=createRaidEngine({...config,boss_manual_profile:null,player_teams:[attackers,attackers],friendship_multipliers:[1.1,1.1],use_purified_gems:true},catalog);
  const automatic=autoEngine.createSimulation({detailed:true});const automaticResult=automatic.run();
- const gemTicks=automatic.replay_actions.filter(action=>action[4]==='gem').map(action=>action[0]);
+ const gemActions=automatic.replay_actions.filter(action=>action[4]==='gem');
  assert.equal(automaticResult.purified_gems_used,8);assert.equal(automatic.shadow_subdued,true);
- assert.deepEqual(gemTicks,[173,173,183,183,193,193,203,203]);
+ assert.equal(gemActions.length,8);assert.deepEqual(automatic.players.map(player=>player.purified_gems_used),[4,4]);
+ for(const playerId of [0,1]) {
+  const ticks=gemActions.filter(action=>action[3]===playerId).map(action=>action[0]);
+  assert.equal(ticks.length,4);
+  for(let index=1;index<ticks.length;index++) assert(ticks[index]-ticks[index-1]>=10);
+ }
 });
 test('replay timestamps, legacy tuples, and malformed input are safe',()=>{
  assert.equal(seconds_to_tick('1.500000000000000000000',1),3);

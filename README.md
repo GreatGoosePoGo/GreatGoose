@@ -90,13 +90,18 @@ times. Bosses with 12 or fewer combinations use all of them. The displayed
 Battle DPS, damage share and faints come only from those battles.
 
 Each benchmark uses one trainer and six identical 15/15/15 attackers. The user
-can choose Level 30, 40, or 50; weather; friendship; five dodge policies; and
+can choose Level 20 through 50 in five-level increments; weather; friendship; five dodge policies; and
 the no-swap or three hot-swap strategies. Downtime-saver dodging is deliberately
 excluded. Catch tanks are not meaningful for identical-attacker teams and are
 also unavailable. The legacy filter removes moves marked Elite or legacy while
 retaining currently available signature and special-form moves. Party Power,
 Adventure Effects, and Purified Gems remain off. Six-copy Mega teams are a
 standardized ranking abstraction, not a legal party recommendation.
+
+Selecting a Shadow raid tier automatically makes the boss Shadow: its Attack is
+multiplied by 1.2 and its effective Defense by 5/6 both before and during enrage. The same
+selection also enables the tier's Shadow CPM, enrage thresholds, and enrage
+bonuses; no separate Shadow-boss switch is required.
 
 ## Edit and rebuild
 
@@ -109,26 +114,21 @@ the counter cards after generating: hardest first by mean battle DPS against
 the fixed displayed lineup, with the easiest tested moveset indexed to 100.
 It changes with the lineup/settings and is not an absolute boss rating.
 
-Click a counter name, card, or Matchup breakdown to run 32 diagnostic trials
-per tested moveset, cached for the current page session. The panel reports
-charged attacks actually landed per fainted life, fast attacks, completed vs
-unfinished samples, survived incoming hits, and damage per six-member team
-outing. Hot-swap returns accumulate on the same individual life. Damage is
-capped at remaining boss HP; first-outing damage includes wins/timeouts while
-completed-outing damage excludes those censored samples. Conditional averages
-of completed lives/outings may be biased toward shorter ones; they are not
-uncensored lifetime predictions. An average is unavailable when any tested
-moveset has no completed sample, rather than treating missing data as zero.
+Click a counter name, card, or Performance details to run 32 diagnostic trials
+per tested moveset, cached for the current page session. The player-facing panel
+focuses on time on the field, average active DPS, charged moves landed, typical
+boss hits survived, and the full-HP limit against either boss attack alone.
+Movesets are sorted hardest first for the selected counter, using its simulated
+battle DPS; the lowest DPS matchup appears first.
 
-Cycle probabilities are empirical simulation frequencies. Separately, the
-binomial approximation uses `K ~ Binomial(n,p)`, with `p` fitted to the observed
-charged fraction of incoming hits. It sums probabilities for outcomes with
-`(n-K)*fastDamage + K*chargedDamage < HP`. This model assumes independent hits,
-full initial HP, no dodging or swapping, and one fixed enrage phase. The real
-boss is energy-gated, so these are explicitly approximate survival estimates,
-not exact probabilities of reaching a charged cycle. Hidden Power averages
-type-specific probabilities across all 16 possible types, not average damage.
-The UI bounds survival curves to 60 hits and cycle distributions to a 12+ tail.
+Peak DPS models the useful burst created by damage energy. It starts at
+zero energy immediately before an undodged boss charged hit. The attacker keeps
+using fast moves while the boss chains that charged move back-to-back, and the
+metric divides all attacker damage through its first charged move by the elapsed
+time. A scenario is unavailable if the attacker faints before that move lands.
+The normal phase is used for the summary on raids that can enrage, with the
+enraged result shown separately. Hidden Power hit limits preserve the possible
+type range rather than averaging damage first.
 
 All diagnostics run on demand in the existing worker; no server or deployment
 changes are required. General rankings and the battle simulator are unchanged.
@@ -218,3 +218,19 @@ reference modules in `simulator/`.
 
 See `PORT_NOTES.md` for behavioral boundaries and `README_PYTHON_REFERENCE.md`
 for the retained Python instructions.
+
+### Per-player raid settings
+
+New raids start with an empty boss and one empty Pokémon slot. Choose each
+Pokémon from the search results; its legal moves then become available.
+Each player chooses their highest friendship bonus with another raid participant,
+one Adventure Effect, and an optional Party Power group. Forever Friends gives
++12%. The raid-wide seasonal switch doubles only the friendship bonus (for example,
+Best Friends +10% becomes +20%); it is off by default.
+
+Assign 2–4 players to the same numbered party to enable automatic Party Power.
+Separate parties are supported. The existing engine charges each member's meter
+from their own fast attacks and doubles powered charged attacks. The turn-by-turn
+mode uses only player 1 and disables Party Power because it is a solo encounter.
+Setup/result links retain individual settings, and older links with global
+friendship and Adventure Effects still load. Cloning player 1 copies their settings.
