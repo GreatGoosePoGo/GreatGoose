@@ -156,32 +156,34 @@ tbody tr:last-child td { border-bottom: 0; }
   display: inline-block;
   width: 28px;
   height: 28px;
+  flex: 0 0 28px;
   margin-right: .42rem;
   overflow: hidden;
   border-radius: 50%;
+  clip-path: circle(50% at 50% 50%);
   background-image: url("assets/pokemon-go-type-icons.png");
   background-repeat: no-repeat;
-  background-size: 217.212px 108.606px;
+  background-size: 217.212121px 108.606061px;
   vertical-align: middle;
 }
-.type-bug { background-position: 0 -22.061px; }
-.type-ghost { background-position: -28px -22.061px; }
-.type-normal { background-position: -56px -22.061px; }
-.type-ice { background-position: -84px -22.061px; }
-.type-dragon { background-position: 0 -50.061px; }
-.type-flying { background-position: -28px -50.061px; }
-.type-ground { background-position: -56px -50.061px; }
-.type-grass { background-position: -84px -50.061px; }
-.type-fairy { background-position: -112px -50.061px; }
-.type-electric { background-position: -140px -50.061px; }
-.type-poison { background-position: -168px -50.061px; }
-.type-steel { background-position: 0 -78.061px; }
-.type-psychic { background-position: -28px -78.061px; }
-.type-water { background-position: -56px -78.061px; }
-.type-dark { background-position: -84px -78.061px; }
-.type-rock { background-position: -112px -78.061px; }
-.type-fighting { background-position: -140px -78.061px; }
-.type-fire { background-position: -168px -78.061px; }
+.type-bug { background-position: 0 -21.636364px; }
+.type-ghost { background-position: -28px -21.636364px; }
+.type-normal { background-position: -56px -21.636364px; }
+.type-ice { background-position: -84px -21.636364px; }
+.type-dragon { background-position: 0 -49.636364px; }
+.type-flying { background-position: -28px -49.636364px; }
+.type-ground { background-position: -56px -49.636364px; }
+.type-grass { background-position: -84px -49.636364px; }
+.type-fairy { background-position: -112px -49.636364px; }
+.type-electric { background-position: -140px -49.636364px; }
+.type-poison { background-position: -168px -49.636364px; }
+.type-steel { background-position: 0 -77.636364px; }
+.type-psychic { background-position: -28px -77.636364px; }
+.type-water { background-position: -56px -77.636364px; }
+.type-dark { background-position: -84px -77.636364px; }
+.type-rock { background-position: -112px -77.636364px; }
+.type-fighting { background-position: -140px -77.636364px; }
+.type-fire { background-position: -168px -77.636364px; }
 .elite-star { margin-left: .12rem; color: #111111; font-size: .9em; font-weight: 850; }
 .metric { font-weight: 780; text-align: right; }
 .metric.primary { color: #111111; }

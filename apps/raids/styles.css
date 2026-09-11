@@ -169,28 +169,29 @@
   overflow: hidden;
   flex: 0 0 28px;
   border-radius: 50%;
+  clip-path: circle(50% at 50% 50%);
   background-image: url("assets/pokemon-go-type-icons.png");
   background-repeat: no-repeat;
-  background-size: 217.212px 108.606px;
+  background-size: 217.212121px 108.606061px;
 }
-.type-bug { background-position: 0 -22.061px; }
-.type-ghost { background-position: -28px -22.061px; }
-.type-normal { background-position: -56px -22.061px; }
-.type-ice { background-position: -84px -22.061px; }
-.type-dragon { background-position: 0 -50.061px; }
-.type-flying { background-position: -28px -50.061px; }
-.type-ground { background-position: -56px -50.061px; }
-.type-grass { background-position: -84px -50.061px; }
-.type-fairy { background-position: -112px -50.061px; }
-.type-electric { background-position: -140px -50.061px; }
-.type-poison { background-position: -168px -50.061px; }
-.type-steel { background-position: 0 -78.061px; }
-.type-psychic { background-position: -28px -78.061px; }
-.type-water { background-position: -56px -78.061px; }
-.type-dark { background-position: -84px -78.061px; }
-.type-rock { background-position: -112px -78.061px; }
-.type-fighting { background-position: -140px -78.061px; }
-.type-fire { background-position: -168px -78.061px; }
+.type-bug { background-position: 0 -21.636364px; }
+.type-ghost { background-position: -28px -21.636364px; }
+.type-normal { background-position: -56px -21.636364px; }
+.type-ice { background-position: -84px -21.636364px; }
+.type-dragon { background-position: 0 -49.636364px; }
+.type-flying { background-position: -28px -49.636364px; }
+.type-ground { background-position: -56px -49.636364px; }
+.type-grass { background-position: -84px -49.636364px; }
+.type-fairy { background-position: -112px -49.636364px; }
+.type-electric { background-position: -140px -49.636364px; }
+.type-poison { background-position: -168px -49.636364px; }
+.type-steel { background-position: 0 -77.636364px; }
+.type-psychic { background-position: -28px -77.636364px; }
+.type-water { background-position: -56px -77.636364px; }
+.type-dark { background-position: -84px -77.636364px; }
+.type-rock { background-position: -112px -77.636364px; }
+.type-fighting { background-position: -140px -77.636364px; }
+.type-fire { background-position: -168px -77.636364px; }
 .combatant-action { min-height: 22px; margin: 0 0 10px; color: var(--blue); font-size: 14px; }
 .health-track, .energy-track { overflow: hidden; border-radius: 7px; background: #e5e9f0; }
 .health-track { height: 13px; }
