@@ -638,30 +638,29 @@ select:focus,
   flex: 0 0 28px;
   overflow: hidden;
   border-radius: 50%;
-  clip-path: circle(50% at 50% 50%);
   background-image: url("../rankings/assets/pokemon-go-type-icons.png");
   background-repeat: no-repeat;
-  background-size: 217.212121px 108.606061px;
+  background-size: 222px 111px;
   vertical-align: middle;
 }
-.type-bug { background-position: 0 -21.636364px; }
-.type-ghost { background-position: -28px -21.636364px; }
-.type-normal { background-position: -56px -21.636364px; }
-.type-ice { background-position: -84px -21.636364px; }
-.type-dragon { background-position: 0 -49.636364px; }
-.type-flying { background-position: -28px -49.636364px; }
-.type-ground { background-position: -56px -49.636364px; }
-.type-grass { background-position: -84px -49.636364px; }
-.type-fairy { background-position: -112px -49.636364px; }
-.type-electric { background-position: -140px -49.636364px; }
-.type-poison { background-position: -168px -49.636364px; }
-.type-steel { background-position: 0 -77.636364px; }
-.type-psychic { background-position: -28px -77.636364px; }
-.type-water { background-position: -56px -77.636364px; }
-.type-dark { background-position: -84px -77.636364px; }
-.type-rock { background-position: -112px -77.636364px; }
-.type-fighting { background-position: -140px -77.636364px; }
-.type-fire { background-position: -168px -77.636364px; }
+.type-bug { background-position: 0px -25.5px; }
+.type-ghost { background-position: -28.5px -26px; }
+.type-normal { background-position: -57px -26px; }
+.type-ice { background-position: -85.5px -26.3px; }
+.type-dragon { background-position: 0.5px -53.3px; }
+.type-flying { background-position: -28.5px -54.7px; }
+.type-ground { background-position: -57px -54px; }
+.type-grass { background-position: -85.5px -54.5px; }
+.type-fairy { background-position: -114px -55px; }
+.type-electric { background-position: -143px -54px; }
+.type-poison { background-position: -171.5px -54.5px; }
+.type-steel { background-position: 0 -85px; }
+.type-psychic { background-position: -28.5px -84px; }
+.type-water { background-position: -57px -84px; }
+.type-dark { background-position: -86px -83.5px; }
+.type-rock { background-position: -114px -84px; }
+.type-fighting { background-position: -143px -84px; }
+.type-fire { background-position: -171.5px -84px; }
 
 .counter-methodology {
   margin: 1rem 0 0;

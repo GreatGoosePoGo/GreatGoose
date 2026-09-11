@@ -318,11 +318,11 @@ test('rankings UI uses compact selection, metric help, and effective DPS by defa
   assert.match(styles, /\.type-button\[aria-pressed="true"\][^{]*\{[^}]*background:\s*var\(--blue-selected\)/s);
   assert.match(styles, /\.type-button\[aria-pressed="true"\][^{]*\{[^}]*color:\s*#111111/s);
   for (const type of RANKING_TYPES) assert.match(styles, new RegExp(`\\.type-${type}\\s*\\{`));
-  assert.match(styles, /background-size:\s*217\.212121px 108\.606061px/);
-  assert.match(styles, /\.type-bug\s*\{[^}]*-21\.636364px/);
-  assert.match(styles, /\.type-dragon\s*\{[^}]*-49\.636364px/);
-  assert.match(styles, /\.type-steel\s*\{[^}]*-77\.636364px/);
-  assert.match(styles, /clip-path:\s*circle\(50% at 50% 50%\)/);
+  assert.match(styles, /background-size:\s*222px 111px/);
+  assert.match(styles, /\.type-bug\s*\{[^}]*0px -25\.5px/);
+  assert.match(styles, /\.type-dragon\s*\{[^}]*0\.5px -53\.3px/);
+  assert.match(styles, /\.type-steel\s*\{[^}]*0 -85px/);
+  assert.doesNotMatch(styles, /clip-path:\s*circle/);
   assert.match(app, /type-icon type-\$\{type\}/);
   assert.doesNotMatch(app, /className\s*=\s*["']move-type|row\.chargedEnergy|textContent\s*=\s*["']Elite["']/);
   assert.match(app, /marker\.textContent\s*=\s*["']\*["']/);

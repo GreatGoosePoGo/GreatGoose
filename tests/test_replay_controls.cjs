@@ -18,9 +18,10 @@ const fixture = JSON.parse(built.stdout);
 const styles = fs.readFileSync(path.join(root, 'apps/raids/styles.css'), 'utf8');
 assert.match(styles, /\.battle-stage\s*\{[^}]*overflow:\s*hidden;/s);
 assert.doesNotMatch(styles, /\.battle-stage\s*\{[^}]*overflow:\s*auto;/s);
-assert.match(styles, /\.type-fairy\s*\{\s*background-position:\s*-112px\s+-49\.636364px;/);
-assert.match(styles, /\.type-psychic\s*\{\s*background-position:\s*-28px\s+-77\.636364px;/);
-assert.match(styles, /clip-path:\s*circle\(50% at 50% 50%\)/);
+assert.match(styles, /background-size:\s*222px 111px;/);
+assert.match(styles, /\.type-fairy\s*\{\s*background-position:\s*-114px\s+-55px;/);
+assert.match(styles, /\.type-psychic\s*\{\s*background-position:\s*-28\.5px\s+-84px;/);
+assert.doesNotMatch(styles, /clip-path:\s*circle/);
 
 class Element {
   constructor() {
