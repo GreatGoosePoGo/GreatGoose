@@ -188,6 +188,54 @@ tbody tr:last-child td { border-bottom: 0; }
 .loading-row td { padding: 3rem 1rem; color: var(--muted); text-align: center; }
 .error { margin: 1rem; padding: .9rem 1rem; border: 1px solid #e1a9a9; border-radius: .65rem; color: #792626; background: #fff0f0; }
 
+/* Anti type is the other side of attacker rankings, so it gets the other theme. */
+html[data-ranking-mode="anti"] {
+  color: #edf3f8;
+  background: #0c1117;
+  color-scheme: dark;
+  --blue: #79baff;
+  --blue-soft: #203b56;
+  --blue-selected: #326b9f;
+  --line: #3a4858;
+  --muted: #aeb9c5;
+  --surface: #18212b;
+}
+html[data-ranking-mode="anti"] body { background: linear-gradient(180deg, #111821 0, #0c1117 22rem); }
+html[data-ranking-mode="anti"] .brand,
+html[data-ranking-mode="anti"] nav a:hover,
+html[data-ranking-mode="anti"] nav a:focus-visible,
+html[data-ranking-mode="anti"] nav a[aria-current="page"],
+html[data-ranking-mode="anti"] .eyebrow,
+html[data-ranking-mode="anti"] h1,
+html[data-ranking-mode="anti"] h2 { color: #f4f7fa; }
+html[data-ranking-mode="anti"] .controls,
+html[data-ranking-mode="anti"] .results { background: rgba(24, 33, 43, .96); box-shadow: 0 14px 42px rgba(0, 0, 0, .28); }
+html[data-ranking-mode="anti"] select,
+html[data-ranking-mode="anti"] .metric-help,
+html[data-ranking-mode="anti"] .search-control input { color: #edf3f8; background: #101821; }
+html[data-ranking-mode="anti"] .metric-help { border-color: #718091; }
+html[data-ranking-mode="anti"] .metric-help-text { color: #e4ebf1; background: #202b37; box-shadow: 0 10px 32px rgba(0, 0, 0, .45); }
+html[data-ranking-mode="anti"] .type-button,
+html[data-ranking-mode="anti"] .filter-button { color: #e8eef4; background: #202b36; }
+html[data-ranking-mode="anti"] .type-button:hover,
+html[data-ranking-mode="anti"] .type-button:focus-visible,
+html[data-ranking-mode="anti"] .filter-button:hover,
+html[data-ranking-mode="anti"] .filter-button:focus-visible { border-color: #79baff; background: #263f58; }
+html[data-ranking-mode="anti"] .type-button[aria-pressed="true"],
+html[data-ranking-mode="anti"] .filter-button[aria-pressed="true"] { border-color: #8bc5ff; color: #ffffff; background: #326b9f; }
+html[data-ranking-mode="anti"] .ranking-tools { border-top-color: #334150; }
+html[data-ranking-mode="anti"] th,
+html[data-ranking-mode="anti"] td { border-bottom-color: #344251; }
+html[data-ranking-mode="anti"] th { color: #bec9d3; background: #111923; }
+html[data-ranking-mode="anti"] tbody tr:nth-child(odd) { background: #17212b; }
+html[data-ranking-mode="anti"] tbody tr:nth-child(even) { background: #1d2935; }
+html[data-ranking-mode="anti"] tbody tr:hover { background: #263c51; }
+html[data-ranking-mode="anti"] .shadow-word { color: #d7a7ff; }
+html[data-ranking-mode="anti"] .mega-word { color: #64c9ff; }
+html[data-ranking-mode="anti"] .elite-star { color: #f5d66f; }
+html[data-ranking-mode="anti"] .metric.primary { color: #ffffff; }
+html[data-ranking-mode="anti"] .error { border-color: #934c55; color: #ffd7dc; background: #401f25; }
+
 @media (max-width: 44rem) {
   main { margin-top: 1.5rem; }
   .intro, .control-heading, .results-heading { align-items: flex-start; flex-direction: column; }

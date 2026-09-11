@@ -347,4 +347,7 @@ test('rankings UI uses compact selection, metric help, and effective DPS by defa
   assert.match(styles, /\.metric-help-text\s*\{[^}]*bottom:\s*calc\(100% \+ \.5rem\)[^}]*pointer-events:\s*none/s);
   assert.doesNotMatch(styles, /\.metric-help-text:hover/);
   assert.match(app, /rank:\s*index \+ 1/);
+  assert.match(app, /document\.documentElement\.dataset\.rankingMode = rankingMode/);
+  assert.match(styles, /html\[data-ranking-mode="anti"\]\s*\{[^}]*color-scheme:\s*dark/s);
+  assert.match(styles, /html\[data-ranking-mode="anti"\] tbody tr:nth-child\(even\)/);
 });

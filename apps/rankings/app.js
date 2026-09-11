@@ -16,6 +16,7 @@
   let requestId = 0;
   let selectedType = initialType();
   let rankingMode = new URL(location.href).searchParams.get("mode") === "anti" ? "anti" : "attack";
+  document.documentElement.dataset.rankingMode = rankingMode;
   let includeMegas = initialFlag("megas");
   let includeShadows = initialFlag("shadows");
   let includeLegendaries = initialFlag("legendaries");
@@ -169,6 +170,7 @@
   async function selectType(type) {
     selectedType = type;
     currentResult = null;
+    document.documentElement.dataset.rankingMode = rankingMode;
     elements.mode.setAttribute("aria-checked", String(rankingMode === "anti"));
     elements.typeHeading.textContent = rankingMode === "anti" ? "Anti type" : "Attack type";
     elements.types.setAttribute("aria-label", rankingMode === "anti" ? "Defending type" : "Attack type");
