@@ -65,7 +65,7 @@ SHADOW_UNENRAGE_HP = floor(BOSS_HP * 0.15) if SHADOW_RAID else -1
 
 FAST_MOVE_DELAY = 2.5
 BOSS_CHARGED_CHANCE = 0.30
-BOSS_MAX_ENERGY = 200.0
+BOSS_MAX_ENERGY = 100.0
 ENRAGE_ATTACK_MULTIPLIER = 1.8
 # Change only this value when testing a different Shadow enrage defense bonus.
 SHADOW_ENRAGE_DEFENSE_BONUS = 2.2
