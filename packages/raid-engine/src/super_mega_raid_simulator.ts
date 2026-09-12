@@ -133,7 +133,7 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
     SHADOW_UNENRAGE_HP = (py.truth(SHADOW_RAID) ? Math.floor(py.mul(BOSS_HP, 0.15)) : -1);
     FAST_MOVE_DELAY = 2.5;
     BOSS_CHARGED_CHANCE = 0.3;
-    BOSS_MAX_ENERGY = 200.0;
+    BOSS_MAX_ENERGY = 100.0;
     ENRAGE_ATTACK_MULTIPLIER = 1.8;
     SHADOW_BOSS_ATTACK_MULTIPLIER = 1.2;
     SHADOW_BOSS_DEFENSE_MULTIPLIER = 5 / 6;
