@@ -1,7 +1,10 @@
 /** The page sends jobs to this Web Worker; no HTTP simulation requests exist. */
-import { publicCatalog, run_simulations } from './website_api.js';
+import { publicCatalog, battle_config } from './website_api.js';
+import { createRaidEngine } from './super_mega_raid_simulator.js';
+import { applyCanonicalEventOrderPolicy } from './event_order_policy.js';
+import { applySavedEnergyReturnValuePolicy } from './saved_energy_policy.js';
 import { parse_replay_text } from './battle_replay.js';
-import { build_playback } from './battle_playback.js';
+import { buildStrategyPlayback } from './strategy_playback.js';
 import { TurnService } from './turn_service.js';
 import { saveBattle, loadBattle, listBattles } from './recording_store.js';
 import type { CalculatorEntry } from './types.js';
@@ -16,6 +19,26 @@ async function catalog(): Promise<CalculatorEntry[]> {
         return entries;
     }).catch(error => { data = undefined; throw error; });
 }
+function runSimulationWithSavedEnergyPolicy(payload: any, entries: CalculatorEntry[]) {
+    const config = battle_config(payload, entries);
+    const engine = createRaidEngine(config, entries);
+    applyCanonicalEventOrderPolicy(engine);
+    applySavedEnergyReturnValuePolicy(engine);
+    engine.validate_settings();
+    const fast = Object.values(engine.BOSS_FAST_MOVES);
+    const charged = Object.values(engine.BOSS_CHARGED_MOVES);
+    if (config.trials !== 1 || fast.length !== 1 || charged.length !== 1)
+        return engine.aggregate_summary();
+    const sim = engine.createSimulation({ detailed: true });
+    const result = sim.run();
+    return {
+        mode: 'single', won: result.won, finish_time: result.finish_time, boss_hp: result.boss_hp, faints: result.faints,
+        retreats: result.tactical_switches, rejoins: result.rejoins, catch_tanks: result.catch_tanks_used,
+        purified_gems_used: result.purified_gems_used,
+        random_seed: String(engine.RANDOM_SEED), boss_fast_type: fast[0].name === 'Hidden Power' ? sim.boss_fast.move_type : null,
+        battle_log_mode: config.battle_log_mode, log: sim.event_log, replay_text: engine.render_battle_replay(sim, result, engine.RANDOM_SEED),
+    };
+}
 let sessions: TurnService | undefined;
 async function route(method: string, payload: any) {
     if (method === 'replay/parse') {
@@ -27,9 +50,9 @@ async function route(method: string, payload: any) {
     if (method === 'catalog')
         return { pokemon: publicCatalog(entries) };
     if (method === 'simulate')
-        return run_simulations(payload, entries);
+        return runSimulationWithSavedEnergyPolicy(payload, entries);
     if (method === 'replay/playback')
-        return build_playback(payload.text, entries);
+        return buildStrategyPlayback(payload.text, entries);
     sessions ??= new TurnService(entries, saveBattle);
     if (method === 'turn/start')
         return sessions.start(payload);

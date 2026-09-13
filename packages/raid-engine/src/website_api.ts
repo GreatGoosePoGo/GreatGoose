@@ -74,14 +74,14 @@ export function battle_config(request: SimulationRequest, catalog: CalculatorEnt
     const mode = request.boss_moveset_mode ?? 'selected';
     if (!['selected', 'all'].includes(mode))
         throw new Error("Boss movesets must be 'selected' or 'all'.");
-    const trials = integer(request.simulation_count ?? 1, 1, 100, 'Games per moveset');
+    const trials = integer(request.simulation_count ?? 1, 1, 1000, 'Games per moveset');
     if (!boss.boss_fast_moves.includes(request.boss_fast_move) || !boss.boss_charged_moves.includes(request.boss_charged_move))
         throw new Error('Choose legal ordinary moves for the raid boss.');
     const fast = mode === 'all' ? boss.boss_fast_moves : [request.boss_fast_move];
     const charged = mode === 'all' ? boss.boss_charged_moves : [request.boss_charged_move];
     const games = trials * fast.length * charged.length;
-    if (games > 500)
-        throw new Error(`This would run ${games} battles. The limit is 500; reduce games per moveset or use the selected moveset.`);
+    if (games > 1000)
+        throw new Error(`This would run ${games} battles. The limit is 1000; reduce games per moveset or use the selected moveset.`);
     const strategy = request.player_strategy ?? 'no_strategy';
     const requestedPlayers = request.players ?? (request.team ? [{ team: request.team }] : []);
     if (!Array.isArray(requestedPlayers) || requestedPlayers.length < 1 || requestedPlayers.length > 20)
