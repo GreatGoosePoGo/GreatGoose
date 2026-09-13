@@ -1,8 +1,6 @@
 /** The page sends jobs to this Web Worker; no HTTP simulation requests exist. */
 import { publicCatalog, battle_config } from './website_api.js';
-import { createRaidEngineWithDodgePolicy } from './dodge_policy.js';
-import { applyCanonicalEventOrderPolicy } from './event_order_policy.js';
-import { applySavedEnergyReturnValuePolicy } from './saved_energy_policy.js';
+import { createAutomaticRaidEngine } from './raid_engine_factory.js';
 import { parse_replay_text } from './battle_replay.js';
 import { buildStrategyPlayback } from './strategy_playback.js';
 import { TurnService } from './turn_service.js';
@@ -19,11 +17,9 @@ async function catalog(): Promise<CalculatorEntry[]> {
         return entries;
     }).catch(error => { data = undefined; throw error; });
 }
-function runSimulationWithSavedEnergyPolicy(payload: any, entries: CalculatorEntry[]) {
+function runAutomaticSimulation(payload: any, entries: CalculatorEntry[]) {
     const config = battle_config(payload, entries);
-    const engine = createRaidEngineWithDodgePolicy(config, entries);
-    applyCanonicalEventOrderPolicy(engine);
-    applySavedEnergyReturnValuePolicy(engine);
+    const engine = createAutomaticRaidEngine(config, entries);
     engine.validate_settings();
     const fast = Object.values(engine.BOSS_FAST_MOVES);
     const charged = Object.values(engine.BOSS_CHARGED_MOVES);
@@ -50,7 +46,7 @@ async function route(method: string, payload: any) {
     if (method === 'catalog')
         return { pokemon: publicCatalog(entries) };
     if (method === 'simulate')
-        return runSimulationWithSavedEnergyPolicy(payload, entries);
+        return runAutomaticSimulation(payload, entries);
     if (method === 'replay/playback')
         return buildStrategyPlayback(payload.text, entries);
     sessions ??= new TurnService(entries, saveBattle);
