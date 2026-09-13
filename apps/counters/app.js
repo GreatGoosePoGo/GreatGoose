@@ -733,7 +733,7 @@
   bindFilter(elements.megas, () => includeMegas, value => { includeMegas = value; });
   bindFilter(elements.shadows, () => includeShadows, value => { includeShadows = value; });
   bindFilter(elements.legendaries, () => includeLegendaries, value => { includeLegendaries = value; });
-  bindFilter(elements.legacy, () => excludeLegacy = value => { excludeLegacy = value; });
+  bindFilter(elements.legacy, () => excludeLegacy, value => { excludeLegacy = value; });
   for (const select of [
     elements.difficulty, elements.level, elements.weather, elements.friendship,
     elements.dodgeStrategy, elements.playerStrategy, elements.megaLevel, elements.partyPower,
