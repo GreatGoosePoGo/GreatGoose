@@ -7,7 +7,7 @@
  */
 import { parse_replay_text } from './battle_replay.js';
 import { replay_config, reconstruct } from './battle_playback.js';
-import { createRaidEngine } from './super_mega_raid_simulator.js';
+import { createRaidEngineWithDodgePolicy } from './dodge_policy.js';
 import { applyCanonicalEventOrderPolicy } from './event_order_policy.js';
 import { applySavedEnergyReturnValuePolicy } from './saved_energy_policy.js';
 import type { CalculatorEntry } from './types.js';
@@ -34,7 +34,7 @@ function configuredEngine(document: any, catalog: CalculatorEntry[], canonical: 
         };
     }
 
-    const engine = createRaidEngine(config, catalog);
+    const engine = createRaidEngineWithDodgePolicy(config, catalog);
     if (canonical)
         applyCanonicalEventOrderPolicy(engine);
     if (legacyStrategy)
