@@ -1,4 +1,5 @@
 /** Canonical constructors for the different ways Great Goose uses the raid engine. */
+import { createRaidEngine } from './super_mega_raid_simulator.js';
 import { createRaidEngineWithDodgeCompatibility, createRaidEngineWithDodgePolicy } from './dodge_policy.js';
 import { applyCanonicalEventOrderPolicy } from './event_order_policy.js';
 import { applySavedEnergyReturnValuePolicy } from './saved_energy_policy.js';
@@ -44,4 +45,12 @@ export function createReplayRaidEngine(
     else
         neutralizeReplayDecisions(engine);
     return engine;
+}
+
+/**
+ * Manual turn-by-turn battles deliberately use the unmodified core mechanics:
+ * the player supplies dodge/switch decisions, so no automatic policy is applied.
+ */
+export function createManualRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) {
+    return createRaidEngine(input, catalog);
 }
