@@ -1,5 +1,5 @@
 /** Application boundary used by the browser worker and optional Node callers. */
-import { createRaidEngine } from './super_mega_raid_simulator.js';
+import { createAutomaticRaidEngine } from './raid_engine_factory.js';
 import { parseSeed } from './compatibility.js';
 import {isPlayerMoveAvailable} from './move_availability.js';
 import type { CalculatorEntry, RaidConfig, SimulationRequest, TeamMember } from './types.js';
@@ -142,7 +142,7 @@ export function battle_config(request: SimulationRequest, catalog: CalculatorEnt
 }
 export function run_simulations(request: SimulationRequest, catalog: CalculatorEntry[]) {
     const config = battle_config(request, catalog);
-    const engine = createRaidEngine(config, catalog);
+    const engine = createAutomaticRaidEngine(config, catalog);
     engine.validate_settings();
     const fast = Object.values(engine.BOSS_FAST_MOVES), charged = Object.values(engine.BOSS_CHARGED_MOVES);
     if (config.trials !== 1 || fast.length !== 1 || charged.length !== 1)
