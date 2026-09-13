@@ -7,9 +7,7 @@
  */
 import { parse_replay_text } from './battle_replay.js';
 import { replay_config, reconstruct } from './battle_playback.js';
-import { createRaidEngineWithDodgePolicy } from './dodge_policy.js';
-import { applyCanonicalEventOrderPolicy } from './event_order_policy.js';
-import { applySavedEnergyReturnValuePolicy } from './saved_energy_policy.js';
+import { createReplayRaidEngine } from './raid_engine_factory.js';
 import type { CalculatorEntry } from './types.js';
 
 function configuredEngine(document: any, catalog: CalculatorEntry[], canonical: boolean, legacyStrategy: boolean) {
@@ -34,11 +32,7 @@ function configuredEngine(document: any, catalog: CalculatorEntry[], canonical: 
         };
     }
 
-    const engine = createRaidEngineWithDodgePolicy(config, catalog);
-    if (canonical)
-        applyCanonicalEventOrderPolicy(engine);
-    if (legacyStrategy)
-        applySavedEnergyReturnValuePolicy(engine);
+    const engine = createReplayRaidEngine(config, catalog, { canonical, legacyStrategy });
     if (engine.RAID_SECONDS > 3600)
         throw new Error('Replay timer must be at most 3600 seconds.');
     engine.validate_settings();
