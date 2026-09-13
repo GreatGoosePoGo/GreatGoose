@@ -2,7 +2,7 @@
 import { createRaidEngine } from './super_mega_raid_simulator.js';
 import type { CalculatorEntry, DodgeStrategy, RaidConfig } from './types.js';
 
-const CUSTOM_DODGE_STRATEGIES = new Set<DodgeStrategy>([
+export const CUSTOM_DODGE_STRATEGIES = new Set<DodgeStrategy>([
     'damage_50',
     'damage_30',
     'smart',
@@ -23,8 +23,7 @@ function fastMovesNeeded(energy: number, cost: number, fastEnergy: number): numb
 /**
  * Smart Dodge assumes every slot in this player's entered party is another copy
  * of the active Pokémon. Therefore preserving HP is valuable only because it
- * reduces transition/relobby downtime; it does not pretend a weak teammate is
- * worth preserving over a stronger one.
+ * reduces transition/relobby downtime; it does not inspect the actual teammates.
  *
  * Time-value comparison:
  *   HP value = saved HP fraction × average transition downtime per party member
@@ -34,7 +33,14 @@ function fastMovesNeeded(energy: number, cost: number, fastEnergy: number): numb
  * move before the next charged move gets credit. A removed fast move is worth its
  * duration minus the time-equivalent value of the damage that fast move dealt.
  */
-export function smartDodgeIsWorthwhile(simulation: any, playerId: number, player: any, fullDamage: number, dodgedDamage: number, engine: any): boolean {
+export function smartDodgeIsWorthwhile(
+    simulation: any,
+    playerId: number,
+    player: any,
+    fullDamage: number,
+    dodgedDamage: number,
+    engine: any,
+): boolean {
     if (dodgedDamage >= Number(player.hp))
         return false;
 
@@ -86,7 +92,12 @@ export function smartDodgeIsWorthwhile(simulation: any, playerId: number, player
     return hpTimeValue > Number(engine.DODGE_SECONDS) + energyTimeValue;
 }
 
-export function createRaidEngineWithDodgePolicy(input: RaidConfig, catalog: CalculatorEntry[]) {
+/**
+ * Construct an engine that can parse/render the experimental dodge names without
+ * actually asking the dodge AI to make decisions. Replay playback uses this so
+ * the recorded dodge actions remain authoritative.
+ */
+export function createRaidEngineWithDodgeCompatibility(input: RaidConfig, catalog: CalculatorEntry[]) {
     const requested = input.dodge_strategy ?? 'none';
     const custom = CUSTOM_DODGE_STRATEGIES.has(requested);
     const engine = createRaidEngine(
@@ -94,8 +105,20 @@ export function createRaidEngineWithDodgePolicy(input: RaidConfig, catalog: Calc
         catalog,
     );
 
-    if (!custom)
-        return engine;
+    if (custom) {
+        const originalRender = engine.render_battle_replay;
+        engine.render_battle_replay = function (...args: Parameters<typeof originalRender>): string {
+            return originalRender(...args).replace(/^Dodge: none$/m, `Dodge: ${requested}`);
+        };
+    }
+
+    return engine;
+}
+
+/** Apply the automatic experimental dodge decision to an already compatible engine. */
+export function applyDodgePolicy(engine: any, requested: DodgeStrategy): void {
+    if (!CUSTOM_DODGE_STRATEGIES.has(requested))
+        return;
 
     const prototype = engine.Simulation.prototype;
     prototype.should_dodge_charged = function (playerId: number, player: any): boolean {
@@ -112,14 +135,12 @@ export function createRaidEngineWithDodgePolicy(input: RaidConfig, catalog: Calc
             return fullDamage > Number(player.pokemon.max_hp) * 0.3;
         return smartDodgeIsWorthwhile(this, playerId, player, fullDamage, dodgedDamage, engine);
     };
+}
 
-    // The ported core does not know these experimental strategy names yet. Keep
-    // its validation and replay renderer by internally using "none", then restore
-    // the requested name in generated replay text.
-    const originalRender = engine.render_battle_replay;
-    engine.render_battle_replay = function (...args: Parameters<typeof originalRender>): string {
-        return originalRender(...args).replace(/^Dodge: none$/m, `Dodge: ${requested}`);
-    };
-
+/** Backward-compatible helper; automatic callers should prefer raid_engine_factory.ts. */
+export function createRaidEngineWithDodgePolicy(input: RaidConfig, catalog: CalculatorEntry[]) {
+    const requested = input.dodge_strategy ?? 'none';
+    const engine = createRaidEngineWithDodgeCompatibility(input, catalog);
+    applyDodgePolicy(engine, requested);
     return engine;
 }
