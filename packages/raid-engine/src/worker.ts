@@ -1,6 +1,7 @@
 /** The page sends jobs to this Web Worker; no HTTP simulation requests exist. */
 import { publicCatalog, battle_config } from './website_api.js';
 import { createRaidEngine } from './super_mega_raid_simulator.js';
+import { applyCanonicalEventOrderPolicy } from './event_order_policy.js';
 import { applySavedEnergyReturnValuePolicy } from './saved_energy_policy.js';
 import { parse_replay_text } from './battle_replay.js';
 import { buildStrategyPlayback } from './strategy_playback.js';
@@ -21,6 +22,7 @@ async function catalog(): Promise<CalculatorEntry[]> {
 function runSimulationWithSavedEnergyPolicy(payload: any, entries: CalculatorEntry[]) {
     const config = battle_config(payload, entries);
     const engine = createRaidEngine(config, entries);
+    applyCanonicalEventOrderPolicy(engine);
     applySavedEnergyReturnValuePolicy(engine);
     engine.validate_settings();
     const fast = Object.values(engine.BOSS_FAST_MOVES);
