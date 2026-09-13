@@ -33,6 +33,41 @@
   };
 })();
 
+/* Test-branch dodge menu: add Smart/30%/50% and retire downtime saver. */
+(() => {
+  const select = document.querySelector('#dodge-strategy');
+  if (!select) return;
+  const selected = select.value === 'downtime_saver' ? 'smart' : select.value;
+  const choices = [
+    ['none', 'Dodge nothing'],
+    ['smart', 'Smart dodge'],
+    ['damage_50', 'Dodge if damage > 50% max HP'],
+    ['damage_30', 'Dodge if damage > 30% max HP'],
+    ['all_survivable', 'Dodge every survivable charged move'],
+    ['super_effective', 'Dodge super-effective moves'],
+    ['non_resisted', 'Dodge every non-resisted move'],
+    ['lethal_only', 'Dodge only lethal charged moves'],
+  ];
+  select.replaceChildren(...choices.map(([value, label]) => {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = label;
+    return option;
+  }));
+  select.value = choices.some(([value]) => value === selected) ? selected : 'none';
+
+  const replayText = document.querySelector('#replay-text');
+  if (replayText?.placeholder) {
+    replayText.placeholder = replayText.placeholder.replace('Dodge: downtime_saver', 'Dodge: smart');
+  }
+  const insertExample = document.querySelector('#insert-replay-example');
+  if (insertExample && replayText) {
+    insertExample.addEventListener('click', () => queueMicrotask(() => {
+      replayText.value = replayText.value.replace('Dodge: downtime_saver', 'Dodge: smart');
+    }));
+  }
+})();
+
 /* Keep the batch-size UI aligned with the engine's 1000-battle request cap. */
 (() => {
   const BATTLE_LIMIT = 1000;
