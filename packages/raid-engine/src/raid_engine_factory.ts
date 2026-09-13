@@ -16,11 +16,20 @@ export function createAutomaticRaidEngine(input: RaidConfig, catalog: Calculator
     return engine;
 }
 
+/** Disable automatic decisions while retaining the configured team metadata. */
+function neutralizeReplayDecisions(engine: any): void {
+    const prototype = engine.Simulation.prototype;
+    prototype.should_dodge_charged = function (): boolean { return false; };
+    prototype.should_retreat = function (): boolean { return false; };
+    prototype.announced_charge_prevents_next_charge = function (): boolean { return false; };
+    prototype.schedule_catch_tank = function (): boolean { return false; };
+}
+
 /**
- * Replay reconstruction must understand modern strategy names but must not make
- * fresh dodge/swap decisions. Recorded actions are authoritative. The legacy
- * strategy switch exists only for old ambiguous replays produced before the
- * canonical same-tick ordering rule.
+ * Replay reconstruction must understand modern strategy names but normally must
+ * not make fresh dodge/swap decisions. Recorded actions are authoritative. The
+ * legacy strategy switch exists only for old ambiguous replays produced before
+ * the canonical same-tick ordering rule.
  */
 export function createReplayRaidEngine(
     input: RaidConfig,
@@ -32,5 +41,7 @@ export function createReplayRaidEngine(
         applyCanonicalEventOrderPolicy(engine);
     if (options.legacyStrategy === true)
         applySavedEnergyReturnValuePolicy(engine);
+    else
+        neutralizeReplayDecisions(engine);
     return engine;
 }
