@@ -4,7 +4,8 @@ import {
 } from './party_power.js';
 import {RELEASED_MEGA_PLUS_FORM_IDS, type MegaLevel} from './rankings.js';
 import {isPlayerMoveAvailable} from './move_availability.js';
-import {createRaidEngine, type RaidEngine, type Move} from './super_mega_raid_simulator.js';
+import {createAutomaticRaidEngine} from './raid_engine_factory.js';
+import {type RaidEngine, type Move} from './super_mega_raid_simulator.js';
 import type {
     CalculatorEntry, CalculatorMove, DodgeStrategy, PlayerStrategy,
     RaidDifficulty, Weather,
@@ -19,7 +20,8 @@ export const RAID_COUNTER_DIFFICULTIES: readonly RaidDifficulty[] = [
 export const RAID_COUNTER_LEVELS = [20, 25, 30, 35, 40, 45, 50] as const;
 export type RaidCounterLevel = typeof RAID_COUNTER_LEVELS[number];
 export const RAID_COUNTER_DODGE_STRATEGIES = [
-    'none', 'all_survivable', 'super_effective', 'non_resisted', 'lethal_only',
+    'none', 'smart', 'damage_50', 'damage_30',
+    'all_survivable', 'super_effective', 'non_resisted', 'lethal_only',
 ] as const satisfies readonly DodgeStrategy[];
 export type RaidCounterDodgeStrategy = typeof RAID_COUNTER_DODGE_STRATEGIES[number];
 export const RAID_COUNTER_PLAYER_STRATEGIES = [
@@ -481,7 +483,7 @@ export function prepareRaidCounterScenario(
     const dummyTeam = Array.from({length: TEAM_SIZE}, () => [
         dummy.form_id, dummyFast.name, dummyCharged.name, level, 15, 15, 15, false, 1,
     ] as const);
-    const engine = createRaidEngine({
+    const engine = createAutomaticRaidEngine({
         trials: 1,
         random_seed: 20260909,
         raid_difficulty: settings.raidDifficulty,
