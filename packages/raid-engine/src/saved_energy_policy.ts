@@ -5,6 +5,7 @@ type PendingThreat = {
     hitTime: number;
     announcedDamage: number;
     bossMove: any;
+    lethal: boolean;
 };
 
 const pendingThreats = new WeakMap<object, Map<number, PendingThreat>>();
@@ -63,8 +64,12 @@ function canLandNextChargedBeforeHit(simulation: any, player: any, hitTime: numb
  * 2. A boss charged-move announcement records an exact hit deadline/damage
  *    instead of forcing an immediate swap. The attacker keeps acting while a
  *    useful move still fits and swaps at the last useful action boundary.
- * 3. If the attacker can actually reach and land its charged move before the
- *    announced hit, it stays in and spends the meter rather than saving it.
+ * 3. A nonlethal threat can be ignored once the attacker can land its charged
+ *    move before the boss hit. A lethal threat remains active after that move:
+ *    the attacker may spend the charge only if it still leaves the full switch
+ *    window, then it swaps before the lethal hit.
+ * 4. Lethal protection is independent of whether the remaining energy is worth
+ *    banking. Low-value energy affects return decisions, not whether to survive.
  */
 export function applySavedEnergyReturnValuePolicy(engine: any): void {
     const prototype = engine.Simulation.prototype;
@@ -113,10 +118,11 @@ export function applySavedEnergyReturnValuePolicy(engine: any): void {
         const announced = threatMap(announcedThreats, this);
         announced.delete(playerId);
 
-        if (canLandNextChargedBeforeHit(this, player, Number(hitTime)))
+        const lethal = Number(damage) >= Number(player.hp);
+        if (!lethal && canLandNextChargedBeforeHit(this, player, Number(hitTime)))
             return false;
 
-        const prevents = originalAnnouncedChargePreventsNextCharge.call(
+        const prevents = lethal || originalAnnouncedChargePreventsNextCharge.call(
             this,
             playerId,
             player,
@@ -129,6 +135,7 @@ export function applySavedEnergyReturnValuePolicy(engine: any): void {
                 hitTime: Number(hitTime),
                 announcedDamage: Number(damage),
                 bossMove,
+                lethal,
             });
         }
         return prevents;
@@ -142,14 +149,16 @@ export function applySavedEnergyReturnValuePolicy(engine: any): void {
     ): boolean {
         const player = this.players[playerId];
         const announced = threatMap(announcedThreats, this);
+        const fallbackDamage = Number(this.incoming_damage(bossMove, playerId, player, false));
         const threat = announced.get(playerId) ?? {
             hitTime: Number(hitTime),
-            announcedDamage: Number(this.incoming_damage(bossMove, playerId, player, false)),
+            announcedDamage: fallbackDamage,
             bossMove,
+            lethal: fallbackDamage >= Number(player.hp),
         };
         announced.delete(playerId);
 
-        if (savedEnergyTimeValue(player.pokemon) <= Number(engine.SWITCH_SECONDS))
+        if (!threat.lethal && savedEnergyTimeValue(player.pokemon) <= Number(engine.SWITCH_SECONDS))
             return false;
         if (this.replacement_for_announced_charge(playerId, player, bossMove) === null)
             return false;
@@ -164,7 +173,7 @@ export function applySavedEnergyReturnValuePolicy(engine: any): void {
 
         this.log(
             time,
-            `P${playerId + 1} ${player.species.name}: ${bossMove.name} hits at ${threat.hitTime.toFixed(2)}s for about ${threat.announcedDamage}; delaying energy-save decision`,
+            `P${playerId + 1} ${player.species.name}: ${bossMove.name} hits at ${threat.hitTime.toFixed(2)}s for about ${threat.announcedDamage}${threat.lethal ? ' (lethal)' : ''}; delaying hot-swap decision`,
         );
         return true;
     };
@@ -178,44 +187,66 @@ export function applySavedEnergyReturnValuePolicy(engine: any): void {
                 if (Number(time) >= threat.hitTime - 1e-9) {
                     pending.delete(playerId);
                 }
-                else if (canLandNextChargedBeforeHit(this, player, threat.hitTime)) {
-                    pending.delete(playerId);
-                }
                 else {
                     const exactDamage = Number(this.incoming_damage(threat.bossMove, playerId, player, false));
-                    const stillThreatened = originalAnnouncedChargePreventsNextCharge.call(
-                        this,
-                        playerId,
-                        player,
-                        threat.hitTime,
-                        exactDamage,
-                        threat.bossMove,
-                    );
-                    if (!stillThreatened || savedEnergyTimeValue(player.pokemon) <= Number(engine.SWITCH_SECONDS)) {
+                    const lethalNow = exactDamage >= Number(player.hp);
+                    const canLandCharge = canLandNextChargedBeforeHit(this, player, threat.hitTime);
+
+                    if (!lethalNow && canLandCharge) {
                         pending.delete(playerId);
                     }
                     else {
-                        const deadline = threat.hitTime - Number(engine.SWITCH_SECONDS);
-                        const pokemon = player.pokemon;
-                        const chargedReady = Number(player.energy) >= Number(pokemon.charged_move.energy);
-                        const nextMoveDuration = chargedReady
-                            ? Number(pokemon.charged_move.duration)
-                            : Number(pokemon.fast_move.duration);
+                        const stillEnergyThreat = originalAnnouncedChargePreventsNextCharge.call(
+                            this,
+                            playerId,
+                            player,
+                            threat.hitTime,
+                            exactDamage,
+                            threat.bossMove,
+                        );
+                        const bankWorthSaving = savedEnergyTimeValue(player.pokemon) > Number(engine.SWITCH_SECONDS);
 
-                        const usefulMoveFits = chargedReady
-                            ? Number(time) + nextMoveDuration <= threat.hitTime + 1e-9
-                            : Number(time) + nextMoveDuration <= deadline + 1e-9;
-
-                        if (!usefulMoveFits || Number(time) >= deadline - 1e-9) {
+                        if (!lethalNow && (!stillEnergyThreat || !bankWorthSaving)) {
                             pending.delete(playerId);
-                            originalSaveEnergyForAnnouncedCharge.call(
-                                this,
-                                time,
-                                threat.hitTime,
-                                playerId,
-                                threat.bossMove,
-                            );
-                            return;
+                        }
+                        else {
+                            const deadline = threat.hitTime - Number(engine.SWITCH_SECONDS);
+                            const pokemon = player.pokemon;
+                            const chargedReady = Number(player.energy) >= Number(pokemon.charged_move.energy);
+                            const nextMoveDuration = chargedReady
+                                ? Number(pokemon.charged_move.duration)
+                                : Number(pokemon.fast_move.duration);
+
+                            // A lethal threat needs the entire switch window after
+                            // the move. Nonlethal energy-saving may spend a ready
+                            // charged move any time before the boss hit.
+                            const usefulMoveFits = lethalNow
+                                ? Number(time) + nextMoveDuration <= deadline + 1e-9
+                                : chargedReady
+                                    ? Number(time) + nextMoveDuration <= threat.hitTime + 1e-9
+                                    : Number(time) + nextMoveDuration <= deadline + 1e-9;
+
+                            if (!usefulMoveFits || Number(time) >= deadline - 1e-9) {
+                                pending.delete(playerId);
+                                const departingIndex = player.pokemon_index;
+                                const switched = originalSaveEnergyForAnnouncedCharge.call(
+                                    this,
+                                    time,
+                                    threat.hitTime,
+                                    playerId,
+                                    threat.bossMove,
+                                );
+
+                                // If this was survival rather than meaningful energy
+                                // banking, do not permanently classify the preserved
+                                // attacker as a saved-energy return target.
+                                if (switched && lethalNow && !bankWorthSaving) {
+                                    player.saved_energy_indices.delete(departingIndex);
+                                    delete player.saved_energy_return_after[departingIndex];
+                                }
+                                if (switched)
+                                    return;
+                            }
                         }
                     }
                 }
