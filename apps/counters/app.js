@@ -5,9 +5,17 @@
   const LEVELS = [20, 25, 30, 35, 40, 45, 50];
   const WEATHER = ["", "Sunny/Clear", "Rainy", "Partly Cloudy", "Cloudy", "Windy", "Snow", "Fog"];
   const FRIENDSHIP = [1, 1.03, 1.05, 1.07, 1.10, 1.12];
-  const DODGE_STRATEGIES = [
-    "none", "all_survivable", "super_effective", "non_resisted", "lethal_only",
+  const DODGE_CHOICES = [
+    ["none", "Dodge nothing"],
+    ["smart", "Smart dodge"],
+    ["damage_50", "Dodge if damage > 50% max HP"],
+    ["damage_30", "Dodge if damage > 30% max HP"],
+    ["all_survivable", "Dodge every survivable charged move"],
+    ["super_effective", "Dodge super-effective moves"],
+    ["non_resisted", "Dodge every non-resisted move"],
+    ["lethal_only", "Dodge only lethal charged moves"],
   ];
+  const DODGE_STRATEGIES = DODGE_CHOICES.map(([value]) => value);
   const PLAYER_STRATEGIES = [
     "no_strategy", "hot_swap_greedy", "hot_swap_cautious", "hot_swap_very_cautious",
   ];
@@ -73,6 +81,8 @@
     progressBar: document.querySelector("#counter-progress-bar"),
     progressText: document.querySelector("#counter-progress-text"),
   };
+
+  elements.dodgeStrategy.replaceChildren(...DODGE_CHOICES.map(([value, label]) => new Option(label, value)));
 
   const settingControls = [
     elements.boss, elements.difficulty, elements.level, elements.weather,
@@ -723,7 +733,7 @@
   bindFilter(elements.megas, () => includeMegas, value => { includeMegas = value; });
   bindFilter(elements.shadows, () => includeShadows, value => { includeShadows = value; });
   bindFilter(elements.legendaries, () => includeLegendaries, value => { includeLegendaries = value; });
-  bindFilter(elements.legacy, () => excludeLegacy, value => { excludeLegacy = value; });
+  bindFilter(elements.legacy, () => excludeLegacy = value => { excludeLegacy = value; });
   for (const select of [
     elements.difficulty, elements.level, elements.weather, elements.friendship,
     elements.dodgeStrategy, elements.playerStrategy, elements.megaLevel, elements.partyPower,
