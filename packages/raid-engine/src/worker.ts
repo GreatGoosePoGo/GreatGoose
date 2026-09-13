@@ -3,7 +3,7 @@ import { publicCatalog, battle_config } from './website_api.js';
 import { createRaidEngine } from './super_mega_raid_simulator.js';
 import { applySavedEnergyReturnValuePolicy } from './saved_energy_policy.js';
 import { parse_replay_text } from './battle_replay.js';
-import { build_playback } from './battle_playback.js';
+import { buildStrategyPlayback } from './strategy_playback.js';
 import { TurnService } from './turn_service.js';
 import { saveBattle, loadBattle, listBattles } from './recording_store.js';
 import type { CalculatorEntry } from './types.js';
@@ -50,7 +50,7 @@ async function route(method: string, payload: any) {
     if (method === 'simulate')
         return runSimulationWithSavedEnergyPolicy(payload, entries);
     if (method === 'replay/playback')
-        return build_playback(payload.text, entries);
+        return buildStrategyPlayback(payload.text, entries);
     sessions ??= new TurnService(entries, saveBattle);
     if (method === 'turn/start')
         return sessions.start(payload);
