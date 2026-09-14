@@ -23,3 +23,5 @@ jobs:
         run: npm ci
       - name: Build and validate static site
         run: npm run build
+      - name: Catch-tank rejoin regression
+        run: node --test tests/typescript/catch_tank_rejoin.test.mjs
