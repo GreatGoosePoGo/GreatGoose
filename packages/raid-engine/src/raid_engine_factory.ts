@@ -3,17 +3,19 @@ import { createRaidEngine } from './super_mega_raid_simulator.js';
 import { createRaidEngineWithDodgeCompatibility, createRaidEngineWithDodgePolicy } from './dodge_policy.js';
 import { applyCanonicalEventOrderPolicy } from './event_order_policy.js';
 import { applySavedEnergyReturnValuePolicy } from './saved_energy_policy.js';
+import { applyCatchTankRejoinPolicy } from './catch_tank_policy.js';
 import type { CalculatorEntry, RaidConfig } from './types.js';
 
 /**
  * Automatic raid simulation used by the raid calculator, batch simulations and
  * raid-counter rankings. Every automatic caller gets exactly the same event,
- * dodge and hot-swap semantics through this one entry point.
+ * dodge, hot-swap and catch-tank semantics through this one entry point.
  */
 export function createAutomaticRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) {
     const engine = createRaidEngineWithDodgePolicy(input, catalog);
     applyCanonicalEventOrderPolicy(engine);
     applySavedEnergyReturnValuePolicy(engine);
+    applyCatchTankRejoinPolicy(engine);
     return engine;
 }
 
@@ -40,8 +42,10 @@ export function createReplayRaidEngine(
     const engine = createRaidEngineWithDodgeCompatibility(input, catalog);
     if (options.canonical !== false)
         applyCanonicalEventOrderPolicy(engine);
-    if (options.legacyStrategy === true)
+    if (options.legacyStrategy === true) {
         applySavedEnergyReturnValuePolicy(engine);
+        applyCatchTankRejoinPolicy(engine);
+    }
     else
         neutralizeReplayDecisions(engine);
     return engine;
