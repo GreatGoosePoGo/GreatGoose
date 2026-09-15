@@ -3,6 +3,8 @@ import type {RejoinTimeDistribution, RejoinTimeInput} from './types.js';
 export const DEFAULT_RAID_REJOIN_INPUT = '7.5:1, 8:2, 8.5:1, 11:1';
 export const DEFAULT_COUNTER_REJOIN_INPUT = '7.5';
 
+let automaticRejoinOverride: RejoinTimeDistribution | undefined;
+
 function numeric(value: unknown, label: string): number {
     const number = Number(value);
     if (!Number.isFinite(number)) throw new Error(`${label} must be a finite number.`);
@@ -85,6 +87,21 @@ export function sampleRejoinTime(rng: {random(): number}, distribution: RejoinTi
 }
 
 /**
+ * A browser worker is isolated from every other page/worker. Counters use this
+ * worker-local override because their engine is created deep inside the ranking
+ * pipeline, while normal raid requests pass an explicit distribution in RaidConfig.
+ */
+export function setAutomaticRejoinTimeOverride(distribution: RejoinTimeDistribution | undefined): void {
+    automaticRejoinOverride = distribution;
+}
+
+export function automaticRejoinTimeDistribution(
+    configured: RejoinTimeDistribution | undefined,
+): RejoinTimeDistribution | undefined {
+    return configured ?? automaticRejoinOverride;
+}
+
+/**
  * The ported core still contains its historical uniform REJOIN_TIMES list.
  * Automatic simulations route through the canonical factory, so intercept the
  * single rng.choice made by Simulation.switch when it actually has to relobby.
@@ -106,7 +123,7 @@ export function applyRejoinTimeDistributionPolicy(
         rng.choice = function <T>(items: readonly T[]): T {
             if (!intercepted) {
                 intercepted = true;
-                return sampleRejoinTime(rng, distribution) as T;
+                return sampleRejoinTime(rng, distribution) as unknown as T;
             }
             return originalChoice.call(rng, items);
         };
