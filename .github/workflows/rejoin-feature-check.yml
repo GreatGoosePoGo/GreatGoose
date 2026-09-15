@@ -27,3 +27,5 @@ jobs:
         run: node --test tests/typescript/rejoin_time_distribution.test.mjs
       - name: Catch-tank rejoin regression
         run: node --test tests/typescript/catch_tank_rejoin.test.mjs
+      - name: Mega Staraptor regression
+        run: node --test tests/typescript/mega_staraptor.test.mjs
