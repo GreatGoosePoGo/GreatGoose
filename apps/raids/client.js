@@ -33,7 +33,7 @@
   };
 })();
 
-/* Automatic raid rejoin time: one fixed value or relative weighted values. */
+/* Automatic raid rejoin time: fixed, equal-weight list, or weighted distribution. */
 (() => {
   const DEFAULT_REJOIN = '7.5:1, 8:2, 8.5:1, 11:1';
   const grid = document.querySelector('#simulator-view .settings-grid');
@@ -46,8 +46,8 @@
   input.type = 'text';
   input.autocomplete = 'off';
   input.spellcheck = false;
-  input.placeholder = '7.5 or 7.5:1, 8:2, 8.5:1';
-  input.title = 'Enter one rejoin time in seconds, or relative weights such as 7.5:1, 8:2, 8.5:1. Weights do not need to add to 1.';
+  input.placeholder = '7.5, 8, 8.5 or 7.5:1, 8:2, 8.5:1';
+  input.title = 'Enter one time, a comma-separated equal-probability list such as 7.5, 8, 8.5, or give every time a relative weight such as 7.5:1, 8:2, 8.5:1. Do not mix weighted and unweighted entries.';
   input.value = new URL(location.href).searchParams.get('rj') || DEFAULT_REJOIN;
   label.append(input);
   const seedLabel = document.querySelector('#random-seed')?.closest('label');
