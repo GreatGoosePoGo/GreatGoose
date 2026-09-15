@@ -4,6 +4,9 @@ import {calculateCounterBreakdown} from './counter_breakdown.js';
 import {
     DEFAULT_COUNTER_REJOIN_INPUT, parseRejoinTimeInput, setAutomaticRejoinTimeOverride,
 } from './rejoin_time.js';
+import {
+    defaultBattleTimeForDifficulty, parseBattleTimeLimit, setAutomaticBattleTimeOverride,
+} from './battle_time.js';
 import type {CalculatorEntry} from './types.js';
 
 interface ShadowAvailability {
@@ -57,7 +60,7 @@ self.onmessage = async (event: MessageEvent) => {
         id, mode, bossFormId, raidDifficulty, includeMegas, includeShadows,
         includeLegendaries, megaLevel, level, friendshipMultiplier, weather,
         dodgeStrategy, playerStrategy, excludeLegacy,
-        partyPowerPlayers, rejoinTime,
+        partyPowerPlayers, rejoinTime, battleTime,
         trialsPerBossMoveset, prefilterLimit,
         bossFastMoveId, bossChargedMoveId, pick,
     } = event.data ?? {};
@@ -69,6 +72,8 @@ self.onmessage = async (event: MessageEvent) => {
         }
         const resolvedRejoinTime = rejoinTime ?? DEFAULT_COUNTER_REJOIN_INPUT;
         setAutomaticRejoinTimeOverride(parseRejoinTimeInput(resolvedRejoinTime));
+        const resolvedBattleTime = battleTime ?? defaultBattleTimeForDifficulty(raidDifficulty);
+        setAutomaticBattleTimeOverride(parseBattleTimeLimit(resolvedBattleTime));
         const settings = {
                 bossFormId,
                 raidDifficulty,
@@ -84,6 +89,7 @@ self.onmessage = async (event: MessageEvent) => {
                 excludeLegacy: Boolean(excludeLegacy),
                 partyPowerPlayers,
                 rejoinTime: resolvedRejoinTime,
+                battleTime: resolvedBattleTime,
                 trialsPerBossMoveset,
                 prefilterLimit,
                 bossFastMoveId,
