@@ -6,6 +6,7 @@
     <title>Pokémon GO Raid Counters | Great Goose</title>
     <meta name="description" content="Rank Pokémon GO raid counters with full battle simulations and configurable battle conditions.">
     <link rel="stylesheet" href="styles.css">
+    <script src="rejoin.js" defer></script>
     <script src="app.js" defer></script>
   </head>
   <body>
@@ -223,7 +224,7 @@
           <span id="counter-progress-text">Preparing candidates…</span>
         </div>
         <details id="boss-moveset-difficulty" class="moveset-difficulty" hidden>
-          <summary>Boss moveset difficulty <span id="moveset-difficulty-summary"></span></summary>
+          <summary>Boss moveset difficulty <span id="boss-moveset-difficulty-summary"></span></summary>
           <p>Hardest first, measured against the same displayed top counters and their listed attacker moves. Lower mean battle DPS means harder. Easiest tested moveset = 100. This comparison depends on your settings and is not an intrinsic boss rating.</p>
           <div id="moveset-difficulty-body"></div>
         </details>
