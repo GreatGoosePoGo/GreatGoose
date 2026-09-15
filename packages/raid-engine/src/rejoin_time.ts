@@ -28,28 +28,39 @@ function validateWeight(value: unknown): number {
 
 function entriesFromString(value: string): [unknown, unknown][] {
     const trimmed = value.trim();
-    if (!trimmed) throw new Error('Enter a rejoin time or weighted distribution.');
-    if (!trimmed.includes(':')) return [[trimmed, 1]];
+    if (!trimmed) throw new Error('Enter a rejoin time or distribution.');
     const body = trimmed.startsWith('{') && trimmed.endsWith('}')
         ? trimmed.slice(1, -1).trim()
         : trimmed;
     if (!body) throw new Error('Rejoin distribution cannot be empty.');
-    return body.split(',').map(part => {
+
+    const parts = body.split(',').map(part => part.trim());
+    if (parts.some(part => !part)) {
+        throw new Error('Rejoin entries cannot be empty.');
+    }
+    const weighted = parts.map(part => part.includes(':'));
+    if (weighted.some(Boolean) && !weighted.every(Boolean)) {
+        throw new Error('Use either a comma-separated list of times or give every time a weight; do not mix the two formats.');
+    }
+    if (!weighted.some(Boolean)) {
+        return parts.map(part => [part, 1]);
+    }
+    return parts.map(part => {
         const pieces = part.split(':');
         if (pieces.length !== 2 || !pieces[0].trim() || !pieces[1].trim()) {
-            throw new Error('Use rejoin syntax like 7.5 or 7.5:1, 8:2, 8.5:1.');
+            throw new Error('Use rejoin syntax like 7.5, 8, 8.5 or 7.5:1, 8:2, 8.5:1.');
         }
         return [pieces[0].trim(), pieces[1].trim()];
     });
 }
 
-/** Parse one fixed time or relative weights. Weights are intentionally not normalized. */
+/** Parse one fixed time, an equal-weight list, or relative weights. */
 export function parseRejoinTimeInput(value: RejoinTimeInput): RejoinTimeDistribution {
     let rawEntries: [unknown, unknown][];
     if (typeof value === 'number') rawEntries = [[value, 1]];
     else if (typeof value === 'string') rawEntries = entriesFromString(value);
     else if (value && typeof value === 'object' && !Array.isArray(value)) rawEntries = Object.entries(value);
-    else throw new Error('Rejoin time must be a number or weighted distribution.');
+    else throw new Error('Rejoin time must be a number or distribution.');
 
     const combined = new Map<number, number>();
     for (const [rawSeconds, rawWeight] of rawEntries) {
