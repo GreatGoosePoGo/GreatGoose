@@ -31,6 +31,11 @@ export interface ManualRebuildRequest {
 }
 
 export function createTurnBattle(engine: RaidEngine) {
+    const battleTimeLimit = Math.min(
+        engine.RAID_SECONDS,
+        Number((engine as any).BATTLE_TIME_LIMIT ?? engine.RAID_SECONDS),
+    );
+
     class ManualSimulation extends engine.Simulation {
         declare events: ManualEvent[];
         declare tick: number;
@@ -73,8 +78,8 @@ export function createTurnBattle(engine: RaidEngine) {
                 const [time, , , kind, data] = heappop(this.events) as ManualEvent;
                 this.current_time = time;
                 if (kind === 'boss_decision') {
-                    // No new moves may begin after the raid timer expires.
-                    if (time < engine.RAID_SECONDS)
+                    // No new moves may begin after the selected elapsed-time cutoff.
+                    if (time < battleTimeLimit)
                         super.boss_decision(time);
                 }
                 else if (kind === 'boss_hit') {
@@ -119,7 +124,7 @@ export function createTurnBattle(engine: RaidEngine) {
         }
 
         get finished(): boolean {
-            return this.stopped || this.boss_hp <= 0 || this.current_time >= engine.RAID_SECONDS;
+            return this.stopped || this.boss_hp <= 0 || this.current_time >= battleTimeLimit;
         }
 
         availability(): ManualAvailability {
@@ -210,7 +215,7 @@ export function createTurnBattle(engine: RaidEngine) {
 
         advance(action: ManualAction = 'wait', slot: number | null = null, snapshot = true): Record<string, any> | null {
             this.act(action, slot);
-            this.resolve_until(Math.min(engine.RAID_SECONDS, (this.tick + 1) / 2));
+            this.resolve_until(Math.min(battleTimeLimit, (this.tick + 1) / 2));
             return snapshot ? this.snapshot() : null;
         }
 
@@ -259,7 +264,7 @@ export function createTurnBattle(engine: RaidEngine) {
                 ? 'stopped'
                 : this.boss_hp <= 0
                     ? 'victory'
-                    : this.current_time >= engine.RAID_SECONDS
+                    : this.current_time >= battleTimeLimit
                         ? 'time_expired'
                         : 'in_progress';
             const activeHit = this.events.find(event => event[3] === 'player_hit' && event[4][1] === player.generation);
@@ -270,6 +275,8 @@ export function createTurnBattle(engine: RaidEngine) {
                 tick: this.tick,
                 elapsed: this.current_time,
                 remaining: Math.max(0, engine.RAID_SECONDS - this.current_time),
+                battle_time_limit: battleTimeLimit,
+                raid_timer: engine.RAID_SECONDS,
                 status,
                 seed: String(engine.RANDOM_SEED),
                 boss: {
