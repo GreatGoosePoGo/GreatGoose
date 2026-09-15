@@ -4,7 +4,7 @@ import { createRaidEngineWithDodgeCompatibility, createRaidEngineWithDodgePolicy
 import { applyCanonicalEventOrderPolicy } from './event_order_policy.js';
 import { applySavedEnergyReturnValuePolicy } from './saved_energy_policy.js';
 import { applyCatchTankRejoinPolicy } from './catch_tank_policy.js';
-import { applyRejoinTimeDistributionPolicy } from './rejoin_time.js';
+import { automaticRejoinTimeDistribution, applyRejoinTimeDistributionPolicy } from './rejoin_time.js';
 import type { CalculatorEntry, RaidConfig } from './types.js';
 
 /**
@@ -17,7 +17,7 @@ export function createAutomaticRaidEngine(input: RaidConfig, catalog: Calculator
     applyCanonicalEventOrderPolicy(engine);
     applySavedEnergyReturnValuePolicy(engine);
     applyCatchTankRejoinPolicy(engine);
-    applyRejoinTimeDistributionPolicy(engine, input.rejoin_time_distribution);
+    applyRejoinTimeDistributionPolicy(engine, automaticRejoinTimeDistribution(input.rejoin_time_distribution));
     return engine;
 }
 
