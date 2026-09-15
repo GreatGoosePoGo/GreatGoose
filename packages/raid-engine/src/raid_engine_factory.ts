@@ -10,6 +10,7 @@ import {
     defaultBattleTimeForDifficulty,
     parseBattleTimeLimit,
 } from './battle_time.js';
+import {applyCurrentEngineMoveOverrides, withCurrentCatalogOverrides} from './catalog_overrides.js';
 import type { CalculatorEntry, RaidConfig } from './types.js';
 
 function makeReplayTimerSelfContained(engine: any): void {
@@ -51,13 +52,15 @@ function elapsedBattleLimit(input: RaidConfig, raidSeconds: number): number {
 export function createAutomaticRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) {
     const raidSeconds = realRaidSeconds(input);
     const battleLimit = elapsedBattleLimit(input, raidSeconds);
+    const currentCatalog = withCurrentCatalogOverrides(catalog);
 
     // The ported core has one timer variable. Give that closure the elapsed
     // challenge cutoff, then expose the real in-game clock on the returned
     // engine. Only Simulation.run consumes the closure timer; UI/replay code
     // reads engine.RAID_SECONDS and therefore keeps the authentic 180/300 clock.
     const coreInput = {...input, raid_seconds: battleLimit};
-    const engine = createRaidEngineWithDodgePolicy(coreInput, catalog);
+    const engine = createRaidEngineWithDodgePolicy(coreInput, currentCatalog);
+    applyCurrentEngineMoveOverrides(engine, input);
     engine.RAID_SECONDS = raidSeconds;
     (engine as any).BATTLE_TIME_LIMIT = battleLimit;
 
@@ -89,7 +92,9 @@ export function createReplayRaidEngine(
     catalog: CalculatorEntry[],
     options: { canonical?: boolean; legacyStrategy?: boolean } = {},
 ) {
-    const engine = createRaidEngineWithDodgeCompatibility(input, catalog);
+    const currentCatalog = withCurrentCatalogOverrides(catalog);
+    const engine = createRaidEngineWithDodgeCompatibility(input, currentCatalog);
+    applyCurrentEngineMoveOverrides(engine, input);
     if (options.canonical !== false)
         applyCanonicalEventOrderPolicy(engine);
     if (options.legacyStrategy === true) {
@@ -112,7 +117,9 @@ export function createManualRaidEngine(input: RaidConfig, catalog: CalculatorEnt
         : parseBattleTimeLimit(input.battle_time_limit, input.raid_difficulty);
     if (battleLimit > raidSeconds)
         throw new Error(`Battle time limit cannot exceed the ${raidSeconds}-second raid timer.`);
-    const engine = createRaidEngine({...input, raid_seconds: raidSeconds}, catalog);
+    const currentCatalog = withCurrentCatalogOverrides(catalog);
+    const engine = createRaidEngine({...input, raid_seconds: raidSeconds}, currentCatalog);
+    applyCurrentEngineMoveOverrides(engine, input);
     (engine as any).BATTLE_TIME_LIMIT = battleLimit;
     makeReplayTimerSelfContained(engine);
     return engine;
