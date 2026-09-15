@@ -2,6 +2,7 @@
 import { createAutomaticRaidEngine } from './raid_engine_factory.js';
 import { parseSeed } from './compatibility.js';
 import {isPlayerMoveAvailable} from './move_availability.js';
+import {DEFAULT_RAID_REJOIN_INPUT, parseRejoinTimeInput} from './rejoin_time.js';
 import type { CalculatorEntry, RaidConfig, SimulationRequest, TeamMember } from './types.js';
 export function publicCatalog(catalog: CalculatorEntry[]) {
     return catalog.map(entry => {
@@ -130,6 +131,7 @@ export function battle_config(request: SimulationRequest, catalog: CalculatorEnt
     for (const [group, members] of groups) {
         if (members.length < 2 || members.length > 4) throw new Error(`Party ${group} needs 2–4 players; it currently has ${members.length}.`);
     }
+    const rejoinTimeDistribution = parseRejoinTimeInput(request.rejoin_time ?? DEFAULT_RAID_REJOIN_INPUT);
     return {
         trials, random_seed: seed, raid_difficulty: request.raid_difficulty ?? 'Tier 5', boss_form_id: request.boss,
         boss_fast_move_names: fast, boss_charged_move_names: charged, player_teams: teams,
@@ -137,6 +139,7 @@ export function battle_config(request: SimulationRequest, catalog: CalculatorEnt
         behemoth_bash_adventure_effect: requestedPlayers.map(p => (p.behemoth_bash_adventure_effect ?? request.behemoth_bash_adventure_effect) === true), dynamic_punch_adventure_effect: requestedPlayers.map(p => (p.dynamic_punch_adventure_effect ?? request.dynamic_punch_adventure_effect) === true),
         party_power_groups: [...groups.values()], weather: request.weather || null, dodge_strategy: request.dodge_strategy ?? 'none', player_strategy: strategy,
         use_purified_gems: request.use_purified_gems === true,
+        rejoin_time_distribution: rejoinTimeDistribution,
         catch_tank_team_indices: tankTeams, battle_log_mode: request.battle_log_mode ?? 'moves',
     };
 }
