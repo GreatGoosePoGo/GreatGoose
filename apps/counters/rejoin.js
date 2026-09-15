@@ -41,6 +41,15 @@
   timeLabel.append(timeSelect);
   grid.append(timeLabel);
 
+  const syncBattleTimeDefault = () => {
+    if (difficulty.value === previousDifficulty) return;
+    const oldDefault = normalBattleTime(previousDifficulty);
+    if (Number(timeSelect.value) === oldDefault) {
+      timeSelect.value = String(normalBattleTime(difficulty.value));
+    }
+    previousDifficulty = difficulty.value;
+  };
+
   // Counter calculations are cached by the main adapter. Reloading after one
   // of these uncommon advanced settings changes guarantees a fresh cache key.
   rejoinInput.addEventListener("change", () => {
@@ -59,18 +68,14 @@
     location.replace(url);
   });
 
-  difficulty.addEventListener("change", () => {
-    const oldDefault = normalBattleTime(previousDifficulty);
-    const nextDefault = normalBattleTime(difficulty.value);
-    if (Number(timeSelect.value) === oldDefault) timeSelect.value = String(nextDefault);
-    previousDifficulty = difficulty.value;
-  });
+  difficulty.addEventListener("change", syncBattleTimeDefault);
 
   // The counter worker is the only Worker on this page. Inject the current
   // values into full counter runs and on-demand breakdowns without duplicating
   // the rest of the settings adapter.
   const originalPostMessage = Worker.prototype.postMessage;
   Worker.prototype.postMessage = function (message, ...rest) {
+    syncBattleTimeDefault();
     if (message && (message.mode === "counters" || message.mode === "breakdown")) {
       message = {
         ...message,
