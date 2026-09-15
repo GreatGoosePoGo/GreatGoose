@@ -33,7 +33,7 @@
   };
 })();
 
-/* Automatic raid timing: configurable rejoin distribution plus a fixed battle cutoff. */
+/* Automatic raid timing: configurable rejoin distribution plus an elapsed-time cutoff. */
 (() => {
   const DEFAULT_REJOIN = '7.5:1, 8:2, 8.5:1, 11:1';
   const BATTLE_TIMES = [27, 72, 147, 180, 222, 300];
@@ -43,6 +43,8 @@
 
   const normalBattleTime = raidDifficulty =>
     ['Tier 1', 'Tier 3', 'Tier 1 Shadow', 'Tier 3 Shadow'].includes(raidDifficulty) ? 180 : 300;
+  const allowedBattleTimes = raidDifficulty =>
+    BATTLE_TIMES.filter(seconds => seconds <= normalBattleTime(raidDifficulty));
   const params = new URL(location.href).searchParams;
 
   const rejoinLabel = document.createElement('label');
@@ -61,18 +63,22 @@
   timeLabel.append(document.createTextNode('Battle time limit'));
   const timeSelect = document.createElement('select');
   timeSelect.id = 'battle-time-limit';
-  timeSelect.title = 'Stop the battle at this elapsed time and count it as a loss if the boss is still alive.';
-  timeSelect.replaceChildren(...BATTLE_TIMES.map(seconds => {
-    const option = document.createElement('option');
-    option.value = String(seconds);
-    option.textContent = `${seconds} seconds`;
-    return option;
-  }));
+  timeSelect.title = 'Maximum elapsed battle time. The visible raid clock still starts at the normal 180 or 300 seconds.';
+  const setBattleTimeOptions = (raidDifficulty, preferred) => {
+    const allowed = allowedBattleTimes(raidDifficulty);
+    timeSelect.replaceChildren(...allowed.map(seconds => {
+      const option = document.createElement('option');
+      option.value = String(seconds);
+      option.textContent = `${seconds} seconds`;
+      return option;
+    }));
+    timeSelect.value = String(allowed.includes(preferred)
+      ? preferred
+      : normalBattleTime(raidDifficulty));
+  };
   let previousDifficulty = difficulty.value;
   const requestedTime = Number(params.get('bt'));
-  timeSelect.value = String(BATTLE_TIMES.includes(requestedTime)
-    ? requestedTime
-    : normalBattleTime(previousDifficulty));
+  setBattleTimeOptions(previousDifficulty, requestedTime);
   timeLabel.append(timeSelect);
 
   const seedLabel = document.querySelector('#random-seed')?.closest('label');
@@ -81,10 +87,11 @@
 
   const syncBattleTimeDefault = () => {
     if (difficulty.value === previousDifficulty) return;
+    const previousValue = Number(timeSelect.value);
     const oldDefault = normalBattleTime(previousDifficulty);
-    if (Number(timeSelect.value) === oldDefault) {
-      timeSelect.value = String(normalBattleTime(difficulty.value));
-    }
+    const nextDefault = normalBattleTime(difficulty.value);
+    const preferred = previousValue === oldDefault ? nextDefault : previousValue;
+    setBattleTimeOptions(difficulty.value, preferred);
     previousDifficulty = difficulty.value;
   };
   difficulty.addEventListener('change', syncBattleTimeDefault);
