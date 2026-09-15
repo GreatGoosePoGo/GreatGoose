@@ -4,18 +4,20 @@ import { createRaidEngineWithDodgeCompatibility, createRaidEngineWithDodgePolicy
 import { applyCanonicalEventOrderPolicy } from './event_order_policy.js';
 import { applySavedEnergyReturnValuePolicy } from './saved_energy_policy.js';
 import { applyCatchTankRejoinPolicy } from './catch_tank_policy.js';
+import { applyRejoinTimeDistributionPolicy } from './rejoin_time.js';
 import type { CalculatorEntry, RaidConfig } from './types.js';
 
 /**
  * Automatic raid simulation used by the raid calculator, batch simulations and
  * raid-counter rankings. Every automatic caller gets exactly the same event,
- * dodge, hot-swap and catch-tank semantics through this one entry point.
+ * dodge, hot-swap, catch-tank and rejoin-time semantics through this one entry point.
  */
 export function createAutomaticRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) {
     const engine = createRaidEngineWithDodgePolicy(input, catalog);
     applyCanonicalEventOrderPolicy(engine);
     applySavedEnergyReturnValuePolicy(engine);
     applyCatchTankRejoinPolicy(engine);
+    applyRejoinTimeDistributionPolicy(engine, input.rejoin_time_distribution);
     return engine;
 }
 
@@ -53,7 +55,7 @@ export function createReplayRaidEngine(
 
 /**
  * Manual turn-by-turn battles deliberately use the unmodified core mechanics:
- * the player supplies dodge/switch decisions, so no automatic policy is applied.
+ * the player supplies dodge/switch/rejoin decisions, so no automatic policy is applied.
  */
 export function createManualRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) {
     return createRaidEngine(input, catalog);
