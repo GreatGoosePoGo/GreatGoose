@@ -22,10 +22,25 @@ test('counter default is a fixed 7.5 second rejoin', () => {
   assert.deepEqual(parseRejoinTimeInput(DEFAULT_COUNTER_REJOIN_INPUT), [[7.5, 1]]);
 });
 
+test('comma-separated times use equal weights', () => {
+  assert.deepEqual(
+    parseRejoinTimeInput('7.5, 8, 8.5'),
+    [[7.5, 1], [8, 1], [8.5, 1]],
+  );
+  assert.equal(meanRejoinTime(parseRejoinTimeInput('7.5, 8, 8.5')), 8);
+});
+
 test('weights do not need to sum to one and braces are accepted', () => {
   assert.deepEqual(
     parseRejoinTimeInput('{7.0: 25, 7.5: 50, 8.0: 25}'),
     [[7, 25], [7.5, 50], [8, 25]],
+  );
+});
+
+test('weighted and unweighted syntax cannot be mixed', () => {
+  assert.throws(
+    () => parseRejoinTimeInput('7.5:1, 8'),
+    /do not mix/i,
   );
 });
 
