@@ -1,5 +1,6 @@
 /** Browser worker for deterministic, client-side attacker rankings. */
 import {calculateRankings} from './rankings.js';
+import {withCurrentCatalogOverrides} from './catalog_overrides.js';
 import type {CalculatorEntry} from './types.js';
 
 interface ShadowAvailability {
@@ -37,7 +38,7 @@ function rankingData(): Promise<RankingData> {
                 throw new Error('Invalid Pokémon ranking data.');
             }
             return {
-                catalog,
+                catalog: withCurrentCatalogOverrides(catalog),
                 shadowFormIds: new Set(availability.form_ids),
                 legendaryDexNumbers: new Set(categories.legendary_dex_numbers),
             };
