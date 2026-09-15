@@ -33,6 +33,47 @@
   };
 })();
 
+/* Automatic raid rejoin time: one fixed value or relative weighted values. */
+(() => {
+  const DEFAULT_REJOIN = '7.5:1, 8:2, 8.5:1, 11:1';
+  const grid = document.querySelector('#simulator-view .settings-grid');
+  if (!grid) return;
+
+  const label = document.createElement('label');
+  label.append(document.createTextNode('Rejoin time'));
+  const input = document.createElement('input');
+  input.id = 'rejoin-time';
+  input.type = 'text';
+  input.autocomplete = 'off';
+  input.spellcheck = false;
+  input.placeholder = '7.5 or 7.5:1, 8:2, 8.5:1';
+  input.title = 'Enter one rejoin time in seconds, or relative weights such as 7.5:1, 8:2, 8.5:1. Weights do not need to add to 1.';
+  input.value = new URL(location.href).searchParams.get('rj') || DEFAULT_REJOIN;
+  label.append(input);
+  const seedLabel = document.querySelector('#random-seed')?.closest('label');
+  grid.insertBefore(label, seedLabel ?? null);
+
+  const originalRequest = globalThis.RaidClient.request.bind(globalThis.RaidClient);
+  globalThis.RaidClient.request = (method, payload = {}) => {
+    if (method === 'simulate') {
+      payload = {...payload, rejoin_time: input.value.trim() || DEFAULT_REJOIN};
+    }
+    return originalRequest(method, payload);
+  };
+
+  // Keep the setting on setup/result links without changing the existing v1
+  // encoded setup schema. Old links simply fall back to the new raid default.
+  window.addEventListener('DOMContentLoaded', () => {
+    if (!globalThis.RaidShareCodec?.createUrl) return;
+    const originalCreateUrl = globalThis.RaidShareCodec.createUrl.bind(globalThis.RaidShareCodec);
+    globalThis.RaidShareCodec.createUrl = (...args) => {
+      const url = new URL(originalCreateUrl(...args));
+      url.searchParams.set('rj', input.value.trim() || DEFAULT_REJOIN);
+      return url.toString();
+    };
+  });
+})();
+
 /* Test-branch dodge menu: add Smart/30%/50% and retire downtime saver. */
 (() => {
   const select = document.querySelector('#dodge-strategy');
