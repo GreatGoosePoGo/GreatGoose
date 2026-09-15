@@ -44,8 +44,11 @@ export interface RaidConfig {
     use_purified_gems?: boolean;
     /** Weighted seconds; weights are relative and do not need to sum to 1. */
     rejoin_time_distribution?: RejoinTimeDistribution;
-    /** Explicit replay preamble overrides, validated before engine creation. */
+    /** Maximum elapsed battle time. The visible raid clock still uses raid_seconds. */
+    battle_time_limit?: number;
+    /** Actual in-game raid timer, normally supplied by the raid difficulty. */
     raid_seconds?: number;
+    /** Explicit replay preamble overrides, validated before engine creation. */
     boss_hp?: number;
     boss_cpm?: number;
 }
@@ -126,7 +129,7 @@ export interface SimulationRequest {
     use_purified_gems?: boolean;
     /** A fixed number, equal-weight list, weighted list, or object of seconds to relative weight. */
     rejoin_time?: RejoinTimeInput;
-    /** Optional challenge cutoff chosen from the supported raid timer presets. */
+    /** Maximum elapsed battle time, chosen from the allowed presets for this raid timer. */
     battle_time_limit?: number;
 }
 export type ManualAction = 'wait' | 'fast' | 'charged' | 'dodge' | 'switch' | 'quit' | 'rejoin';
