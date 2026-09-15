@@ -3,7 +3,7 @@ import { createAutomaticRaidEngine } from './raid_engine_factory.js';
 import { parseSeed } from './compatibility.js';
 import {isPlayerMoveAvailable} from './move_availability.js';
 import {DEFAULT_RAID_REJOIN_INPUT, parseRejoinTimeInput} from './rejoin_time.js';
-import {parseBattleTimeLimit} from './battle_time.js';
+import {defaultBattleTimeForDifficulty, parseBattleTimeLimit} from './battle_time.js';
 import type { CalculatorEntry, RaidConfig, SimulationRequest, TeamMember } from './types.js';
 export function publicCatalog(catalog: CalculatorEntry[]) {
     return catalog.map(entry => {
@@ -134,7 +134,10 @@ export function battle_config(request: SimulationRequest, catalog: CalculatorEnt
     }
     const rejoinTimeDistribution = parseRejoinTimeInput(request.rejoin_time ?? DEFAULT_RAID_REJOIN_INPUT);
     const raidDifficulty = request.raid_difficulty ?? 'Tier 5';
-    const battleTimeLimit = request.battle_time_limit == null ? undefined : parseBattleTimeLimit(request.battle_time_limit);
+    const raidSeconds = defaultBattleTimeForDifficulty(raidDifficulty);
+    const battleTimeLimit = request.battle_time_limit == null
+        ? raidSeconds
+        : parseBattleTimeLimit(request.battle_time_limit, raidDifficulty);
     return {
         trials, random_seed: seed, raid_difficulty: raidDifficulty, boss_form_id: request.boss,
         boss_fast_move_names: fast, boss_charged_move_names: charged, player_teams: teams,
@@ -143,7 +146,8 @@ export function battle_config(request: SimulationRequest, catalog: CalculatorEnt
         party_power_groups: [...groups.values()], weather: request.weather || null, dodge_strategy: request.dodge_strategy ?? 'none', player_strategy: strategy,
         use_purified_gems: request.use_purified_gems === true,
         rejoin_time_distribution: rejoinTimeDistribution,
-        raid_seconds: battleTimeLimit,
+        raid_seconds: raidSeconds,
+        battle_time_limit: battleTimeLimit,
         catch_tank_team_indices: tankTeams, battle_log_mode: request.battle_log_mode ?? 'moves',
     };
 }
