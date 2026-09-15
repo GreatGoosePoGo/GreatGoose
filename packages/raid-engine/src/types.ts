@@ -1,4 +1,4 @@
-export type DodgeStrategy = 'none' | 'all_survivable' | 'super_effective' | 'non_resisted' | 'lethal_only' | 'downtime_saver';
+export type DodgeStrategy = 'none' | 'all_survivable' | 'super_effective' | 'non_resisted' | 'lethal_only' | 'damage_50' | 'damage_30' | 'smart';
 export type PlayerStrategy = 'no_strategy' | 'hot_swap_greedy' | 'hot_swap_cautious' | 'hot_swap_very_cautious' | 'catch_tank';
 export type RaidDifficulty = 'Tier 1' | 'Tier 3' | 'Tier 4' | 'Tier 5' | 'Mega' | 'Mega Legendary' | 'Super Mega' | 'Elite' | 'Primal' | 'Tier 1 Shadow' | 'Tier 3 Shadow' | 'Tier 5 Shadow';
 export type Weather = null | 'Sunny/Clear' | 'Rainy' | 'Partly Cloudy' | 'Cloudy' | 'Windy' | 'Snow' | 'Fog';

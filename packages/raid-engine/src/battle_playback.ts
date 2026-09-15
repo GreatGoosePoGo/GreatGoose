@@ -3,7 +3,7 @@ import * as py from "./compatibility.js";
 import { PythonRandom } from "./random.js";
 import { re } from "./text.js";
 import { parse_replay_text } from "./battle_replay.js";
-import { createRaidEngine } from "./super_mega_raid_simulator.js";
+import { createReplayRaidEngine } from "./raid_engine_factory.js";
 import type { CalculatorEntry } from "./types.js";
 /** Reconstruct compact raid replays with a private TypeScript battle engine.
  * Generated replays recover original event ordering only when both actions and
@@ -469,7 +469,7 @@ export function build_playback(text: string, catalog: CalculatorEntry[]): Record
             ...(boss.name ? { name: boss.name } : {}), attack: boss.base_attack, defense: boss.base_defense,
             types: boss.types,
         };
-    const engine = createRaidEngine(config, catalog);
+    const engine = createReplayRaidEngine(config, catalog);
     if (engine.RAID_SECONDS > 3600)
         throw new Error('Replay timer must be at most 3600 seconds.');
     engine.validate_settings();
