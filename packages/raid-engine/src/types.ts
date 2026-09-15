@@ -124,7 +124,9 @@ export interface SimulationRequest {
     player_strategy?: PlayerStrategy;
     battle_log_mode?: 'none' | 'moves' | 'full';
     use_purified_gems?: boolean;
-    /** A fixed number, "7.5:1, 8:2", or an object of seconds to relative weight. */
+    /** A fixed number, equal-weight list, weighted list, or object of seconds to relative weight. */
     rejoin_time?: RejoinTimeInput;
+    /** Optional challenge cutoff chosen from the supported raid timer presets. */
+    battle_time_limit?: number;
 }
 export type ManualAction = 'wait' | 'fast' | 'charged' | 'dodge' | 'switch' | 'quit' | 'rejoin';
