@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {createAutomaticRaidEngine} from '../../build/raid_engine_factory.js';
+import {createAutomaticRaidEngine, createManualRaidEngine} from '../../build/raid_engine_factory.js';
+import {createTurnBattle} from '../../build/turn_battle.js';
 import {
   parseRejoinTimeInput,
   meanRejoinTime,
@@ -11,10 +12,12 @@ import {
 } from '../../build/rejoin_time.js';
 import {
   BATTLE_TIME_LIMITS,
+  battleTimeLimitsForDifficulty,
   defaultBattleTimeForDifficulty,
   parseBattleTimeLimit,
   setAutomaticBattleTimeOverride,
 } from '../../build/battle_time.js';
+import {PythonRandom} from '../../build/random.js';
 
 const catalog = JSON.parse(readFileSync(new URL('../../simulator/calculator_data.json', import.meta.url)));
 
@@ -92,35 +95,66 @@ test('configured rejoin time changes the automatic raid scheduler', () => {
   assert.equal(rejoin[0], 16);
 });
 
-test('battle time presets and normal difficulty defaults are fixed', () => {
+test('180 second raids omit 222 and 300 second challenge limits', () => {
   assert.deepEqual([...BATTLE_TIME_LIMITS], [27, 72, 147, 180, 222, 300]);
-  assert.equal(defaultBattleTimeForDifficulty('Tier 1'), 180);
+  assert.deepEqual([...battleTimeLimitsForDifficulty('Tier 3')], [27, 72, 147, 180]);
+  assert.deepEqual([...battleTimeLimitsForDifficulty('Tier 5')], [27, 72, 147, 180, 222, 300]);
   assert.equal(defaultBattleTimeForDifficulty('Tier 3 Shadow'), 180);
-  assert.equal(defaultBattleTimeForDifficulty('Tier 4'), 300);
   assert.equal(defaultBattleTimeForDifficulty('Tier 5'), 300);
-  assert.equal(parseBattleTimeLimit('72'), 72);
-  assert.throws(() => parseBattleTimeLimit(75), /one of/);
+  assert.equal(parseBattleTimeLimit('72', 'Tier 3'), 72);
+  assert.throws(() => parseBattleTimeLimit(222, 'Tier 3'), /27, 72, 147, 180/);
+  assert.equal(parseBattleTimeLimit(222, 'Tier 5'), 222);
 });
 
-test('configured battle time changes the automatic cutoff and replay timer metadata', () => {
-  const engine = createAutomaticRaidEngine(engineConfig({raid_seconds: 27}), catalog);
-  assert.equal(engine.RAID_SECONDS, 27);
+test('72 second challenge on a 300 second raid ends with 228 seconds on the real clock', () => {
+  const engine = createAutomaticRaidEngine(engineConfig({
+    raid_difficulty: 'Tier 5',
+    raid_seconds: 300,
+    battle_time_limit: 72,
+  }), catalog);
+  assert.equal(engine.RAID_SECONDS, 300);
+  assert.equal(engine.BATTLE_TIME_LIMIT, 72);
   const simulation = engine.createSimulation({detailed: true});
   const result = simulation.run();
-  assert.equal(result.finish_time, 27);
+  assert.equal(result.finish_time, 72);
   assert.equal(result.won, false);
+  assert.equal(engine.RAID_SECONDS - result.finish_time, 228);
   const replay = engine.render_battle_replay(simulation, result, engine.RANDOM_SEED);
-  assert.match(replay, /Raid difficulty: Tier 3; .*timer 27s/);
+  assert.match(replay, /Raid difficulty: Tier 5; .*timer 300s/);
 });
 
-test('counter-style automatic battle time override reaches the shared engine factory', () => {
+test('counter-style cutoff override preserves the raid timer', () => {
   setAutomaticBattleTimeOverride(72);
   try {
-    const engine = createAutomaticRaidEngine(engineConfig(), catalog);
-    assert.equal(engine.RAID_SECONDS, 72);
+    const engine = createAutomaticRaidEngine(engineConfig({raid_seconds: 180}), catalog);
+    assert.equal(engine.RAID_SECONDS, 180);
+    assert.equal(engine.BATTLE_TIME_LIMIT, 72);
   } finally {
     setAutomaticBattleTimeOverride(undefined);
   }
+});
+
+test('turn-by-turn shows the real clock while stopping at the elapsed challenge limit', () => {
+  const engine = createManualRaidEngine(engineConfig({
+    raid_difficulty: 'Tier 5',
+    raid_seconds: 300,
+    battle_time_limit: 72,
+    battle_log_mode: 'full',
+  }), catalog);
+  const ManualSimulation = createTurnBattle(engine).ManualSimulation;
+  const sim = new ManualSimulation(
+    Object.values(engine.BOSS_FAST_MOVES)[0],
+    Object.values(engine.BOSS_CHARGED_MOVES)[0],
+    new PythonRandom(engine.RANDOM_SEED),
+  );
+  assert.equal(sim.snapshot().remaining, 300);
+  while (!sim.finished) sim.advance('wait', null, false);
+  const snapshot = sim.snapshot();
+  assert.equal(snapshot.elapsed, 72);
+  assert.equal(snapshot.remaining, 228);
+  assert.equal(snapshot.status, 'time_expired');
+  assert.equal(snapshot.raid_timer, 300);
+  assert.equal(snapshot.battle_time_limit, 72);
 });
 
 test('invalid rejoin granularity and nonpositive weights are rejected', () => {
