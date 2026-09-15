@@ -4,6 +4,7 @@ import type {CalculatorEntry, CalculatorMove, RaidConfig} from './types.js';
  * Current announced data that is newer than the pinned calculator export.
  * Keep these overrides small and remove them once calculator_data.json catches up.
  */
+export const BRAVE_BIRD_PLUS_POWERS: [number, number, number, number] = [150, 165, 180, 195];
 export const BRAVE_BIRD_PLUS: CalculatorMove = {
     id: 'BRAVE_BIRD_PLUS',
     name: 'Brave Bird+',
@@ -11,7 +12,7 @@ export const BRAVE_BIRD_PLUS: CalculatorMove = {
     energy: -100,
     duration_ms: 2000,
     type: 'flying',
-    plus_powers: [150, 165, 180, 195],
+    plus_powers: [...BRAVE_BIRD_PLUS_POWERS],
 };
 
 const STARAPTOR_MEGA_FORM_ID = 'STARAPTOR_MEGA';
@@ -20,7 +21,7 @@ const STARAPTOR_BASE_FORM_ID = 'STARAPTOR';
 function currentMegaStaraptor(base: CalculatorEntry, existing?: CalculatorEntry): CalculatorEntry {
     const plusMoves = [
         ...(existing?.mega_charged_moves ?? []).filter(move => move.name !== BRAVE_BIRD_PLUS.name),
-        {...BRAVE_BIRD_PLUS, plus_powers: [...BRAVE_BIRD_PLUS.plus_powers!]},
+        {...BRAVE_BIRD_PLUS, plus_powers: [...BRAVE_BIRD_PLUS_POWERS]},
     ];
     return {
         ...(existing ?? base),
@@ -57,7 +58,7 @@ export function applyCurrentEngineMoveOverrides(engine: any, input: RaidConfig):
         Math.abs(BRAVE_BIRD_PLUS.energy),
         'Flying',
         false,
-        [...BRAVE_BIRD_PLUS.plus_powers],
+        [...BRAVE_BIRD_PLUS_POWERS],
     );
 
     // The older core's private +move map predates Mega Staraptor. API requests
