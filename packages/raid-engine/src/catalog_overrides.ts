@@ -1,9 +1,13 @@
+import {RELEASED_MEGA_PLUS_FORM_IDS} from './rankings.js';
 import type {CalculatorEntry, CalculatorMove, RaidConfig} from './types.js';
 
 /**
  * Current announced data that is newer than the pinned calculator export.
  * Keep these overrides small and remove them once calculator_data.json catches up.
  */
+const STARAPTOR_MEGA_FORM_ID = 'STARAPTOR_MEGA';
+(RELEASED_MEGA_PLUS_FORM_IDS as Set<string>).add(STARAPTOR_MEGA_FORM_ID);
+
 export const BRAVE_BIRD_PLUS_POWERS: [number, number, number, number] = [150, 165, 180, 195];
 export const BRAVE_BIRD_PLUS: CalculatorMove = {
     id: 'BRAVE_BIRD_PLUS',
@@ -15,7 +19,6 @@ export const BRAVE_BIRD_PLUS: CalculatorMove = {
     plus_powers: [...BRAVE_BIRD_PLUS_POWERS],
 };
 
-const STARAPTOR_MEGA_FORM_ID = 'STARAPTOR_MEGA';
 const STARAPTOR_BASE_FORM_ID = 'STARAPTOR';
 
 function currentMegaStaraptor(base: CalculatorEntry, existing?: CalculatorEntry): CalculatorEntry {
