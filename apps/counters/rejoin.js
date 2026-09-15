@@ -10,6 +10,8 @@
 
   const normalBattleTime = raidDifficulty =>
     ["Tier 1", "Tier 3", "Tier 1 Shadow", "Tier 3 Shadow"].includes(raidDifficulty) ? 180 : 300;
+  const allowedBattleTimes = raidDifficulty =>
+    BATTLE_TIMES.filter(seconds => seconds <= normalBattleTime(raidDifficulty));
   const params = new URL(location.href).searchParams;
 
   const rejoinLabel = document.createElement("label");
@@ -31,22 +33,27 @@
   timeLabel.append(document.createTextNode("Battle time limit"));
   const timeSelect = document.createElement("select");
   timeSelect.id = "counter-battle-time";
-  timeSelect.title = "Stop each simulated battle at this elapsed time and count it as a loss if the boss is still alive.";
-  timeSelect.replaceChildren(...BATTLE_TIMES.map(seconds => new Option(`${seconds} seconds`, String(seconds))));
+  timeSelect.title = "Maximum elapsed battle time. The visible raid clock still starts at the normal 180 or 300 seconds.";
+  const setBattleTimeOptions = (raidDifficulty, preferred) => {
+    const allowed = allowedBattleTimes(raidDifficulty);
+    timeSelect.replaceChildren(...allowed.map(seconds => new Option(`${seconds} seconds`, String(seconds))));
+    timeSelect.value = String(allowed.includes(preferred)
+      ? preferred
+      : normalBattleTime(raidDifficulty));
+  };
   let previousDifficulty = difficulty.value;
   const requestedTime = Number(params.get("battleTime"));
-  timeSelect.value = String(BATTLE_TIMES.includes(requestedTime)
-    ? requestedTime
-    : normalBattleTime(previousDifficulty));
+  setBattleTimeOptions(previousDifficulty, requestedTime);
   timeLabel.append(timeSelect);
   grid.append(timeLabel);
 
   const syncBattleTimeDefault = () => {
     if (difficulty.value === previousDifficulty) return;
+    const previousValue = Number(timeSelect.value);
     const oldDefault = normalBattleTime(previousDifficulty);
-    if (Number(timeSelect.value) === oldDefault) {
-      timeSelect.value = String(normalBattleTime(difficulty.value));
-    }
+    const nextDefault = normalBattleTime(difficulty.value);
+    const preferred = previousValue === oldDefault ? nextDefault : previousValue;
+    setBattleTimeOptions(difficulty.value, preferred);
     previousDifficulty = difficulty.value;
   };
 
