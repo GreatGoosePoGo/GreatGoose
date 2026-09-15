@@ -4,9 +4,10 @@ import { parseSeed } from './compatibility.js';
 import {isPlayerMoveAvailable} from './move_availability.js';
 import {DEFAULT_RAID_REJOIN_INPUT, parseRejoinTimeInput} from './rejoin_time.js';
 import {defaultBattleTimeForDifficulty, parseBattleTimeLimit} from './battle_time.js';
+import {withCurrentCatalogOverrides} from './catalog_overrides.js';
 import type { CalculatorEntry, RaidConfig, SimulationRequest, TeamMember } from './types.js';
 export function publicCatalog(catalog: CalculatorEntry[]) {
-    return catalog.map(entry => {
+    return withCurrentCatalogOverrides(catalog).map(entry => {
         const fast = [...entry.fast_moves, ...(entry.exclusive_fast_moves || [])];
         const charged = [...entry.charged_moves, ...(entry.exclusive_charged_moves || []), ...(entry.mega_charged_moves || [])];
         const shadowFast = fast.filter(move => isPlayerMoveAvailable(move, {shadow: true}));
