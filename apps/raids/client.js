@@ -33,42 +33,94 @@
   };
 })();
 
-/* Automatic raid rejoin time: fixed, equal-weight list, or weighted distribution. */
+/* Automatic raid timing: configurable rejoin distribution plus a fixed battle cutoff. */
 (() => {
   const DEFAULT_REJOIN = '7.5:1, 8:2, 8.5:1, 11:1';
+  const BATTLE_TIMES = [27, 72, 147, 180, 222, 300];
   const grid = document.querySelector('#simulator-view .settings-grid');
-  if (!grid) return;
+  const difficulty = document.querySelector('#raid-difficulty');
+  if (!grid || !difficulty) return;
 
-  const label = document.createElement('label');
-  label.append(document.createTextNode('Rejoin time'));
-  const input = document.createElement('input');
-  input.id = 'rejoin-time';
-  input.type = 'text';
-  input.autocomplete = 'off';
-  input.spellcheck = false;
-  input.placeholder = '7.5, 8, 8.5 or 7.5:1, 8:2, 8.5:1';
-  input.title = 'Enter one time, a comma-separated equal-probability list such as 7.5, 8, 8.5, or give every time a relative weight such as 7.5:1, 8:2, 8.5:1. Do not mix weighted and unweighted entries.';
-  input.value = new URL(location.href).searchParams.get('rj') || DEFAULT_REJOIN;
-  label.append(input);
+  const normalBattleTime = raidDifficulty =>
+    ['Tier 1', 'Tier 3', 'Tier 1 Shadow', 'Tier 3 Shadow'].includes(raidDifficulty) ? 180 : 300;
+  const params = new URL(location.href).searchParams;
+
+  const rejoinLabel = document.createElement('label');
+  rejoinLabel.append(document.createTextNode('Rejoin time'));
+  const rejoinInput = document.createElement('input');
+  rejoinInput.id = 'rejoin-time';
+  rejoinInput.type = 'text';
+  rejoinInput.setAttribute('list', 'rejoin-time-presets');
+  rejoinInput.autocomplete = 'off';
+  rejoinInput.spellcheck = false;
+  rejoinInput.placeholder = '7.5, 8, 8.5 or 7.5:1, 8:2, 8.5:1';
+  rejoinInput.title = 'Enter one time, a comma-separated equal-probability list such as 7.5, 8, 8.5, or give every time a relative weight such as 7.5:1, 8:2, 8.5:1. Do not mix weighted and unweighted entries.';
+  rejoinInput.value = params.get('rj') || DEFAULT_REJOIN;
+  const rejoinPresets = document.createElement('datalist');
+  rejoinPresets.id = 'rejoin-time-presets';
+  [
+    '7.5',
+    '7.5, 8, 8.5',
+    DEFAULT_REJOIN,
+  ].forEach(value => {
+    const option = document.createElement('option');
+    option.value = value;
+    rejoinPresets.append(option);
+  });
+  rejoinLabel.append(rejoinInput, rejoinPresets);
+
+  const timeLabel = document.createElement('label');
+  timeLabel.append(document.createTextNode('Battle time limit'));
+  const timeSelect = document.createElement('select');
+  timeSelect.id = 'battle-time-limit';
+  timeSelect.title = 'Stop the battle at this elapsed time and count it as a loss if the boss is still alive.';
+  timeSelect.replaceChildren(...BATTLE_TIMES.map(seconds => {
+    const option = document.createElement('option');
+    option.value = String(seconds);
+    option.textContent = `${seconds} seconds`;
+    return option;
+  }));
+  let previousDifficulty = difficulty.value;
+  const requestedTime = Number(params.get('bt'));
+  timeSelect.value = String(BATTLE_TIMES.includes(requestedTime)
+    ? requestedTime
+    : normalBattleTime(previousDifficulty));
+  timeLabel.append(timeSelect);
+
   const seedLabel = document.querySelector('#random-seed')?.closest('label');
-  grid.insertBefore(label, seedLabel ?? null);
+  grid.insertBefore(rejoinLabel, seedLabel ?? null);
+  grid.insertBefore(timeLabel, seedLabel ?? null);
+
+  difficulty.addEventListener('change', () => {
+    const oldDefault = normalBattleTime(previousDifficulty);
+    const nextDefault = normalBattleTime(difficulty.value);
+    if (Number(timeSelect.value) === oldDefault) timeSelect.value = String(nextDefault);
+    previousDifficulty = difficulty.value;
+  });
 
   const originalRequest = globalThis.RaidClient.request.bind(globalThis.RaidClient);
   globalThis.RaidClient.request = (method, payload = {}) => {
     if (method === 'simulate') {
-      payload = {...payload, rejoin_time: input.value.trim() || DEFAULT_REJOIN};
+      payload = {
+        ...payload,
+        rejoin_time: rejoinInput.value.trim() || DEFAULT_REJOIN,
+        battle_time_limit: Number(timeSelect.value),
+      };
+    } else if (method === 'turn/start') {
+      payload = {...payload, battle_time_limit: Number(timeSelect.value)};
     }
     return originalRequest(method, payload);
   };
 
-  // Keep the setting on setup/result links without changing the existing v1
-  // encoded setup schema. Old links simply fall back to the new raid default.
+  // Keep advanced timing settings on setup/result links without changing the
+  // existing v1 encoded setup schema. Old links use the defaults above.
   window.addEventListener('DOMContentLoaded', () => {
     if (!globalThis.RaidShareCodec?.createUrl) return;
     const originalCreateUrl = globalThis.RaidShareCodec.createUrl.bind(globalThis.RaidShareCodec);
     globalThis.RaidShareCodec.createUrl = (...args) => {
       const url = new URL(originalCreateUrl(...args));
-      url.searchParams.set('rj', input.value.trim() || DEFAULT_REJOIN);
+      url.searchParams.set('rj', rejoinInput.value.trim() || DEFAULT_REJOIN);
+      url.searchParams.set('bt', timeSelect.value);
       return url.toString();
     };
   });
