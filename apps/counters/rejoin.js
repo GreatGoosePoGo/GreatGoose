@@ -14,8 +14,8 @@
   input.type = "text";
   input.autocomplete = "off";
   input.spellcheck = false;
-  input.placeholder = "7.5 or 7.5:1, 8:2, 8.5:1";
-  input.title = "Enter one rejoin time in seconds, or relative weights such as 7.5:1, 8:2, 8.5:1. Weights do not need to add to 1.";
+  input.placeholder = "7.5, 8, 8.5 or 7.5:1, 8:2, 8.5:1";
+  input.title = "Enter one time, a comma-separated equal-probability list such as 7.5, 8, 8.5, or give every time a relative weight such as 7.5:1, 8:2, 8.5:1. Do not mix weighted and unweighted entries.";
   input.value = new URL(location.href).searchParams.get("rejoin") || DEFAULT_REJOIN;
   label.append(input);
   grid.append(label);
