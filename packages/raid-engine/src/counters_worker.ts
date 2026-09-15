@@ -1,6 +1,9 @@
 /** Browser worker for simulation-backed counters against one raid boss. */
 import {calculateRaidCounters, raidBossCatalog} from './raid_counters.js';
 import {calculateCounterBreakdown} from './counter_breakdown.js';
+import {
+    DEFAULT_COUNTER_REJOIN_INPUT, parseRejoinTimeInput, setAutomaticRejoinTimeOverride,
+} from './rejoin_time.js';
 import type {CalculatorEntry} from './types.js';
 
 interface ShadowAvailability {
@@ -54,7 +57,7 @@ self.onmessage = async (event: MessageEvent) => {
         id, mode, bossFormId, raidDifficulty, includeMegas, includeShadows,
         includeLegendaries, megaLevel, level, friendshipMultiplier, weather,
         dodgeStrategy, playerStrategy, excludeLegacy,
-        partyPowerPlayers,
+        partyPowerPlayers, rejoinTime,
         trialsPerBossMoveset, prefilterLimit,
         bossFastMoveId, bossChargedMoveId, pick,
     } = event.data ?? {};
@@ -64,6 +67,8 @@ self.onmessage = async (event: MessageEvent) => {
             self.postMessage({id, result: {bosses: raidBossCatalog(catalog)}});
             return;
         }
+        const resolvedRejoinTime = rejoinTime ?? DEFAULT_COUNTER_REJOIN_INPUT;
+        setAutomaticRejoinTimeOverride(parseRejoinTimeInput(resolvedRejoinTime));
         const settings = {
                 bossFormId,
                 raidDifficulty,
@@ -78,6 +83,7 @@ self.onmessage = async (event: MessageEvent) => {
                 playerStrategy,
                 excludeLegacy: Boolean(excludeLegacy),
                 partyPowerPlayers,
+                rejoinTime: resolvedRejoinTime,
                 trialsPerBossMoveset,
                 prefilterLimit,
                 bossFastMoveId,
