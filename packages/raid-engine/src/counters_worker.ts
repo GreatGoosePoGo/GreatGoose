@@ -72,8 +72,11 @@ self.onmessage = async (event: MessageEvent) => {
         }
         const resolvedRejoinTime = rejoinTime ?? DEFAULT_COUNTER_REJOIN_INPUT;
         setAutomaticRejoinTimeOverride(parseRejoinTimeInput(resolvedRejoinTime));
-        const resolvedBattleTime = battleTime ?? defaultBattleTimeForDifficulty(raidDifficulty);
-        setAutomaticBattleTimeOverride(parseBattleTimeLimit(resolvedBattleTime));
+        const resolvedBattleTime = parseBattleTimeLimit(
+            battleTime ?? defaultBattleTimeForDifficulty(raidDifficulty),
+            raidDifficulty,
+        );
+        setAutomaticBattleTimeOverride(resolvedBattleTime);
         const settings = {
                 bossFormId,
                 raidDifficulty,
