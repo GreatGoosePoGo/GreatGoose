@@ -7,6 +7,7 @@ import {
 import {
     defaultBattleTimeForDifficulty, parseBattleTimeLimit, setAutomaticBattleTimeOverride,
 } from './battle_time.js';
+import {withCurrentCatalogOverrides} from './catalog_overrides.js';
 import type {CalculatorEntry} from './types.js';
 
 interface ShadowAvailability {
@@ -44,7 +45,7 @@ function counterData(): Promise<CounterData> {
                 throw new Error('Invalid Pokémon counter data.');
             }
             return {
-                catalog,
+                catalog: withCurrentCatalogOverrides(catalog),
                 shadowFormIds: new Set(availability.form_ids),
                 legendaryDexNumbers: new Set(categories.legendary_dex_numbers),
             };
