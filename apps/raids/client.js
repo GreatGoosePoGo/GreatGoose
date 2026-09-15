@@ -50,24 +50,12 @@
   const rejoinInput = document.createElement('input');
   rejoinInput.id = 'rejoin-time';
   rejoinInput.type = 'text';
-  rejoinInput.setAttribute('list', 'rejoin-time-presets');
   rejoinInput.autocomplete = 'off';
   rejoinInput.spellcheck = false;
   rejoinInput.placeholder = '7.5, 8, 8.5 or 7.5:1, 8:2, 8.5:1';
   rejoinInput.title = 'Enter one time, a comma-separated equal-probability list such as 7.5, 8, 8.5, or give every time a relative weight such as 7.5:1, 8:2, 8.5:1. Do not mix weighted and unweighted entries.';
   rejoinInput.value = params.get('rj') || DEFAULT_REJOIN;
-  const rejoinPresets = document.createElement('datalist');
-  rejoinPresets.id = 'rejoin-time-presets';
-  [
-    '7.5',
-    '7.5, 8, 8.5',
-    DEFAULT_REJOIN,
-  ].forEach(value => {
-    const option = document.createElement('option');
-    option.value = value;
-    rejoinPresets.append(option);
-  });
-  rejoinLabel.append(rejoinInput, rejoinPresets);
+  rejoinLabel.append(rejoinInput);
 
   const timeLabel = document.createElement('label');
   timeLabel.append(document.createTextNode('Battle time limit'));
@@ -91,15 +79,19 @@
   grid.insertBefore(rejoinLabel, seedLabel ?? null);
   grid.insertBefore(timeLabel, seedLabel ?? null);
 
-  difficulty.addEventListener('change', () => {
+  const syncBattleTimeDefault = () => {
+    if (difficulty.value === previousDifficulty) return;
     const oldDefault = normalBattleTime(previousDifficulty);
-    const nextDefault = normalBattleTime(difficulty.value);
-    if (Number(timeSelect.value) === oldDefault) timeSelect.value = String(nextDefault);
+    if (Number(timeSelect.value) === oldDefault) {
+      timeSelect.value = String(normalBattleTime(difficulty.value));
+    }
     previousDifficulty = difficulty.value;
-  });
+  };
+  difficulty.addEventListener('change', syncBattleTimeDefault);
 
   const originalRequest = globalThis.RaidClient.request.bind(globalThis.RaidClient);
   globalThis.RaidClient.request = (method, payload = {}) => {
+    syncBattleTimeDefault();
     if (method === 'simulate') {
       payload = {
         ...payload,
@@ -118,6 +110,7 @@
     if (!globalThis.RaidShareCodec?.createUrl) return;
     const originalCreateUrl = globalThis.RaidShareCodec.createUrl.bind(globalThis.RaidShareCodec);
     globalThis.RaidShareCodec.createUrl = (...args) => {
+      syncBattleTimeDefault();
       const url = new URL(originalCreateUrl(...args));
       url.searchParams.set('rj', rejoinInput.value.trim() || DEFAULT_REJOIN);
       url.searchParams.set('bt', timeSelect.value);
