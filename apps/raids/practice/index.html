@@ -26,6 +26,16 @@
     <div id="practice-intro" class="practice-intro">
       <h2>Set up a practice raid</h2>
       <p>Choose a boss and up to six Pokémon, then play the raid in real time. You control Player 1; the boss attacks automatically. Solo practice has no Party Power.</p>
+      <details class="practice-glitches">
+        <summary>Current glitches <span>Optional · all off by default</span></summary>
+        <p>Choose which glitches to practise with. Settings apply when you start an attempt.</p>
+        <label><input id="practice-glitch-phantom_relobby" type="checkbox"> <strong>Phantom relobby</strong> — rejoining can eject you with “All your Pokémon have fainted”.</label>
+        <label class="practice-glitch-chance">Chance per rejoin (0–1) <input id="practice-glitch-phantom_chance" type="number" min="0" max="1" step="0.01" value="0.25" disabled> <span>0.25 = 25%</span></label>
+        <label><input id="practice-glitch-rejoin_snipe" type="checkbox"> <strong>Rejoin snipe</strong> — rejoin during a boss charged move and controls freeze until its unavoidable hit.</label>
+        <label><input id="practice-glitch-energy_resolve" type="checkbox"> <strong>Energy resolve bug</strong> — fast-move energy arrives one turn late; a queued fast move can commit before the charge button lights up.</label>
+        <label><input id="practice-glitch-switch_charge_freeze" type="checkbox"> <strong>Charge move freeze on switch</strong> — charged moves are blocked for the first turn after switching in.</label>
+        <label><input id="practice-glitch-remote_lag" type="checkbox"> <strong>Remote lag</strong> — add 1 second to every relobby.</label>
+      </details>
     </div>
     <!-- RAID_SETUP: generated from the simulator, keeping one shared team builder. -->
     <section id="practice-battle" hidden aria-label="Live raid practice">
@@ -72,6 +82,8 @@
         <label class="practice-auto"><input id="practice-auto" type="checkbox"> Repeat fast attacks</label>
         <label class="practice-speed">Speed <select id="practice-speed"><option value="1">1× real time</option><option value="0.5">0.5× learning</option></select></label>
       </div>
+      <p id="practice-glitches-active"></p>
+      <p class="practice-hint">To change glitches, choose Edit boss &amp; team and start a new attempt. Retry same seed keeps these settings.</p>
       <details class="practice-help"><summary>Controls &amp; practice rules</summary><p>Tap the battle screen for a fast move. Swipe left, right, up or down to dodge; dragging with a mouse also works. Buttons keep their own actions. Tap the circular charged-move button when it fills. F / Space, C and D also work; 1–6 switches teammates and P pauses.</p><p>After a faint, wait 2 seconds while the first surviving team slot enters automatically. A full team wipe sends you to the lobby. Wait out the rejoin delay, then press Rejoin raid. Team slots stay on screen throughout the battle.</p><p>One action can be queued during a move. The battle uses the simulator’s half-second manual timing and dodge window. Switching tabs pauses practice. Export a replay before leaving or reloading to keep your attempt.</p></details>
       <details><summary>Battle log</summary><pre id="practice-log" class="turn-log"></pre></details>
     </dialog>

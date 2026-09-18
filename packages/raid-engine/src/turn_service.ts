@@ -1,6 +1,7 @@
 /** Browser-owned turn sessions. Persistence is injected, keeping the engine portable. */
 import { createManualRaidEngine } from './raid_engine_factory.js';
 import { createTurnBattle, type ManualBattleOptions } from './turn_battle.js';
+import { practiceGlitches, type PracticeGlitches } from './practice_glitches.js';
 import { PythonRandom } from './random.js';
 import { battle_config, freshId } from './website_api.js';
 import type { CalculatorEntry, RaidConfig, SimulationRequest, ManualAction } from './types.js';
@@ -14,6 +15,7 @@ export interface SavedBattle {
     revision: number;
     updated: number;
     config: RaidConfig;
+    glitches?: PracticeGlitches;
     commands: Command[];
     tick: number;
     stopped: boolean;
@@ -27,16 +29,21 @@ interface Session {
 export class TurnService {
     private sessions = new Map<string, Session>();
     constructor(private catalog: CalculatorEntry[], private save: (record: SavedBattle) => Promise<void> = async () => { }, private options: ManualBattleOptions = {}) { }
-    private make(config: RaidConfig): ManualSimulation {
+    private make(config: RaidConfig, glitches?: PracticeGlitches): ManualSimulation {
         const e = createManualRaidEngine(config, this.catalog);
         e.validate_settings();
-        return new (createTurnBattle(e, this.options).ManualSimulation)(Object.values(e.BOSS_FAST_MOVES)[0], Object.values(e.BOSS_CHARGED_MOVES)[0], new PythonRandom(e.RANDOM_SEED));
+        const battle = createTurnBattle(e, {
+            ...this.options,
+            glitches: this.options.automaticFaints ? glitches : undefined,
+            rejoinTimeDistribution: this.options.automaticFaints ? config.rejoin_time_distribution : undefined,
+        });
+        return new battle.ManualSimulation(Object.values(e.BOSS_FAST_MOVES)[0], Object.values(e.BOSS_CHARGED_MOVES)[0], new PythonRandom(e.RANDOM_SEED));
     }
     private decorate(sim: ManualSimulation, id: string): Record<string, any> {
         return { ...sim.snapshot(), session_id: id, filename: `turn-battle-${id}.txt`, recording_file: 'this browser' };
     }
     private reconstruct(saved: SavedBattle): ManualSimulation {
-        const sim = this.make(saved.config), commands = new Map(saved.commands.map(c => [c.tick, c]));
+        const sim = this.make(saved.config, saved.glitches), commands = new Map(saved.commands.map(c => [c.tick, c]));
         while (sim.tick < saved.tick && !sim.finished) {
             const command = commands.get(sim.tick);
             sim.advance(command?.action ?? 'wait', command?.slot ?? null, false);
@@ -46,9 +53,10 @@ export class TurnService {
     }
     async start(request: SimulationRequest): Promise<Record<string, any>> {
         const config = battle_config({ ...request, player_strategy: 'no_strategy', dodge_strategy: 'none', battle_log_mode: 'full', simulation_count: 1, boss_moveset_mode: 'selected' }, this.catalog);
-        const sim = this.make(config), id = freshId();
+        const glitches = this.options.automaticFaints ? practiceGlitches(request.practice_glitches) : undefined;
+        const sim = this.make(config, glitches), id = freshId();
         const snapshot = this.decorate(sim, id);
-        const saved: SavedBattle = { id, revision: 0, updated: Date.now(), config, commands: [], tick: sim.tick, stopped: false, snapshot };
+        const saved: SavedBattle = { id, revision: 0, updated: Date.now(), config, glitches, commands: [], tick: sim.tick, stopped: false, snapshot };
         await this.save(structuredClone(saved));
         this.sessions.set(id, { sim, saved });
         this.trim();

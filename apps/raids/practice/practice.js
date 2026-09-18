@@ -1,5 +1,18 @@
 import {PracticeController, installBattleGestures} from './controller.js';
 const at = id => document.getElementById(`practice-${id}`);
+const glitchNames = {phantom_relobby:'Phantom relobby', rejoin_snipe:'Rejoin snipe',
+  energy_resolve:'Energy resolve bug', switch_charge_freeze:'Charge move freeze on switch', remote_lag:'Remote lag'};
+function readGlitches() {
+  const chance = at('glitch-phantom_chance');
+  if (at('glitch-phantom_relobby').checked && (!chance.value || !chance.checkValidity())) {
+    chance.reportValidity(); throw new Error('Phantom relobby chance must be between 0 and 1.');
+  }
+  return {...Object.fromEntries(Object.keys(glitchNames).map(key => [key, at(`glitch-${key}`).checked])),
+    phantom_chance: chance.value && chance.validity.valid ? Number(chance.value) : 0.25};
+}
+at('glitch-phantom_relobby').addEventListener('change', () => {
+  at('glitch-phantom_chance').disabled = !at('glitch-phantom_relobby').checked;
+});
 let resumeAfterOptions = false;
 let ready = false, editing = true, heldFast = false, lastTick = -1, lastSession = '', incomingKey = '', incomingStart = 0;
 const text = (id, value) => { const el = at(id); if (el.textContent !== value) el.textContent = value; };
@@ -48,6 +61,8 @@ function render() {
   text('player-name', `${player.slot}. ${player.name}`); types('player-types', player.types);
   meter('player-hp', player.hp, player.max_hp, true);
   text('player-numbers', `${player.hp} / ${player.max_hp} HP`);
+  const lagged = player.lag_until > battle.elapsed;
+  const chargeFrozen = player.charged_blocked_until > battle.elapsed;
   const chargeReady = player.energy >= player.charged_energy;
   at('charged').style.setProperty('--charge', `${Math.min(100, 100 * player.energy / player.charged_energy)}%`);
   at('charged').classList.toggle('ready', chargeReady);
@@ -55,7 +70,10 @@ function render() {
   text('energy-label', `${player.energy} / ${player.charged_energy}`);
   text('action', !live ? 'Attempt complete' : player.in_lobby ? `In lobby · ${available.rejoin ? 'ready to rejoin' : `ready in ${Math.max(0, player.rejoin_at - battle.elapsed).toFixed(1)}s`}` : !player.on_field ? `Fainted · ${player.next_slot ? `slot ${player.next_slot} enters` : 'entering lobby'} in ${Math.max(0, (player.fainting_until ?? battle.elapsed) - battle.elapsed).toFixed(1)}s` : player.busy_until > battle.elapsed ? `${player.current_action} · ${(player.busy_until - battle.elapsed).toFixed(1)}s remaining` : 'Ready');
   text('fast-name', player.fast); text('charged-name', player.charged);
-  at('charged').disabled = !active || !player.on_field || player.energy < player.charged_energy;
+  if (player.lobby_message && player.in_lobby) text('action', `${player.lobby_message} · Phantom relobby · ${available.rejoin ? 'ready to rejoin' : `${Math.max(0, player.rejoin_at - battle.elapsed).toFixed(1)}s to rejoin`}`);
+  else if (lagged) text('action', `Rejoin snipe · frozen until impact (${(player.lag_until - battle.elapsed).toFixed(1)}s)`);
+  else if (chargeFrozen && player.on_field && player.busy_until <= battle.elapsed) text('action', 'Switch glitch · charged move frozen this turn');
+  at('charged').disabled = !active || !player.on_field || lagged || chargeFrozen || player.energy < player.charged_energy;
   at('quit').disabled = !live || !available.quit;
   at('rejoin').hidden = !player.in_lobby;
   at('charged').hidden = player.in_lobby;
@@ -65,6 +83,9 @@ function render() {
   at('retry').disabled = controller.busy;
   at('edit').disabled = controller.busy;
   at('end').disabled = !live || controller.busy;
+  const enabledGlitches = Object.entries(glitchNames).filter(([key]) => battle.glitches?.[key])
+    .map(([key, name]) => key === 'phantom_relobby' ? `${name} (${Math.round(battle.glitches.phantom_chance * 100)}%)` : name);
+  text('glitches-active', `Current glitches: ${enabledGlitches.join(' · ') || 'off'}`);
   const pending = controller.pending;
   text('queued', pending ? `Queued: ${pending.action === 'switch' ? `switch to slot ${pending.slot}` : pending.action} · new input replaces it` : controller.repeatFast && active ? 'Repeating fast attacks when ready' : '');
   if (battle.tick !== lastTick || battle.session_id !== lastSession) {
@@ -85,7 +106,7 @@ function render() {
     button.firstElementChild.textContent = `${member.slot}. ${member.name}`;
     button.lastElementChild.textContent = member.hp <= 0 ? 'Fainted' : `${member.hp}/${member.max_hp} HP`;
     button.setAttribute('aria-pressed', String(selected));
-    button.disabled = !active || selected || member.hp <= 0 || player.in_lobby || !player.on_field;
+    button.disabled = !active || lagged || selected || member.hp <= 0 || player.in_lobby || !player.on_field;
     button.title = `${member.slot}. ${member.name} · ${member.hp}/${member.max_hp} HP · ${member.energy} energy`;
     button.setAttribute('aria-label', button.title);
   });
@@ -106,7 +127,7 @@ function edit() {
 async function start(payload) {
   if (!ready || controller.busy) return;
   try {
-    const request = payload || globalThis.RaidSetup.read({singlePlayer: true});
+    const request = payload || {...globalThis.RaidSetup.read({singlePlayer: true}), practice_glitches: readGlitches()};
     closeOptions(); status('Starting raid…');
     heldFast = false; syncRepeat();
     if (await controller.start(request)) {
@@ -183,7 +204,8 @@ window.addEventListener('pagehide', () => controller.pause());
 function canAct(action) {
   const b = controller.battle;
   if (editing || at('options').open || !controller.running || !b?.player.on_field || b.player.in_lobby) return false;
-  if (action === 'charged') return b.player.energy >= b.player.charged_energy;
+  if (b.player.lag_until > b.elapsed) return false;
+  if (action === 'charged') return !(b.player.charged_blocked_until > b.elapsed) && b.player.energy >= b.player.charged_energy;
   if (action === 'dodge') return !!b.boss.incoming;
   return true;
 }

@@ -124,3 +124,11 @@ body.practice-playing { overflow: hidden; touch-action: none; }
  .combatant-title h2 { font-size: 16px; }
 }
 @media (prefers-reduced-motion: reduce) { .practice-hp > span, .practice-charge-fill, .practice-windup > span { transition: none; } }
+
+.practice-glitches { margin-block: 16px; padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: white; }
+.practice-glitches summary { cursor: pointer; font-weight: 700; }
+.practice-glitches summary span { font-weight: 400; font-size: 13px; }
+.practice-glitches > label { display: block; margin-block: 12px; line-height: 1.5; font-weight: 400; }
+.practice-glitches input[type="checkbox"] { display: inline-block; width: auto; margin: 0 6px 0 0; vertical-align: middle; }
+.practice-glitches .practice-glitch-chance { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.practice-glitch-chance input { width: 90px; }

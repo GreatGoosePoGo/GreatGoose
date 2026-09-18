@@ -1,4 +1,5 @@
 /** Native TypeScript port of the supplied Python reference. No Python runtime is used. */
+import { practiceGlitches } from './practice_glitches.js';
 import * as py from "./compatibility.js";
 import { re } from "./text.js";
 import { seconds_to_tick } from "./text.js";
@@ -494,6 +495,11 @@ function parse_replay_text(text: string): Record<string, any> {
                 settings[py.key("use_purified_gems")] = false;
             else
                 throw new ReplayParseError(line_number, 'Purified Gems must be "use" or "none".');
+            continue;
+        }
+        if (line.startsWith('Current glitches: ')) {
+            try { settings.practice_glitches = practiceGlitches(JSON.parse(line.slice('Current glitches: '.length))); }
+            catch (error) { throw new ReplayParseError(line_number, `Invalid current glitches: ${error instanceof Error ? error.message : error}`); }
             continue;
         }
         if (py.truth(py.startswith(line, "Raid: "))) {
