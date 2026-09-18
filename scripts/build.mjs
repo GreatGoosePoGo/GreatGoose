@@ -125,6 +125,20 @@ const index = (await readFile(indexPath, 'utf8')).replace(
 );
 await writeFile(indexPath, index);
 
+// Keep a dedicated, directly loadable practice URL while sharing the setup form.
+const practicePath = join('dist', 'raids', 'practice', 'index.html');
+const setupStart = index.indexOf('      <section id="simulator-view"');
+const setupEnd = index.indexOf('      <section id="turn-view"');
+if (setupStart < 0 || setupEnd <= setupStart) throw new Error('Cannot locate the shared raid setup.');
+const practiceIndex = (await readFile(practicePath, 'utf8'))
+  .replace('<!-- RAID_SETUP: generated from the simulator, keeping one shared team builder. -->', index.slice(setupStart, setupEnd))
+  .replace(/\b(href|src)="((?:practice\/)?[a-z_-]+\.(?:css|js))(?:\?v=[^"]*)?"/g,
+    (_match, attribute, asset) => `${attribute}="${asset}?v=${version}"`);
+await writeFile(practicePath, practiceIndex);
+const practiceScriptPath = join('dist', 'raids', 'practice', 'practice.js');
+await writeFile(practiceScriptPath, (await readFile(practiceScriptPath, 'utf8'))
+  .replace("'./controller.js'", `'./controller.js?v=${version}'`));
+
 const countersClientPath = join('dist', 'counters', 'app.js');
 const countersClient = (await readFile(countersClientPath, 'utf8'))
   .replace('engine/counters_worker.js', `${engineDirectory}/counters_worker.js`);

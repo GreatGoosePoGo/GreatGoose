@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <base href="../">
+  <title>Raid Practice · Great Goose Pokémon GO</title>
+  <meta name="description" content="Practise Pokémon GO raids in your browser. Control attacks, dodges and switches using your own raid team.">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="practice/practice.css">
+  <script src="client.js" defer></script>
+  <script src="pokemon_code.js" defer></script>
+  <script src="share.js" defer></script>
+  <script src="app.js" defer></script>
+  <script type="module" src="practice/practice.js"></script>
+</head>
+<body data-mode="practice">
+  <header>
+    <div><p class="eyebrow">Great Goose Pokémon GO</p><h1>Raid practice</h1></div>
+    <nav class="site-nav" aria-label="Great Goose tools">
+      <a href="../">Home</a><a href="./">Raids</a><a href="../counters/">Counters</a><a href="../rankings/">Rankings</a>
+    </nav>
+  </header>
+  <main>
+    <nav class="practice-nav" aria-label="Raid tools"><a href="./">← Raid simulator</a><span aria-current="page">Raid practice</span></nav>
+    <div id="practice-intro" class="practice-intro">
+      <h2>Set up a practice raid</h2>
+      <p>Choose a boss and up to six Pokémon, then play the raid in real time. You control Player 1; the boss attacks automatically. Solo practice has no Party Power.</p>
+    </div>
+    <!-- RAID_SETUP: generated from the simulator, keeping one shared team builder. -->
+    <section id="practice-battle" hidden aria-label="Live raid practice">
+      <div class="practice-toolbar">
+        <button id="practice-pause" class="secondary" type="button">Pause (P)</button>
+        <button id="practice-retry" class="secondary" type="button">Retry same seed</button>
+        <button id="practice-edit" class="secondary" type="button">Edit boss &amp; team</button>
+        <button id="practice-export" class="secondary" type="button">Export replay .txt</button>
+        <button id="practice-end" class="secondary" type="button">End attempt</button>
+      </div>
+      <div class="practice-arena">
+        <div class="practice-topline"><span id="practice-state">LIVE PRACTICE</span><span id="practice-seed"></span></div>
+        <div class="practice-clock" role="timer" aria-label="Time remaining"><strong id="practice-time">300</strong><span>seconds left</span></div>
+        <section class="practice-boss" aria-label="Raid boss">
+          <div class="combatant-title"><h2 id="practice-boss-name"></h2><span id="practice-boss-types"></span></div>
+          <div class="practice-hp" id="practice-boss-hp" role="progressbar" aria-label="Boss HP" aria-valuemin="0"><span></span></div>
+          <p id="practice-boss-numbers" class="practice-numbers"></p>
+          <div id="practice-warning" class="practice-warning"><strong id="practice-incoming">Watch the boss</strong><span id="practice-hit-time"></span><div class="practice-windup"><span id="practice-windup"></span></div></div>
+        </section>
+        <div id="practice-feedback" class="practice-feedback" role="status" aria-live="polite"></div>
+        <section class="practice-player" aria-label="Active Pokémon">
+          <div class="combatant-title"><h2 id="practice-player-name"></h2><span id="practice-player-types"></span></div>
+          <div class="practice-hp" id="practice-player-hp" role="progressbar" aria-label="Your Pokémon HP" aria-valuemin="0"><span></span></div>
+          <p id="practice-player-numbers" class="practice-numbers"></p>
+          <div class="practice-energy" id="practice-energy" role="progressbar" aria-label="Energy" aria-valuemin="0" aria-valuemax="100"><span></span><i id="practice-energy-cost"></i></div>
+          <p id="practice-energy-label" class="practice-numbers"></p>
+          <p id="practice-action" class="practice-action"></p>
+        </section>
+        <div class="practice-actions" aria-label="Battle controls">
+          <button id="practice-fast" type="button"><strong>Fast attack</strong><span id="practice-fast-name"></span><kbd>F / Space</kbd></button>
+          <button id="practice-charged" type="button"><strong>Charged attack</strong><span id="practice-charged-name"></span><kbd>C</kbd></button>
+          <button id="practice-dodge" type="button"><strong>Dodge</strong><span>Evade the incoming hit</span><kbd>D</kbd></button>
+        </div>
+        <p id="practice-queued" class="practice-queued" aria-live="polite"></p>
+      </div>
+      <div class="practice-bottom">
+        <div class="practice-toolbar">
+          <label class="practice-auto"><input id="practice-auto" type="checkbox"> Repeat fast attacks</label>
+          <label class="practice-speed">Speed <select id="practice-speed"><option value="1">1× real time</option><option value="0.5">0.5× learning</option></select></label>
+          <button id="practice-quit" class="secondary" type="button">Quit to lobby</button>
+          <button id="practice-rejoin" class="primary" type="button" hidden>Rejoin raid</button>
+        </div>
+        <h3>Your team <span class="practice-hint">Click a slot or press 1–6 to switch</span></h3>
+        <div id="practice-team" class="practice-team"></div>
+        <section id="practice-result" class="panel" hidden aria-live="polite"><h2 id="practice-result-title"></h2><p id="practice-result-stats"></p><p>Retry the same seed to compare your decisions, or edit your team for a new attempt.</p></section>
+        <details class="practice-help"><summary>Controls &amp; practice rules</summary><p>Tap Fast attack or hold F / Space to keep attacking. C uses your charged move; D dodges. Press 1–6 to switch, and P to pause. One action can be queued during a move; a new input replaces it. An attack cannot be cancelled halfway through.</p><p>The battle advances in 0.5-second steps using the simulator’s manual battle rules, including its dodge window. This is a practice model, not an exact recreation of the Pokémon GO app. Choose a surviving slot after a faint, or rejoin after your whole team faints. Switching tabs pauses practice.</p><p>Attempts stay in this page until you leave or reload. Export a replay to keep it and open it in the simulator’s Battle replay tab.</p></details>
+        <details><summary>Battle log</summary><pre id="practice-log" class="turn-log"></pre></details>
+      </div>
+    </section>
+    <p id="practice-status" role="status" aria-live="polite">Loading Pokémon data…</p>
+  </main>
+</body>
+</html>

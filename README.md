@@ -245,3 +245,28 @@ an independent setting. Hidden Power uses its best legal type for the matchup,
 shown beside its name. Each form/Shadow variant retains one best moveset under
 the existing Ideal DPS selection rule. The mode is preserved in the page URL and
 cached separately. The type buttons occupy one horizontally scrollable row.
+
+### Real-time raid practice
+
+Open `/raids/practice/`, or use **Raid practice** on `/raids/` to carry your
+configured boss, moves, and team into practice. The shared setup builder uses
+Player 1 only and disables Party Power. Choose **Start practice** to begin.
+
+- Click/tap fast attack, charged attack, or dodge; hold **F / Space** for repeated
+  fast attacks, press **C** to charge, **D** to dodge, and **1–6** to switch slots.
+- **P** pauses/resumes. Practice also pauses when the window loses focus or the
+  browser falls behind. **0.5× learning** slows the clock without changing combat.
+- A single action can be queued during recovery. A new command replaces it;
+  pending commands clear on faint, switch, lobby entry, or pause.
+- Choose a surviving teammate after a faint. After a wipe, wait out the lobby
+  delay and press **Rejoin raid**. **Retry same seed** resets the same scenario.
+- Export a `.txt` replay before leaving/reloading to keep an attempt. Load it in
+  the existing Battle replay tab. Practice does not autosave into turn sessions.
+
+Practice uses the canonical `TurnService` and its half-second manual battle
+model, including its existing dodge semantics. `practice/*` worker requests use
+an independent in-memory service; the saved turn-by-turn mode is unchanged.
+The build composes the practice page from its shell and the simulator's setup
+markup, versions all its scripts/styles, and retains static GitHub Pages routing.
+Targeted verification: `npm run build` then
+`node --test tests/typescript/practice.test.mjs`.
