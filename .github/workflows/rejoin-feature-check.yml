@@ -1,0 +1,31 @@
+name: Rejoin feature branch check
+
+on:
+  push:
+    branches: ["feature/rejoin-time-distribution"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Build and validate static site
+        run: npm run build
+      - name: Rejoin distribution regression
+        run: node --test tests/typescript/rejoin_time_distribution.test.mjs
+      - name: Catch-tank rejoin regression
+        run: node --test tests/typescript/catch_tank_rejoin.test.mjs
+      - name: Mega Staraptor regression
+        run: node --test tests/typescript/mega_staraptor.test.mjs
