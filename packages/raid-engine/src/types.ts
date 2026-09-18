@@ -2,6 +2,8 @@ export type DodgeStrategy = 'none' | 'all_survivable' | 'super_effective' | 'non
 export type PlayerStrategy = 'no_strategy' | 'hot_swap_greedy' | 'hot_swap_cautious' | 'hot_swap_very_cautious' | 'catch_tank';
 export type RaidDifficulty = 'Tier 1' | 'Tier 3' | 'Tier 4' | 'Tier 5' | 'Mega' | 'Mega Legendary' | 'Super Mega' | 'Elite' | 'Primal' | 'Tier 1 Shadow' | 'Tier 3 Shadow' | 'Tier 5 Shadow';
 export type Weather = null | 'Sunny/Clear' | 'Rainy' | 'Partly Cloudy' | 'Cloudy' | 'Windy' | 'Snow' | 'Fog';
+export type RejoinTimeDistribution = [seconds: number, weight: number][];
+export type RejoinTimeInput = string | number | Record<string, number>;
 export type TeamMember = [
     species: string,
     fast: string,
@@ -40,8 +42,13 @@ export interface RaidConfig {
     player_strategy?: PlayerStrategy;
     battle_log_mode?: 'none' | 'moves' | 'full';
     use_purified_gems?: boolean;
-    /** Explicit replay preamble overrides, validated before engine creation. */
+    /** Weighted seconds; weights are relative and do not need to sum to 1. */
+    rejoin_time_distribution?: RejoinTimeDistribution;
+    /** Maximum elapsed battle time. The visible raid clock still uses raid_seconds. */
+    battle_time_limit?: number;
+    /** Actual in-game raid timer, normally supplied by the raid difficulty. */
     raid_seconds?: number;
+    /** Explicit replay preamble overrides, validated before engine creation. */
     boss_hp?: number;
     boss_cpm?: number;
 }
@@ -120,5 +127,9 @@ export interface SimulationRequest {
     player_strategy?: PlayerStrategy;
     battle_log_mode?: 'none' | 'moves' | 'full';
     use_purified_gems?: boolean;
+    /** A fixed number, equal-weight list, weighted list, or object of seconds to relative weight. */
+    rejoin_time?: RejoinTimeInput;
+    /** Maximum elapsed battle time, chosen from the allowed presets for this raid timer. */
+    battle_time_limit?: number;
 }
 export type ManualAction = 'wait' | 'fast' | 'charged' | 'dodge' | 'switch' | 'quit' | 'rejoin';

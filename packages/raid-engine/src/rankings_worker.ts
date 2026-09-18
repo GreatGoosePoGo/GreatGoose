@@ -1,6 +1,10 @@
 /** Browser worker for deterministic, client-side attacker rankings. */
-import {calculateRankings} from './rankings.js';
+import {calculateRankings, RELEASED_MEGA_PLUS_FORM_IDS} from './rankings.js';
+import {withCurrentCatalogOverrides} from './catalog_overrides.js';
 import type {CalculatorEntry} from './types.js';
+
+// Mega Staraptor is newer than the pinned calculator snapshot.
+(RELEASED_MEGA_PLUS_FORM_IDS as Set<string>).add('STARAPTOR_MEGA');
 
 interface ShadowAvailability {
     form_ids: string[];
@@ -37,7 +41,7 @@ function rankingData(): Promise<RankingData> {
                 throw new Error('Invalid Pokémon ranking data.');
             }
             return {
-                catalog,
+                catalog: withCurrentCatalogOverrides(catalog),
                 shadowFormIds: new Set(availability.form_ids),
                 legendaryDexNumbers: new Set(categories.legendary_dex_numbers),
             };

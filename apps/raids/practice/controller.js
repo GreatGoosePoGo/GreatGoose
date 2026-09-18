@@ -95,3 +95,32 @@ export class PracticeController {
     if (this.running && !this.busy) { this.deadline = this.now() + 500 / speed; this.arm(); }
   }
 }
+
+/** A drag in any direction dodges once. A swipe never also produces a fast tap. */
+export function installBattleGestures(surface, {enabled, tap, swipe}) {
+  let gesture = null;
+  const controls = 'button, a, input, select, textarea, label, summary, dialog';
+  surface.addEventListener('pointerdown', event => {
+    if (!event.isPrimary) { gesture = null; return; }
+    if (!enabled() || event.button !== 0 || event.target.closest(controls)) return;
+    gesture = {id: event.pointerId, x: event.clientX, y: event.clientY, distance: 0, swiped: false};
+    surface.setPointerCapture(event.pointerId);
+    event.preventDefault();
+  });
+  const move = event => {
+    if (!gesture || event.pointerId !== gesture.id) return;
+    gesture.distance = Math.max(gesture.distance, Math.hypot(event.clientX - gesture.x, event.clientY - gesture.y));
+    if (!gesture.swiped && gesture.distance >= 28) {
+      gesture.swiped = true;
+      if (enabled()) swipe();
+    }
+  };
+  surface.addEventListener('pointermove', move);
+  surface.addEventListener('pointerup', event => {
+    if (!gesture || event.pointerId !== gesture.id) return;
+    move(event);
+    if (!gesture.swiped && gesture.distance < 12 && enabled()) tap();
+    gesture = null;
+  });
+  for (const type of ['pointercancel', 'lostpointercapture']) surface.addEventListener(type, () => { gesture = null; });
+}

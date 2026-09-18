@@ -252,20 +252,29 @@ Open `/raids/practice/`, or use **Raid practice** on `/raids/` to carry your
 configured boss, moves, and team into practice. The shared setup builder uses
 Player 1 only and disables Party Power. Choose **Start practice** to begin.
 
-- Click/tap fast attack, charged attack, or dodge; hold **F / Space** for repeated
-  fast attacks, press **C** to charge, **D** to dodge, and **1–6** to switch slots.
+- Tap the battle screen for a fast attack. Swipe left/right/up/down to dodge;
+  mouse drags also work. Controls consume their own taps, so a swipe or team
+  selection never accidentally triggers a fast attack. Keyboard shortcuts remain
+  **F / Space** (fast), **C** (charged), **D** (dodge), and **1–6** (team slots).
+- The circular charged-move button fills from bottom to top relative to the move's
+  energy cost, and stays disabled until enough energy is available. All six team
+  slots remain in a fixed viewport dock; secondary controls live in Settings & replay.
 - **P** pauses/resumes. Practice also pauses when the window loses focus or the
   browser falls behind. **0.5× learning** slows the clock without changing combat.
 - A single action can be queued during recovery. A new command replaces it;
   pending commands clear on faint, switch, lobby entry, or pause.
-- Choose a surviving teammate after a faint. After a wipe, wait out the lobby
-  delay and press **Rejoin raid**. **Retry same seed** resets the same scenario.
+- After a faint, the engine waits exactly **2 seconds**, then sends out the first
+  surviving slot (starting from slot 1). Inputs cannot skip this delay. If nobody
+  survives, it forces lobby entry after the faint delay. Wait out the configured
+  rejoin delay and press **Rejoin raid**. **Retry same seed** resets the scenario.
 - Export a `.txt` replay before leaving/reloading to keep an attempt. Load it in
   the existing Battle replay tab. Practice does not autosave into turn sessions.
 
 Practice uses the canonical `TurnService` and its half-second manual battle
 model, including its existing dodge semantics. `practice/*` worker requests use
-an independent in-memory service; the saved turn-by-turn mode is unchanged.
+an independent in-memory service with automatic faint replacement enabled; the
+saved turn-by-turn mode is unchanged. Practice replays record the completed faint
+transition explicitly, so playback does not add another voluntary switch delay.
 The build composes the practice page from its shell and the simulator's setup
 markup, versions all its scripts/styles, and retains static GitHub Pages routing.
 Targeted verification: `npm run build` then

@@ -29,16 +29,13 @@
     </div>
     <!-- RAID_SETUP: generated from the simulator, keeping one shared team builder. -->
     <section id="practice-battle" hidden aria-label="Live raid practice">
-      <div class="practice-toolbar">
+      <div class="practice-toolbar practice-main-toolbar">
+        <strong>Raid practice</strong>
         <button id="practice-pause" class="secondary" type="button">Pause (P)</button>
-        <button id="practice-retry" class="secondary" type="button">Retry same seed</button>
-        <button id="practice-edit" class="secondary" type="button">Edit boss &amp; team</button>
-        <button id="practice-export" class="secondary" type="button">Export replay .txt</button>
-        <button id="practice-end" class="secondary" type="button">End attempt</button>
+        <button id="practice-options-open" class="secondary" type="button">Settings &amp; replay</button>
       </div>
-      <div class="practice-arena">
-        <div class="practice-topline"><span id="practice-state">LIVE PRACTICE</span><span id="practice-seed"></span></div>
-        <div class="practice-clock" role="timer" aria-label="Time remaining"><strong id="practice-time">300</strong><span>seconds left</span></div>
+      <div class="practice-arena" id="practice-arena">
+        <div class="practice-topline"><span id="practice-state">LIVE PRACTICE</span><div class="practice-clock" role="timer" aria-label="Time remaining"><strong id="practice-time">300</strong><span>seconds left</span></div><span id="practice-seed"></span></div>
         <section class="practice-boss" aria-label="Raid boss">
           <div class="combatant-title"><h2 id="practice-boss-name"></h2><span id="practice-boss-types"></span></div>
           <div class="practice-hp" id="practice-boss-hp" role="progressbar" aria-label="Boss HP" aria-valuemin="0"><span></span></div>
@@ -50,31 +47,34 @@
           <div class="combatant-title"><h2 id="practice-player-name"></h2><span id="practice-player-types"></span></div>
           <div class="practice-hp" id="practice-player-hp" role="progressbar" aria-label="Your Pokémon HP" aria-valuemin="0"><span></span></div>
           <p id="practice-player-numbers" class="practice-numbers"></p>
-          <div class="practice-energy" id="practice-energy" role="progressbar" aria-label="Energy" aria-valuemin="0" aria-valuemax="100"><span></span><i id="practice-energy-cost"></i></div>
-          <p id="practice-energy-label" class="practice-numbers"></p>
           <p id="practice-action" class="practice-action"></p>
         </section>
         <div class="practice-actions" aria-label="Battle controls">
-          <button id="practice-fast" type="button"><strong>Fast attack</strong><span id="practice-fast-name"></span><kbd>F / Space</kbd></button>
-          <button id="practice-charged" type="button"><strong>Charged attack</strong><span id="practice-charged-name"></span><kbd>C</kbd></button>
-          <button id="practice-dodge" type="button"><strong>Dodge</strong><span>Evade the incoming hit</span><kbd>D</kbd></button>
-        </div>
-        <p id="practice-queued" class="practice-queued" aria-live="polite"></p>
-      </div>
-      <div class="practice-bottom">
-        <div class="practice-toolbar">
-          <label class="practice-auto"><input id="practice-auto" type="checkbox"> Repeat fast attacks</label>
-          <label class="practice-speed">Speed <select id="practice-speed"><option value="1">1× real time</option><option value="0.5">0.5× learning</option></select></label>
-          <button id="practice-quit" class="secondary" type="button">Quit to lobby</button>
+          <p class="practice-gesture-hint">Tap anywhere to use <strong id="practice-fast-name"></strong><br>Swipe ← → ↑ ↓ to dodge</p>
+          <button id="practice-charged" class="practice-charge" type="button" disabled aria-describedby="practice-energy-label"><span class="practice-charge-fill" aria-hidden="true"></span><strong id="practice-charged-name">Charged attack</strong><span id="practice-energy-label"></span><kbd>C</kbd></button>
           <button id="practice-rejoin" class="primary" type="button" hidden>Rejoin raid</button>
         </div>
-        <h3>Your team <span class="practice-hint">Click a slot or press 1–6 to switch</span></h3>
-        <div id="practice-team" class="practice-team"></div>
-        <section id="practice-result" class="panel" hidden aria-live="polite"><h2 id="practice-result-title"></h2><p id="practice-result-stats"></p><p>Retry the same seed to compare your decisions, or edit your team for a new attempt.</p></section>
-        <details class="practice-help"><summary>Controls &amp; practice rules</summary><p>Tap Fast attack or hold F / Space to keep attacking. C uses your charged move; D dodges. Press 1–6 to switch, and P to pause. One action can be queued during a move; a new input replaces it. An attack cannot be cancelled halfway through.</p><p>The battle advances in 0.5-second steps using the simulator’s manual battle rules, including its dodge window. This is a practice model, not an exact recreation of the Pokémon GO app. Choose a surviving slot after a faint, or rejoin after your whole team faints. Switching tabs pauses practice.</p><p>Attempts stay in this page until you leave or reload. Export a replay to keep it and open it in the simulator’s Battle replay tab.</p></details>
-        <details><summary>Battle log</summary><pre id="practice-log" class="turn-log"></pre></details>
+        <p id="practice-queued" class="practice-queued" aria-live="polite"></p>
+        <section id="practice-result" class="panel" hidden aria-live="polite"><h2 id="practice-result-title"></h2><p id="practice-result-stats"></p><p>Open Settings &amp; replay to retry, export, or edit your team.</p></section>
       </div>
+      <section class="practice-team-dock" aria-label="Your team"><h3>Your team <span class="practice-hint">Tap a slot or press 1–6</span></h3><div id="practice-team" class="practice-team"></div></section>
     </section>
+    <dialog id="practice-options" aria-labelledby="practice-options-title">
+      <div class="practice-toolbar"><h2 id="practice-options-title">Practice settings</h2><button id="practice-options-close" class="secondary" type="button">Back to battle</button></div>
+      <div class="practice-toolbar">
+        <button id="practice-retry" class="secondary" type="button">Retry same seed</button>
+        <button id="practice-edit" class="secondary" type="button">Edit boss &amp; team</button>
+        <button id="practice-export" class="secondary" type="button">Export replay .txt</button>
+        <button id="practice-end" class="secondary" type="button">End attempt</button>
+        <button id="practice-quit" class="secondary" type="button">Quit to lobby</button>
+      </div>
+      <div class="practice-toolbar">
+        <label class="practice-auto"><input id="practice-auto" type="checkbox"> Repeat fast attacks</label>
+        <label class="practice-speed">Speed <select id="practice-speed"><option value="1">1× real time</option><option value="0.5">0.5× learning</option></select></label>
+      </div>
+      <details class="practice-help"><summary>Controls &amp; practice rules</summary><p>Tap the battle screen for a fast move. Swipe left, right, up or down to dodge; dragging with a mouse also works. Buttons keep their own actions. Tap the circular charged-move button when it fills. F / Space, C and D also work; 1–6 switches teammates and P pauses.</p><p>After a faint, wait 2 seconds while the first surviving team slot enters automatically. A full team wipe sends you to the lobby. Wait out the rejoin delay, then press Rejoin raid. Team slots stay on screen throughout the battle.</p><p>One action can be queued during a move. The battle uses the simulator’s half-second manual timing and dodge window. Switching tabs pauses practice. Export a replay before leaving or reloading to keep your attempt.</p></details>
+      <details><summary>Battle log</summary><pre id="practice-log" class="turn-log"></pre></details>
+    </dialog>
     <p id="practice-status" role="status" aria-live="polite">Loading Pokémon data…</p>
   </main>
 </body>

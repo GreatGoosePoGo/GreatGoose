@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {Worker} from 'node:worker_threads';
 import {once} from 'node:events';
-import {PracticeController} from '../../apps/raids/practice/controller.js';
+import {PracticeController, installBattleGestures} from '../../apps/raids/practice/controller.js';
 
 function snapshot(extra = {}) {
   return {session_id:'test',tick:0,status:'in_progress',seed:'42',
@@ -79,17 +79,39 @@ test('practice worker handles solo combat, switch, full faint, rejoin, timeout, 
   assert.equal(b.boss.hp,beforeRetry.boss.hp);assert.equal(b.player.hp,beforeRetry.player.hp);assert.equal(b.elapsed,beforeRetry.elapsed);
   const replay=await call('replay/parse',{text:b.replay_text});assert.equal(replay.players.length,1);
   const playback=await call('replay/playback',{text:b.replay_text});assert(playback);
-  // Let a low-level team faint, then rejoin. The boss and clock keep going.
+  // Start with slot 2: a faint must return to the first survivor, not the next index.
   b=await call('practice/start',{...request,players:[{team:[{...member,level:10},{...member,level:10}]}]});
-  while(b.status==='in_progress'&&!b.player.in_lobby){
-    const slot=b.available.switch_slots[0];await step(!b.player.on_field&&slot?'switch':'wait',!b.player.on_field&&slot?slot:null);
+  await step('switch',2);
+  while(b.player.on_field) await step();
+  const faintTime=b.elapsed, replacementTime=b.player.fainting_until;
+  assert.equal(replacementTime,faintTime+2);
+  assert.equal(b.player.next_slot,1);
+  assert.deepEqual(b.available.switch_slots,[]);
+  await assert.rejects(call('practice/step',{session_id:b.session_id,expected_tick:b.tick,action:'switch',slot:1}),/cannot switch/);
+  await assert.rejects(call('practice/step',{session_id:b.session_id,expected_tick:b.tick,action:'fast'}),/Cannot fast/);
+  while(b.elapsed<replacementTime){
+    await step();
+    if(b.elapsed<replacementTime) assert.equal(b.player.on_field,false);
   }
-  assert(b.player.in_lobby);assert(b.player.faints>=2);
+  assert.equal(b.elapsed,replacementTime);assert.equal(b.player.slot,1);assert(b.player.on_field);
+  assert(b.available.fast,'no extra switch delay after two-second faint animation');
+  await step('fast');
+  for(let i=0;i<4;i++) await step();
+  const afterFaintReplay=await call('replay/playback',{text:b.replay_text});
+  assert.deepEqual(afterFaintReplay.warnings,[]);
+  const frame=afterFaintReplay.frames.at(-1);
+  assert.equal(frame.boss_hp,b.boss.hp);assert.equal(frame.players[0].hp,b.player.hp);
+  assert.equal(frame.players[0].energy,b.player.energy);
+  while(b.player.on_field) await step();
+  assert.equal(b.player.next_slot,null);
+  const lobbyTime=b.player.fainting_until;
+  while(b.elapsed<lobbyTime){await step();if(b.elapsed<lobbyTime) assert(!b.player.in_lobby);}
+  assert(b.player.in_lobby);assert.equal(b.player.faints,2);assert.deepEqual(b.available.switch_slots,[]);
   while(b.status==='in_progress')await step();assert.equal(b.status,'time_expired');assert.equal(b.remaining,0);
   await assert.rejects(step(),/already ended/);
   b=await call('practice/start',{...request,raid_difficulty:'Tier 1'});
   while(b.status==='in_progress'){
-    const action=b.available.charged?'charged':b.available.fast?'fast':b.available.rejoin?'rejoin':!b.player.on_field&&b.available.switch_slots.length?'switch':'wait';
+    const action=b.available.charged?'charged':b.available.fast?'fast':b.available.rejoin?'rejoin':'wait';
     await step(action,action==='switch'?b.available.switch_slots[0]:null);
   }
   assert.equal(b.status,'victory');assert.equal(b.boss.hp,0);
@@ -100,4 +122,21 @@ test('practice worker handles solo combat, switch, full faint, rejoin, timeout, 
   assert(dodged.player.hp>undodged.player.hp,'manual dodge reduces the incoming hit');
   assert.equal(first.tick,0);
  }finally{await worker.terminate();}
+});
+
+
+test('pointer gestures distinguish all swipe directions, taps, controls, cancellation and multitouch',()=>{
+ const handlers=new Map(),actions=[];let enabled=true;
+ const surface={addEventListener:(type,fn)=>handlers.set(type,fn),setPointerCapture:()=>{}};
+ installBattleGestures(surface,{enabled:()=>enabled,tap:()=>actions.push('fast'),swipe:()=>actions.push('dodge')});
+ const fire=(type,x,y,extra={})=>handlers.get(type)?.({pointerId:1,isPrimary:true,button:0,clientX:x,clientY:y,target:{closest:()=>null},preventDefault:()=>{},...extra});
+ fire('pointerdown',100,100);fire('pointerup',102,101);assert.deepEqual(actions,['fast']);
+ for(const [dx,dy] of [[60,0],[-60,0],[0,60],[0,-60]]){
+  actions.length=0;fire('pointerdown',100,100);fire('pointermove',100+dx,100+dy);fire('pointermove',100,100);fire('pointerup',100,100);
+  assert.deepEqual(actions,['dodge'],'swipe fires once and never becomes a tap on release');
+ }
+ actions.length=0;fire('pointerdown',100,100);fire('pointercancel',100,100);fire('pointerup',100,100);assert.deepEqual(actions,[]);
+ fire('pointerdown',100,100,{target:{closest:()=>({})}});fire('pointerup',100,100);assert.deepEqual(actions,[]);
+ fire('pointerdown',100,100);fire('pointerdown',110,110,{pointerId:2,isPrimary:false});fire('pointerup',100,100);assert.deepEqual(actions,[]);
+ enabled=false;fire('pointerdown',100,100);fire('pointerup',100,100);assert.deepEqual(actions,[]);
 });

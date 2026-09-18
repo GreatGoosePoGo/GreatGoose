@@ -1,5 +1,6 @@
-import {PracticeController} from './controller.js';
+import {PracticeController, installBattleGestures} from './controller.js';
 const at = id => document.getElementById(`practice-${id}`);
+let resumeAfterOptions = false;
 let ready = false, editing = true, heldFast = false, lastTick = -1, lastSession = '', incomingKey = '', incomingStart = 0;
 const text = (id, value) => { const el = at(id); if (el.textContent !== value) el.textContent = value; };
 function status(message, error = false) { text('status', message); at('status').classList.toggle('error', error); }
@@ -47,16 +48,17 @@ function render() {
   text('player-name', `${player.slot}. ${player.name}`); types('player-types', player.types);
   meter('player-hp', player.hp, player.max_hp, true);
   text('player-numbers', `${player.hp} / ${player.max_hp} HP`);
-  meter('energy', player.energy, 100);
-  at('energy-cost').style.left = `calc(${player.charged_energy}% - 2px)`;
-  text('energy-label', `${player.energy} / 100 energy · charged attack needs ${player.charged_energy}`);
-  text('action', !live ? 'Attempt complete' : player.in_lobby ? `In lobby · ${available.rejoin ? 'ready to rejoin' : `ready in ${Math.max(0, player.rejoin_at - battle.elapsed).toFixed(1)}s`}` : !player.on_field ? 'Fainted — choose a surviving teammate' : player.busy_until > battle.elapsed ? `${player.current_action} · ${(player.busy_until - battle.elapsed).toFixed(1)}s remaining` : 'Ready');
+  const chargeReady = player.energy >= player.charged_energy;
+  at('charged').style.setProperty('--charge', `${Math.min(100, 100 * player.energy / player.charged_energy)}%`);
+  at('charged').classList.toggle('ready', chargeReady);
+  at('charged').setAttribute('aria-label', `${player.charged}: ${player.energy} energy, needs ${player.charged_energy}${chargeReady ? ', ready' : ''}`);
+  text('energy-label', `${player.energy} / ${player.charged_energy}`);
+  text('action', !live ? 'Attempt complete' : player.in_lobby ? `In lobby · ${available.rejoin ? 'ready to rejoin' : `ready in ${Math.max(0, player.rejoin_at - battle.elapsed).toFixed(1)}s`}` : !player.on_field ? `Fainted · ${player.next_slot ? `slot ${player.next_slot} enters` : 'entering lobby'} in ${Math.max(0, (player.fainting_until ?? battle.elapsed) - battle.elapsed).toFixed(1)}s` : player.busy_until > battle.elapsed ? `${player.current_action} · ${(player.busy_until - battle.elapsed).toFixed(1)}s remaining` : 'Ready');
   text('fast-name', player.fast); text('charged-name', player.charged);
-  at('fast').disabled = !active || !player.on_field;
   at('charged').disabled = !active || !player.on_field || player.energy < player.charged_energy;
-  at('dodge').disabled = !active || !player.on_field || !boss.incoming;
-  at('quit').disabled = !active || !available.quit;
+  at('quit').disabled = !live || !available.quit;
   at('rejoin').hidden = !player.in_lobby;
+  at('charged').hidden = player.in_lobby;
   at('rejoin').disabled = !active || !available.rejoin;
   at('pause').disabled = !live || controller.busy;
   text('pause', controller.running ? 'Pause (P)' : 'Resume (P)');
@@ -81,9 +83,11 @@ function render() {
     }
     const selected = member.slot === player.slot && player.on_field;
     button.firstElementChild.textContent = `${member.slot}. ${member.name}`;
-    button.lastElementChild.textContent = member.hp <= 0 ? 'Fainted' : `${member.hp}/${member.max_hp} HP · ${member.energy} energy`;
+    button.lastElementChild.textContent = member.hp <= 0 ? 'Fainted' : `${member.hp}/${member.max_hp} HP`;
     button.setAttribute('aria-pressed', String(selected));
-    button.disabled = !active || selected || member.hp <= 0 || player.in_lobby;
+    button.disabled = !active || selected || member.hp <= 0 || player.in_lobby || !player.on_field;
+    button.title = `${member.slot}. ${member.name} · ${member.hp}/${member.max_hp} HP · ${member.energy} energy`;
+    button.setAttribute('aria-label', button.title);
   });
   at('result').hidden = live;
   if (!live) {
@@ -92,6 +96,7 @@ function render() {
   }
 }
 function edit() {
+  closeOptions(); document.body.classList.remove('practice-playing');
   controller.pause(); heldFast = false; syncRepeat(); editing = true;
   document.querySelector('#simulator-view').hidden = false;
   at('intro').hidden = false; at('battle').hidden = true;
@@ -102,10 +107,10 @@ async function start(payload) {
   if (!ready || controller.busy) return;
   try {
     const request = payload || globalThis.RaidSetup.read({singlePlayer: true});
-    status('Starting raid…');
+    closeOptions(); status('Starting raid…');
     heldFast = false; syncRepeat();
     if (await controller.start(request)) {
-      editing = false; document.querySelector('#simulator-view').hidden = true;
+      editing = false; document.body.classList.add('practice-playing'); document.querySelector('#simulator-view').hidden = true;
       at('intro').hidden = true; at('battle').hidden = false;
       if (document.hidden) controller.pause();
       render(); status(''); at('battle').scrollIntoView({block: 'start', behavior: 'instant'});
@@ -130,7 +135,7 @@ window.addEventListener('raid-setup-ready', setupReady);
 if (document.querySelector('#boss').pokemonSearch) setupReady();
 else document.querySelector('#simulate').disabled = true;
 function syncRepeat() { controller.repeatFast = heldFast || at('auto').checked; render(); }
-for (const action of ['fast', 'charged', 'dodge', 'quit', 'rejoin']) at(action).addEventListener('click', () => controller.queue(action));
+for (const action of ['charged', 'rejoin']) at(action).addEventListener('click', () => controller.queue(action));
 at('auto').addEventListener('change', syncRepeat);
 at('speed').addEventListener('change', () => controller.setSpeed(Number(at('speed').value)));
 function togglePause() {
@@ -146,7 +151,7 @@ at('retry').addEventListener('click', () => {
 });
 at('end').addEventListener('click', async () => {
   const running = controller.running; controller.pause();
-  if (confirm('End this attempt? You can still export its replay.')) await controller.end();
+  if (confirm('End this attempt? You can still export its replay.')) { await controller.end(); closeOptions(); }
   else if (running) controller.resume();
 });
 at('export').addEventListener('click', () => {
@@ -156,7 +161,7 @@ at('export').addEventListener('click', () => {
   document.body.append(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
 });
 window.addEventListener('keydown', event => {
-  if (editing || /^(INPUT|SELECT|TEXTAREA)$/.test(event.target.tagName) || event.target.isContentEditable || event.ctrlKey || event.altKey || event.metaKey) return;
+  if (editing || at('options').open || /^(INPUT|SELECT|TEXTAREA)$/.test(event.target.tagName) || event.target.isContentEditable || event.ctrlKey || event.altKey || event.metaKey) return;
   const action = {KeyF: 'fast', Space: 'fast', KeyC: 'charged', KeyD: 'dodge'}[event.code];
   if (!action && event.code !== 'KeyP' && !/^Digit[1-6]$/.test(event.code)) return;
   event.preventDefault(); if (event.repeat) return;
@@ -164,8 +169,8 @@ window.addEventListener('keydown', event => {
   if (!controller.running) return;
   if (/^Digit/.test(event.code)) {
     const slot = Number(event.code.slice(-1)), member = controller.battle.team[slot - 1];
-    if (member?.hp > 0 && !controller.battle.player.in_lobby && (slot !== controller.battle.player.slot || !controller.battle.player.on_field)) controller.queue('switch', slot);
-  } else if (!at(action).disabled) {
+    if (member?.hp > 0 && controller.battle.player.on_field && !controller.battle.player.in_lobby && (slot !== controller.battle.player.slot || !controller.battle.player.on_field)) controller.queue('switch', slot);
+  } else if (canAct(action)) {
     if (action === 'fast') { heldFast = true; syncRepeat(); }
     controller.queue(action);
   }
@@ -174,3 +179,30 @@ window.addEventListener('keyup', event => { if (['KeyF', 'Space'].includes(event
 window.addEventListener('blur', () => { heldFast = false; syncRepeat(); controller.pause(); });
 document.addEventListener('visibilitychange', () => { if (document.hidden) { heldFast = false; syncRepeat(); controller.pause(); } });
 window.addEventListener('pagehide', () => controller.pause());
+
+function canAct(action) {
+  const b = controller.battle;
+  if (editing || at('options').open || !controller.running || !b?.player.on_field || b.player.in_lobby) return false;
+  if (action === 'charged') return b.player.energy >= b.player.charged_energy;
+  if (action === 'dodge') return !!b.boss.incoming;
+  return true;
+}
+installBattleGestures(document.body, {
+  enabled: () => !editing && !at('options').open && controller.running,
+  tap: () => { if (canAct('fast')) controller.queue('fast'); },
+  swipe: () => { if (canAct('dodge')) controller.queue('dodge'); },
+});
+function closeOptions() { resumeAfterOptions = false; if (at('options').open) at('options').close(); }
+at('options-open').addEventListener('click', () => {
+  resumeAfterOptions = controller.running;
+  heldFast = false; syncRepeat(); controller.pause();
+  at('options').showModal();
+});
+at('options-close').addEventListener('click', () => at('options').close());
+at('options').addEventListener('close', () => {
+  if (resumeAfterOptions && !editing) controller.resume();
+  resumeAfterOptions = false;
+});
+at('quit').addEventListener('click', () => {
+  closeOptions(); controller.resume(); controller.queue('quit');
+});

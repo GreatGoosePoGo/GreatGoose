@@ -19,71 +19,108 @@ body[data-mode=practice] #strategy-description,
 body[data-mode=practice] #simulation-scope-note,
 body[data-mode=practice] #copy-result-link,
 body[data-mode=practice] #result { display: none; }
+/* During a battle, the arena and the six-slot dock share the visible viewport. */
+body.practice-playing { overflow: hidden; touch-action: none; }
+.practice-playing #practice-status:empty { display: none; }
+.practice-playing > header, .practice-playing .practice-nav { display: none; }
+.practice-playing main { width: 100%; max-width: none; padding: 0; margin: 0; }
+#practice-battle { height: 100dvh; padding: 10px max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left)); display: flex; flex-direction: column; gap: 8px; max-width: 1200px; margin: auto; touch-action: none; user-select: none; }
 .practice-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 0 16px; }
-.practice-toolbar button { min-height: 44px; }
-.practice-arena { position: relative; color: #f5f8ff; background: #102746; border: 1px solid #254365; border-radius: 18px; padding: 22px 30px 12px; }
-.practice-topline { display: flex; justify-content: space-between; gap: 12px; color: #adc6e5; font-size: 13px; letter-spacing: .07em; }
-#practice-state { font-weight: 800; }
-#practice-seed { letter-spacing: 0; overflow-wrap: anywhere; text-align: right; }
-.practice-clock { width: 108px; height: 108px; margin: 14px auto; border: 5px solid #f4bd59; border-radius: 50%; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #162f50; font-variant-numeric: tabular-nums; }
-.practice-clock strong { font-size: 30px; line-height: 1.15; }
-.practice-clock span { font-size: 12px; color: #d0dced; }
+.practice-toolbar button { min-height: 40px; }
+.practice-main-toolbar { flex-shrink: 0; margin: 0; flex-wrap: nowrap; gap: 8px; }
+.practice-main-toolbar > strong { margin-right: auto; }
+.practice-main-toolbar button { padding: 8px 12px; font-size: 14px; white-space: nowrap; }
+.practice-arena { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: space-evenly; gap: 5px; color: #f5f8ff; background: #102746; border: 1px solid #254365; border-radius: 16px; padding: 12px 24px; overflow: hidden; }
+.practice-topline { display: flex; justify-content: space-between; align-items: center; gap: 8px; color: #adc6e5; font-size: 12px; }
+#practice-state { font-weight: 800; flex: 1; }
+#practice-seed { flex: 1; text-align: right; overflow-wrap: anywhere; }
+.practice-clock { width: 72px; height: 72px; border: 3px solid #f4bd59; border-radius: 50%; display: flex; flex-shrink: 0; flex-direction: column; justify-content: center; align-items: center; font-variant-numeric: tabular-nums; }
+.practice-clock strong { font-size: 21px; line-height: 1.1; }
+.practice-clock span { font-size: 10px; color: #d0dced; }
 .practice-clock.urgent { border-color: #ff7a85; }
-.practice-boss { max-width: 640px; margin: auto; }
-.combatant-title { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
-.combatant-title h2 { color: inherit; margin: 0; font-size: 24px; }
-.combatant-title .type-icon { margin-inline: 2px; vertical-align: middle; }
-.practice-hp { background: #38506e; border-radius: 10px; height: 12px; overflow: hidden; }
+.practice-boss, .practice-player { width: 100%; max-width: 640px; margin-inline: auto; }
+.practice-player { max-width: 500px; }
+.combatant-title { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 6px; }
+.combatant-title h2 { color: inherit; margin: 0; font-size: 21px; overflow-wrap: anywhere; }
+.combatant-title .type-icon { margin-inline: 2px; vertical-align: middle; width: 23px; height: 23px; }
+.combatant-title > span { flex-shrink: 0; }
+.practice-hp { background: #38506e; border-radius: 10px; height: 10px; overflow: hidden; }
 .practice-hp > span { display: block; height: 100%; background: #67dbac; transition: width .15s linear; }
-.practice-numbers { color: #c4d4e9; font-size: 14px; margin: 6px 0 12px; text-align: center; font-variant-numeric: tabular-nums; }
-.practice-warning { padding: 12px 16px; border: 1px solid #496280; border-radius: 8px; background: #1c3657; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; min-height: 60px; }
+.practice-numbers { color: #c4d4e9; font-size: 13px; margin: 4px 0 6px; text-align: center; font-variant-numeric: tabular-nums; }
+.practice-warning { padding: 8px 12px; border: 1px solid #496280; border-radius: 8px; background: #1c3657; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 5px; font-size: 14px; }
 .practice-warning.imminent { background: #4b351b; border-color: #ffc564; color: #ffe3aa; }
-.practice-warning span { font-size: 14px; }
+.practice-warning span { font-size: 13px; }
 .practice-windup { height: 3px; width: 100%; background: #405775; overflow: hidden; border-radius: 3px; }
 .practice-windup > span { display: block; height: 100%; background: #ffc564; transition: width .15s linear; }
-.practice-feedback { min-height: 34px; text-align: center; padding: 10px 0 4px; color: #b9d6ff; font-size: 14px; }
-.practice-player { max-width: 500px; margin: 0 auto; }
-.practice-player h2 { font-size: 21px; }
-.practice-energy { position: relative; height: 12px; background: #38506e; border-radius: 3px; }
-.practice-energy > span { display: block; height: 100%; background: #6eacff; border-radius: 3px; transition: width .15s linear; }
-.practice-energy > i { position: absolute; top: -3px; bottom: -3px; width: 2px; background: white; }
-.practice-action { min-height: 22px; font-size: 14px; text-align: center; color: #f4bd59; margin: 8px 0 14px; }
-.practice-actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; max-width: 780px; margin: auto; }
-.practice-actions button { touch-action: manipulation; display: flex; flex-direction: column; gap: 5px; align-items: center; justify-content: center; padding: 14px 10px; background: #246bd5; color: white; border: 1px solid #75a5eb; border-radius: 10px; min-height: 100px; }
-.practice-actions button:hover:not(:disabled) { background: #337fe9; }
-.practice-actions button:active:not(:disabled) { transform: translateY(2px); }
-.practice-actions button:disabled { opacity: .45; cursor: not-allowed; }
-.practice-actions button strong { font-size: 17px; }
-.practice-actions button span { font-size: 14px; }
-#practice-dodge { background: #2a4160; border-color: #879ab5; }
-kbd { font: inherit; font-size: 12px; opacity: .8; }
-.practice-queued { min-height: 18px; text-align: center; color: #c4d4e9; font-size: 14px; margin: 8px 0; }
-.practice-bottom { padding: 20px 0; }
+.practice-feedback { min-height: 18px; text-align: center; color: #b9d6ff; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.practice-action { min-height: 18px; font-size: 14px; text-align: center; color: #f4bd59; margin: 4px 0; }
+.practice-actions { display: flex; align-items: center; justify-content: center; gap: 22px; }
+.practice-gesture-hint { text-align: center; color: #c4d4e9; font-size: 14px; line-height: 1.6; margin: 0; max-width: 210px; }
+.practice-charge { --charge: 0%; position: relative; isolation: isolate; overflow: hidden; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; width: 118px; height: 118px; border-radius: 50%; border: 3px solid #7e8da2; color: #f0f3f8; background: #434d5e; padding: 12px; touch-action: none; }
+.practice-charge-fill { position: absolute; z-index: -1; bottom: 0; left: 0; width: 100%; height: var(--charge); background: #246bd5; transition: height .18s linear; }
+.practice-charge strong { font-size: 15px; line-height: 1.15; overflow-wrap: anywhere; }
+.practice-charge #practice-energy-label { font-size: 12px; font-variant-numeric: tabular-nums; }
+.practice-charge kbd { font: inherit; font-size: 11px; }
+.practice-charge:disabled { opacity: 1; cursor: default; }
+.practice-charge.ready { border-color: #98c6ff; box-shadow: 0 0 15px #528ffa55; }
+.practice-charge:active:not(:disabled) { transform: scale(.96); }
+.practice-queued { min-height: 17px; text-align: center; color: #c4d4e9; font-size: 12px; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.practice-team-dock { flex-shrink: 0; }
+.practice-team-dock h3 { font-size: 14px; margin: 0 0 5px; }
+.practice-hint { font-weight: 400; font-size: 12px; color: var(--muted); margin-left: 8px; }
+.practice-team { display: grid; grid-template-columns: repeat(6,minmax(0,1fr)); gap: 6px; }
+.practice-team button { background: white; border: 1px solid var(--line); border-radius: 8px; padding: 8px; color: var(--ink); height: 64px; min-width: 0; text-align: left; }
+.practice-team button[aria-pressed=true] { border: 2px solid var(--blue); background: #eaf2ff; }
+.practice-team button:disabled { opacity: .65; }
+.practice-team strong { display: block; font-size: 13px; margin-bottom: 4px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.practice-team span { display: block; font-size: 11px; color: var(--muted); white-space: nowrap; }
 .practice-auto, .practice-speed { display: flex; align-items: center; gap: 8px; font-size: 15px; }
 .practice-auto input { width: 18px; height: 18px; margin: 0; }
 .practice-speed select { width: auto; }
-.practice-hint { font-weight: 400; font-size: 14px; color: var(--muted); margin-left: 8px; }
-.practice-team { display: grid; grid-template-columns: repeat(6,minmax(0,1fr)); gap: 8px; margin-bottom: 20px; }
-.practice-team button { background: white; border: 1px solid var(--line); border-radius: 8px; padding: 12px 8px; color: var(--ink); min-height: 85px; text-align: left; overflow-wrap: anywhere; }
-.practice-team button[aria-pressed=true] { border: 2px solid var(--blue); background: #eaf2ff; }
-.practice-team button:disabled { opacity: .6; }
-.practice-team strong { display: block; font-size: 14px; margin-bottom: 6px; }
-.practice-team span { display: block; font-size: 13px; color: var(--muted); }
-.practice-help { margin-bottom: 16px; }
-.practice-help p { line-height: 1.6; max-width: 900px; }
+#practice-options { width: min(600px, calc(100vw - 24px)); max-height: calc(100dvh - 30px); overflow: auto; border: 1px solid var(--line); border-radius: 12px; padding: 20px; color: var(--ink); }
+#practice-options::backdrop { background: #071527aa; }
+#practice-options-title { margin: 0 auto 0 0; font-size: 22px; }
+.practice-help p { line-height: 1.6; }
+#practice-result { position: absolute; inset: 20% 10% auto; color: var(--ink); z-index: 2; padding: 20px; box-shadow: 0 8px 30px #0007; }
 #practice-status.error { color: #b32838; }
-@media (max-width: 680px) {
- .practice-arena { padding: 16px 12px 8px; border-radius: 12px; }
- .practice-actions { gap: 6px; }
- .practice-actions button { padding: 10px 5px; }
- .practice-actions button strong { font-size: 14px; }
- .practice-actions button span { font-size: 12px; }
+.practice-playing #practice-status:not(:empty) { position: fixed; bottom: 8px; left: 10px; right: 10px; padding: 8px; background: white; border: 1px solid var(--line); border-radius: 6px; z-index: 5; }
+@media (max-width: 600px) {
+ .practice-arena { padding: 10px 12px; }
  .practice-team { grid-template-columns: repeat(3,minmax(0,1fr)); }
- .practice-clock { height: 88px; width: 88px; margin: 12px auto; }
- .practice-clock strong { font-size: 24px; }
- .combatant-title h2 { font-size: 20px; }
- .practice-hint { display: block; margin: 5px 0; }
- .practice-toolbar { gap: 8px; }
- .practice-toolbar button { font-size: 13px; padding: 10px; }
+ .practice-team button { height: 54px; padding: 5px; }
+ .practice-main-toolbar > strong { display: none; }
+ .practice-main-toolbar #practice-pause { margin-right: auto; }
+ .combatant-title h2 { font-size: 18px; }
+ .practice-gesture-hint { font-size: 13px; max-width: 160px; }
+ .practice-actions { gap: 14px; }
 }
-@media (prefers-reduced-motion: reduce) { .practice-hp > span, .practice-energy > span, .practice-windup > span { transition: none; } }
+@media (max-height: 700px) and (max-width: 600px) {
+ #practice-battle { padding-block: 5px; gap: 5px; }
+ .practice-arena { padding-block: 6px; gap: 3px; }
+ .practice-clock { width: 54px; height: 54px; }
+ .practice-clock strong { font-size: 16px; }
+ .practice-clock span { display: none; }
+ .practice-charge { width: 88px; height: 88px; padding: 8px; gap: 3px; }
+ .practice-charge strong { font-size: 12px; }
+ .practice-charge kbd { display: none; }
+ .practice-warning { padding: 5px 8px; }
+ .practice-feedback { display: none; }
+ .practice-numbers { margin: 2px 0; font-size: 12px; }
+}
+@media (max-height: 600px) and (min-width: 601px) {
+ .practice-arena { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto minmax(0,1fr); align-items: center; column-gap: 24px; padding: 8px 16px; }
+ .practice-topline { grid-column: 1; grid-row: 1; }
+ .practice-clock { width: 48px; height: 48px; }
+ .practice-clock strong { font-size: 15px; }
+ .practice-clock span { display: none; }
+ .practice-boss { grid-column: 1; grid-row: 2; }
+ .practice-player { grid-column: 2; grid-row: 1; }
+ .practice-actions { grid-column: 2; grid-row: 2; }
+ .practice-charge { width: 90px; height: 90px; padding: 8px; }
+ .practice-charge strong { font-size: 12px; }
+ .practice-feedback, .practice-queued { display: none; }
+ .practice-team button { height: 52px; }
+ .practice-action { margin: 0; font-size: 12px; }
+ .combatant-title h2 { font-size: 16px; }
+}
+@media (prefers-reduced-motion: reduce) { .practice-hp > span, .practice-charge-fill, .practice-windup > span { transition: none; } }

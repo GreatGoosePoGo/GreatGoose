@@ -33,6 +33,99 @@
   };
 })();
 
+/* Automatic raid timing: configurable rejoin distribution plus an elapsed-time cutoff. */
+(() => {
+  const DEFAULT_REJOIN = '7.5:1, 8:2, 8.5:1, 11:1';
+  const BATTLE_TIMES = [27, 72, 147, 180, 222, 300];
+  const grid = document.querySelector('#simulator-view .settings-grid');
+  const difficulty = document.querySelector('#raid-difficulty');
+  if (!grid || !difficulty) return;
+
+  const normalBattleTime = raidDifficulty =>
+    ['Tier 1', 'Tier 3', 'Tier 1 Shadow', 'Tier 3 Shadow'].includes(raidDifficulty) ? 180 : 300;
+  const allowedBattleTimes = raidDifficulty =>
+    BATTLE_TIMES.filter(seconds => seconds <= normalBattleTime(raidDifficulty));
+  const params = new URL(location.href).searchParams;
+
+  const rejoinLabel = document.createElement('label');
+  rejoinLabel.append(document.createTextNode('Rejoin time'));
+  const rejoinInput = document.createElement('input');
+  rejoinInput.id = 'rejoin-time';
+  rejoinInput.type = 'text';
+  rejoinInput.autocomplete = 'off';
+  rejoinInput.spellcheck = false;
+  rejoinInput.placeholder = '7.5, 8, 8.5 or 7.5:1, 8:2, 8.5:1';
+  rejoinInput.title = 'Enter one time, a comma-separated equal-probability list such as 7.5, 8, 8.5, or give every time a relative weight such as 7.5:1, 8:2, 8.5:1. Do not mix weighted and unweighted entries.';
+  rejoinInput.value = params.get('rj') || DEFAULT_REJOIN;
+  rejoinLabel.append(rejoinInput);
+
+  const timeLabel = document.createElement('label');
+  timeLabel.append(document.createTextNode('Battle time limit'));
+  const timeSelect = document.createElement('select');
+  timeSelect.id = 'battle-time-limit';
+  timeSelect.title = 'Maximum elapsed battle time. The visible raid clock still starts at the normal 180 or 300 seconds.';
+  const setBattleTimeOptions = (raidDifficulty, preferred) => {
+    const allowed = allowedBattleTimes(raidDifficulty);
+    timeSelect.replaceChildren(...allowed.map(seconds => {
+      const option = document.createElement('option');
+      option.value = String(seconds);
+      option.textContent = `${seconds} seconds`;
+      return option;
+    }));
+    timeSelect.value = String(allowed.includes(preferred)
+      ? preferred
+      : normalBattleTime(raidDifficulty));
+  };
+  let previousDifficulty = difficulty.value;
+  const requestedTime = Number(params.get('bt'));
+  setBattleTimeOptions(previousDifficulty, requestedTime);
+  timeLabel.append(timeSelect);
+
+  const seedLabel = document.querySelector('#random-seed')?.closest('label');
+  grid.insertBefore(rejoinLabel, seedLabel ?? null);
+  grid.insertBefore(timeLabel, seedLabel ?? null);
+
+  const syncBattleTimeDefault = () => {
+    if (difficulty.value === previousDifficulty) return;
+    const previousValue = Number(timeSelect.value);
+    const oldDefault = normalBattleTime(previousDifficulty);
+    const nextDefault = normalBattleTime(difficulty.value);
+    const preferred = previousValue === oldDefault ? nextDefault : previousValue;
+    setBattleTimeOptions(difficulty.value, preferred);
+    previousDifficulty = difficulty.value;
+  };
+  difficulty.addEventListener('change', syncBattleTimeDefault);
+
+  const originalRequest = globalThis.RaidClient.request.bind(globalThis.RaidClient);
+  globalThis.RaidClient.request = (method, payload = {}) => {
+    syncBattleTimeDefault();
+    if (method === 'simulate') {
+      payload = {
+        ...payload,
+        rejoin_time: rejoinInput.value.trim() || DEFAULT_REJOIN,
+        battle_time_limit: Number(timeSelect.value),
+      };
+    } else if (method === 'turn/start') {
+      payload = {...payload, battle_time_limit: Number(timeSelect.value)};
+    }
+    return originalRequest(method, payload);
+  };
+
+  // Keep advanced timing settings on setup/result links without changing the
+  // existing v1 encoded setup schema. Old links use the defaults above.
+  window.addEventListener('DOMContentLoaded', () => {
+    if (!globalThis.RaidShareCodec?.createUrl) return;
+    const originalCreateUrl = globalThis.RaidShareCodec.createUrl.bind(globalThis.RaidShareCodec);
+    globalThis.RaidShareCodec.createUrl = (...args) => {
+      syncBattleTimeDefault();
+      const url = new URL(originalCreateUrl(...args));
+      url.searchParams.set('rj', rejoinInput.value.trim() || DEFAULT_REJOIN);
+      url.searchParams.set('bt', timeSelect.value);
+      return url.toString();
+    };
+  });
+})();
+
 /* Test-branch dodge menu: add Smart/30%/50% and retire downtime saver. */
 (() => {
   const select = document.querySelector('#dodge-strategy');

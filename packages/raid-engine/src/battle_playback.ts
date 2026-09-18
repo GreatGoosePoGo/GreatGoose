@@ -356,10 +356,12 @@ function reconstruct(document: any, engine: any): any {
                                         if (py.truth(((py.at(player.team, slot).hp <= 0)))) {
                                             fail(`p${py.str(external_id)} slot ${py.str(py.add(slot, 1))} has fainted.`);
                                         }
+                                        // Practice records the automatic switch after the full faint delay.
+                                        const replacedAfterFaint = recording?.mode === 'practice' && !player.on_field && player.hp <= 0;
                                         player.generation = py.add(player.generation, 1);
                                         player.pokemon_index = slot;
                                         player.on_field = true;
-                                        player.action_end = py.add((tick / 2), engine.SWITCH_SECONDS);
+                                        player.action_end = tick / 2 + (replacedAfterFaint ? 0 : engine.SWITCH_SECONDS);
                                         player.action_is_charged = false;
                                         if (py.truth(pending_boss)) {
                                             py.discard(py.at(pending_boss, 2), i);

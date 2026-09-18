@@ -1,6 +1,13 @@
 /** Browser worker for simulation-backed counters against one raid boss. */
 import {calculateRaidCounters, raidBossCatalog} from './raid_counters.js';
 import {calculateCounterBreakdown} from './counter_breakdown.js';
+import {
+    DEFAULT_COUNTER_REJOIN_INPUT, parseRejoinTimeInput, setAutomaticRejoinTimeOverride,
+} from './rejoin_time.js';
+import {
+    defaultBattleTimeForDifficulty, parseBattleTimeLimit, setAutomaticBattleTimeOverride,
+} from './battle_time.js';
+import {withCurrentCatalogOverrides} from './catalog_overrides.js';
 import type {CalculatorEntry} from './types.js';
 
 interface ShadowAvailability {
@@ -38,7 +45,7 @@ function counterData(): Promise<CounterData> {
                 throw new Error('Invalid Pokémon counter data.');
             }
             return {
-                catalog,
+                catalog: withCurrentCatalogOverrides(catalog),
                 shadowFormIds: new Set(availability.form_ids),
                 legendaryDexNumbers: new Set(categories.legendary_dex_numbers),
             };
@@ -54,7 +61,7 @@ self.onmessage = async (event: MessageEvent) => {
         id, mode, bossFormId, raidDifficulty, includeMegas, includeShadows,
         includeLegendaries, megaLevel, level, friendshipMultiplier, weather,
         dodgeStrategy, playerStrategy, excludeLegacy,
-        partyPowerPlayers,
+        partyPowerPlayers, rejoinTime, battleTime,
         trialsPerBossMoveset, prefilterLimit,
         bossFastMoveId, bossChargedMoveId, pick,
     } = event.data ?? {};
@@ -64,6 +71,13 @@ self.onmessage = async (event: MessageEvent) => {
             self.postMessage({id, result: {bosses: raidBossCatalog(catalog)}});
             return;
         }
+        const resolvedRejoinTime = rejoinTime ?? DEFAULT_COUNTER_REJOIN_INPUT;
+        setAutomaticRejoinTimeOverride(parseRejoinTimeInput(resolvedRejoinTime));
+        const resolvedBattleTime = parseBattleTimeLimit(
+            battleTime ?? defaultBattleTimeForDifficulty(raidDifficulty),
+            raidDifficulty,
+        );
+        setAutomaticBattleTimeOverride(resolvedBattleTime);
         const settings = {
                 bossFormId,
                 raidDifficulty,
@@ -78,6 +92,8 @@ self.onmessage = async (event: MessageEvent) => {
                 playerStrategy,
                 excludeLegacy: Boolean(excludeLegacy),
                 partyPowerPlayers,
+                rejoinTime: resolvedRejoinTime,
+                battleTime: resolvedBattleTime,
                 trialsPerBossMoveset,
                 prefilterLimit,
                 bossFastMoveId,

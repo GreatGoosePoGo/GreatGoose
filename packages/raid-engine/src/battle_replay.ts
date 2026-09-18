@@ -686,11 +686,11 @@ function parse_replay_text(text: string): Record<string, any> {
                                                                                 }
                                                                                 else {
                                                                                     if (py.truth(py.startswith(line, "Recording: "))) {
-                                                                                        match = re.fullmatch("Recording: manual; through=([\\d.]+); status=(in_progress|stopped|finished)", line);
+                                                                                        match = re.fullmatch("Recording: (manual|practice); through=([\\d.]+); status=(in_progress|stopped|finished)", line);
                                                                                         if (py.truth(!py.truth(match))) {
                                                                                             throw new ReplayParseError(line_number, "Invalid manual recording header.");
                                                                                         }
-                                                                                        settings[py.key("recording")] = py.dict([["mode", "manual"], ["through_tick", seconds_to_tick(py.at(match, 1), line_number)], ["status", py.at(match, 2)]]);
+                                                                                        settings[py.key("recording")] = py.dict([["mode", py.at(match, 1)], ["through_tick", seconds_to_tick(py.at(match, 2), line_number)], ["status", py.at(match, 3)]]);
                                                                                     }
                                                                                     else {
                                                                                         if (py.truth(py.startswith(line, "Result: "))) {

@@ -53,7 +53,7 @@ async function route(method: string, payload: any) {
     if (method === 'replay/playback')
         return buildStrategyPlayback(payload.text, entries);
     if (method.startsWith('practice/')) {
-        practice ??= new TurnService(entries);
+        practice ??= new TurnService(entries, undefined, { automaticFaints: true });
         if (method === 'practice/start') {
             const solo = { ...payload };
             if (Array.isArray(solo.players))

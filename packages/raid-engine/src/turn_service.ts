@@ -1,6 +1,6 @@
 /** Browser-owned turn sessions. Persistence is injected, keeping the engine portable. */
 import { createManualRaidEngine } from './raid_engine_factory.js';
-import { createTurnBattle } from './turn_battle.js';
+import { createTurnBattle, type ManualBattleOptions } from './turn_battle.js';
 import { PythonRandom } from './random.js';
 import { battle_config, freshId } from './website_api.js';
 import type { CalculatorEntry, RaidConfig, SimulationRequest, ManualAction } from './types.js';
@@ -26,11 +26,11 @@ interface Session {
 }
 export class TurnService {
     private sessions = new Map<string, Session>();
-    constructor(private catalog: CalculatorEntry[], private save: (record: SavedBattle) => Promise<void> = async () => { }) { }
+    constructor(private catalog: CalculatorEntry[], private save: (record: SavedBattle) => Promise<void> = async () => { }, private options: ManualBattleOptions = {}) { }
     private make(config: RaidConfig): ManualSimulation {
         const e = createManualRaidEngine(config, this.catalog);
         e.validate_settings();
-        return new (createTurnBattle(e).ManualSimulation)(Object.values(e.BOSS_FAST_MOVES)[0], Object.values(e.BOSS_CHARGED_MOVES)[0], new PythonRandom(e.RANDOM_SEED));
+        return new (createTurnBattle(e, this.options).ManualSimulation)(Object.values(e.BOSS_FAST_MOVES)[0], Object.values(e.BOSS_CHARGED_MOVES)[0], new PythonRandom(e.RANDOM_SEED));
     }
     private decorate(sim: ManualSimulation, id: string): Record<string, any> {
         return { ...sim.snapshot(), session_id: id, filename: `turn-battle-${id}.txt`, recording_file: 'this browser' };

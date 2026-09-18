@@ -2,9 +2,12 @@
 import { createAutomaticRaidEngine } from './raid_engine_factory.js';
 import { parseSeed } from './compatibility.js';
 import {isPlayerMoveAvailable} from './move_availability.js';
+import {DEFAULT_RAID_REJOIN_INPUT, parseRejoinTimeInput} from './rejoin_time.js';
+import {defaultBattleTimeForDifficulty, parseBattleTimeLimit} from './battle_time.js';
+import {withCurrentCatalogOverrides} from './catalog_overrides.js';
 import type { CalculatorEntry, RaidConfig, SimulationRequest, TeamMember } from './types.js';
 export function publicCatalog(catalog: CalculatorEntry[]) {
-    return catalog.map(entry => {
+    return withCurrentCatalogOverrides(catalog).map(entry => {
         const fast = [...entry.fast_moves, ...(entry.exclusive_fast_moves || [])];
         const charged = [...entry.charged_moves, ...(entry.exclusive_charged_moves || []), ...(entry.mega_charged_moves || [])];
         const shadowFast = fast.filter(move => isPlayerMoveAvailable(move, {shadow: true}));
@@ -130,13 +133,22 @@ export function battle_config(request: SimulationRequest, catalog: CalculatorEnt
     for (const [group, members] of groups) {
         if (members.length < 2 || members.length > 4) throw new Error(`Party ${group} needs 2–4 players; it currently has ${members.length}.`);
     }
+    const rejoinTimeDistribution = parseRejoinTimeInput(request.rejoin_time ?? DEFAULT_RAID_REJOIN_INPUT);
+    const raidDifficulty = request.raid_difficulty ?? 'Tier 5';
+    const raidSeconds = defaultBattleTimeForDifficulty(raidDifficulty);
+    const battleTimeLimit = request.battle_time_limit == null
+        ? raidSeconds
+        : parseBattleTimeLimit(request.battle_time_limit, raidDifficulty);
     return {
-        trials, random_seed: seed, raid_difficulty: request.raid_difficulty ?? 'Tier 5', boss_form_id: request.boss,
+        trials, random_seed: seed, raid_difficulty: raidDifficulty, boss_form_id: request.boss,
         boss_fast_move_names: fast, boss_charged_move_names: charged, player_teams: teams,
         friendship_multipliers: friendships, zacian_adventure_effect: requestedPlayers.map(p => (p.zacian_adventure_effect ?? request.zacian_adventure_effect) === true),
         behemoth_bash_adventure_effect: requestedPlayers.map(p => (p.behemoth_bash_adventure_effect ?? request.behemoth_bash_adventure_effect) === true), dynamic_punch_adventure_effect: requestedPlayers.map(p => (p.dynamic_punch_adventure_effect ?? request.dynamic_punch_adventure_effect) === true),
         party_power_groups: [...groups.values()], weather: request.weather || null, dodge_strategy: request.dodge_strategy ?? 'none', player_strategy: strategy,
         use_purified_gems: request.use_purified_gems === true,
+        rejoin_time_distribution: rejoinTimeDistribution,
+        raid_seconds: raidSeconds,
+        battle_time_limit: battleTimeLimit,
         catch_tank_team_indices: tankTeams, battle_log_mode: request.battle_log_mode ?? 'moves',
     };
 }
