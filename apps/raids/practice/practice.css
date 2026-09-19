@@ -1,0 +1,168 @@
+[hidden] { display: none !important; }
+.practice-nav { display: flex; gap: 24px; align-items: center; margin-bottom: 24px; font-size: 15px; }
+.practice-nav a { color: var(--blue); }
+.practice-nav span { font-weight: 700; }
+.practice-intro { max-width: 740px; margin: 0 0 24px; }
+.practice-intro h2 { font-size: 27px; margin-bottom: 8px; }
+.practice-intro p { color: var(--muted); line-height: 1.6; }
+body[data-mode=practice] #simulator-view .player-actions > #add-player,
+body[data-mode=practice] #clone-player,
+body[data-mode=practice] .remove-player,
+body[data-mode=practice] label:has(.player-party),
+body[data-mode=practice] .player-settings + .setting-note,
+body[data-mode=practice] label:has(#dodge-strategy),
+body[data-mode=practice] label:has(#player-strategy),
+body[data-mode=practice] label:has(#battle-log-mode),
+body[data-mode=practice] label:has(#boss-moveset-mode),
+body[data-mode=practice] label:has(#simulation-count),
+body[data-mode=practice] #strategy-description,
+body[data-mode=practice] #simulation-scope-note,
+body[data-mode=practice] #copy-result-link,
+body[data-mode=practice] #result { display: none; }
+/* During a battle, the arena and the six-slot dock share the visible viewport. */
+body.practice-playing { overflow: hidden; touch-action: none; }
+.practice-playing #practice-status:empty { display: none; }
+.practice-playing > header, .practice-playing .practice-nav { display: none; }
+.practice-playing main { width: 100%; max-width: none; padding: 0; margin: 0; }
+#practice-battle { height: 100dvh; padding: 10px max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left)); display: flex; flex-direction: column; gap: 8px; max-width: 1200px; margin: auto; touch-action: none; user-select: none; }
+.practice-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 0 16px; }
+.practice-toolbar button { min-height: 40px; }
+.practice-main-toolbar { flex-shrink: 0; margin: 0; flex-wrap: nowrap; gap: 8px; }
+.practice-main-toolbar > strong { margin-right: auto; }
+.practice-main-toolbar button { padding: 8px 12px; font-size: 14px; white-space: nowrap; }
+.practice-arena { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: space-evenly; gap: 5px; color: #f5f8ff; background: #102746; border: 1px solid #254365; border-radius: 16px; padding: 12px 24px; overflow: hidden; }
+.practice-topline { display: flex; justify-content: space-between; align-items: center; gap: 8px; color: #adc6e5; font-size: 12px; }
+#practice-state { font-weight: 800; flex: 1; }
+.practice-arena-tools { flex: 1; min-width: 0; text-align: right; }
+#practice-seed { display: block; margin-bottom: 5px; overflow-wrap: anywhere; }
+.practice-arena-tools button { min-height: 40px; padding: 6px 9px; font-size: 12px; white-space: nowrap; }
+.practice-clock { width: 72px; height: 72px; border: 3px solid #f4bd59; border-radius: 50%; display: flex; flex-shrink: 0; flex-direction: column; justify-content: center; align-items: center; font-variant-numeric: tabular-nums; }
+.practice-clock strong { font-size: 21px; line-height: 1.1; }
+.practice-clock span { font-size: 10px; color: #d0dced; }
+.practice-clock.urgent { border-color: #ff7a85; }
+.practice-boss, .practice-player { width: 100%; max-width: 640px; margin-inline: auto; }
+.practice-player { max-width: 500px; }
+.combatant-title { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 6px; }
+.combatant-title h2 { color: inherit; margin: 0; font-size: 21px; overflow-wrap: anywhere; }
+.combatant-title .type-icon { margin-inline: 2px; vertical-align: middle; width: 23px; height: 23px; }
+.combatant-title > span { flex-shrink: 0; }
+.practice-hp { background: #38506e; border-radius: 10px; height: 10px; overflow: hidden; }
+.practice-hp > span { display: block; height: 100%; background: #67dbac; transition: width .15s linear; }
+.practice-numbers { color: #c4d4e9; font-size: 13px; margin: 4px 0 6px; text-align: center; font-variant-numeric: tabular-nums; }
+.practice-warning { padding: 8px 12px; border: 1px solid #496280; border-radius: 8px; background: #1c3657; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 5px; font-size: 14px; }
+.practice-warning.imminent { background: #4b351b; border-color: #ffc564; color: #ffe3aa; }
+.practice-warning span { font-size: 13px; }
+.practice-windup { height: 3px; width: 100%; background: #405775; overflow: hidden; border-radius: 3px; }
+.practice-windup > span { display: block; height: 100%; background: #ffc564; transition: width .15s linear; }
+.practice-feedback { min-height: 18px; text-align: center; color: #b9d6ff; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.practice-action { min-height: 18px; font-size: 14px; text-align: center; color: #f4bd59; margin: 4px 0; }
+.practice-actions { display: flex; align-items: center; justify-content: center; gap: 22px; }
+.practice-gesture-hint { text-align: center; color: #c4d4e9; font-size: 14px; line-height: 1.6; margin: 0; max-width: 210px; }
+.practice-charge { --charge: 0%; position: relative; isolation: isolate; overflow: hidden; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; width: 118px; height: 118px; border-radius: 50%; border: 3px solid #7e8da2; color: #f0f3f8; background: #434d5e; padding: 12px; touch-action: none; }
+.practice-charge-fill { position: absolute; z-index: -1; bottom: 0; left: 0; width: 100%; height: var(--charge); background: #246bd5; transition: height .18s linear; }
+.practice-charge strong { font-size: 15px; line-height: 1.15; overflow-wrap: anywhere; }
+.practice-charge #practice-energy-label { font-size: 12px; font-variant-numeric: tabular-nums; }
+.practice-charge kbd { font: inherit; font-size: 11px; }
+.practice-charge:disabled { opacity: 1; cursor: default; }
+.practice-charge.ready { border-color: #98c6ff; box-shadow: 0 0 15px #528ffa55; }
+.practice-charge:active:not(:disabled) { transform: scale(.96); }
+.practice-queued { min-height: 17px; text-align: center; color: #c4d4e9; font-size: 12px; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.practice-team-dock { flex-shrink: 0; }
+.practice-team-dock h3 { font-size: 14px; margin: 0 0 5px; }
+.practice-hint { font-weight: 400; font-size: 12px; color: var(--muted); margin-left: 8px; }
+.practice-team { display: grid; grid-template-columns: repeat(6,minmax(0,1fr)); gap: 6px; }
+.practice-team button { background: white; border: 1px solid var(--line); border-radius: 8px; padding: 8px; color: var(--ink); height: 64px; min-width: 0; text-align: left; }
+.practice-team button[aria-pressed=true] { border: 2px solid var(--blue); background: #eaf2ff; }
+.practice-team button:disabled { opacity: .65; }
+.practice-team strong { display: block; font-size: 13px; margin-bottom: 4px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.practice-team span { display: block; font-size: 11px; color: var(--muted); white-space: nowrap; }
+.practice-auto, .practice-speed { display: flex; align-items: center; gap: 8px; font-size: 15px; }
+.practice-auto input { width: 18px; height: 18px; margin: 0; }
+.practice-speed select { width: auto; }
+#practice-options { width: min(600px, calc(100vw - 24px)); max-height: calc(100dvh - 30px); overflow: auto; border: 1px solid var(--line); border-radius: 12px; padding: 20px; color: var(--ink); }
+#practice-options::backdrop { background: #071527aa; }
+#practice-options-title { margin: 0 auto 0 0; font-size: 22px; }
+.practice-help p { line-height: 1.6; }
+#practice-result { position: absolute; inset: 20% 10% auto; color: var(--ink); z-index: 2; padding: 20px; box-shadow: 0 8px 30px #0007; }
+#practice-status.error { color: #b32838; }
+.practice-playing #practice-status:not(:empty) { position: fixed; bottom: 8px; left: 10px; right: 10px; padding: 8px; background: white; border: 1px solid var(--line); border-radius: 6px; z-index: 5; }
+@media (max-width: 600px) {
+ .practice-arena { padding: 10px 12px; }
+ .practice-team { grid-template-columns: repeat(3,minmax(0,1fr)); }
+ .practice-team button { height: 54px; padding: 5px; }
+ .practice-main-toolbar > strong { display: none; }
+ .practice-main-toolbar #practice-pause { margin-right: auto; }
+ .combatant-title h2 { font-size: 18px; }
+ .practice-gesture-hint { font-size: 13px; max-width: 160px; }
+ .practice-actions { gap: 14px; }
+}
+@media (max-height: 700px) and (max-width: 600px) {
+ #practice-battle { padding-block: 5px; gap: 5px; }
+ .practice-arena { padding-block: 6px; gap: 3px; }
+ .practice-clock { width: 54px; height: 54px; }
+ .practice-clock strong { font-size: 16px; }
+ .practice-clock span { display: none; }
+ .practice-charge { width: 88px; height: 88px; padding: 8px; gap: 3px; }
+ .practice-charge strong { font-size: 12px; }
+ .practice-charge kbd { display: none; }
+ .practice-warning { padding: 5px 8px; }
+ .practice-feedback { display: none; }
+ .practice-numbers { margin: 2px 0; font-size: 12px; }
+}
+@media (max-height: 600px) and (min-width: 601px) {
+ .practice-arena { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto minmax(0,1fr); align-items: center; column-gap: 24px; padding: 8px 16px; }
+ .practice-topline { grid-column: 1; grid-row: 1; }
+ .practice-clock { width: 48px; height: 48px; }
+ .practice-clock strong { font-size: 15px; }
+ .practice-clock span { display: none; }
+ .practice-boss { grid-column: 1; grid-row: 2; }
+ .practice-player { grid-column: 2; grid-row: 1; }
+ .practice-actions { grid-column: 2; grid-row: 2; }
+ .practice-charge { width: 90px; height: 90px; padding: 8px; }
+ .practice-charge strong { font-size: 12px; }
+ .practice-feedback, .practice-queued { display: none; }
+ .practice-team button { height: 52px; }
+ .practice-action { margin: 0; font-size: 12px; }
+ .combatant-title h2 { font-size: 16px; }
+}
+@media (prefers-reduced-motion: reduce) { .practice-hp > span, .practice-charge-fill, .practice-windup > span { transition: none; } }
+
+.practice-glitches { margin-block: 16px; padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: white; }
+.practice-glitches summary { cursor: pointer; font-weight: 700; }
+.practice-glitches summary span { font-weight: 400; font-size: 13px; }
+.practice-glitches > label { display: block; margin-block: 12px; line-height: 1.5; font-weight: 400; }
+.practice-glitches input[type="checkbox"] { display: inline-block; width: auto; margin: 0 6px 0 0; vertical-align: middle; }
+.practice-glitches .practice-glitch-chance { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.practice-glitch-chance input { width: 90px; }
+
+.practice-mode { display: block; margin: 16px 0; line-height: 1.6; font-weight: 400; }
+.practice-mode input, .practice-feedback-settings input[type="checkbox"] { display: inline-block; width: auto; margin: 0 6px 0 0; }
+.practice-feedback-settings { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 18px; margin-block: 16px; }
+.practice-feedback-settings label { display: flex; align-items: center; gap: 6px; margin: 0; font-weight: 400; }
+.practice-feedback-settings input[type="range"] { width: 110px; margin: 0; }
+.practice-realistic .practice-numbers, .practice-realistic #practice-energy-label,
+.practice-realistic #practice-hit-time, .practice-realistic .practice-windup,
+.practice-realistic #practice-feedback { display: none; }
+.practice-lobby { text-align: center; width: 100%; max-width: 540px; margin: auto; padding: 14px; }
+.practice-lobby h2 { color: inherit; font-size: clamp(20px, 4vw, 30px); margin: 10px 0; }
+.practice-lobby p { line-height: 1.5; margin: 10px 0; }
+.practice-lobby-eyebrow { font-size: 12px; letter-spacing: .15em; font-weight: 800; }
+.practice-lobby-symbol { font-size: 44px; color: #32614d; }
+.practice-arena.in-lobby { background: #eaf3ee; color: #183e2c; border-color: #93b3a0; }
+.practice-arena.in-lobby .practice-topline { color: #365947; }
+.practice-arena.in-lobby .practice-clock span { color: #365947; }
+.practice-arena.in-lobby > .practice-boss, .practice-arena.in-lobby > .practice-player,
+.practice-arena.in-lobby > .practice-actions, .practice-arena.in-lobby > .practice-feedback,
+.practice-arena.in-lobby > .practice-queued { display: none; }
+.practice-arena.defeated { background: #f6e8e7; color: #713b38; border-color: #cb9d97; }
+.practice-arena.defeated .practice-lobby { animation: defeat-arrival 2s ease-out both; }
+.practice-arena.defeated .practice-lobby-symbol { color: #a14f49; }
+@keyframes defeat-arrival { from { transform: translateY(10px); } 25%, to { transform: translateY(0); } }
+@media (max-height: 600px) and (min-width: 601px) {
+ .practice-arena.in-lobby { display: flex; }
+ .practice-lobby { padding: 0; }
+ .practice-lobby-symbol { display: none; }
+ .practice-lobby h2 { font-size: 20px; margin: 5px 0; }
+ .practice-lobby p { margin: 5px 0; font-size: 13px; }
+}
+@media (prefers-reduced-motion: reduce) { .practice-arena.defeated .practice-lobby { animation: none; } }

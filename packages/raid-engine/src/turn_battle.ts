@@ -1,8 +1,10 @@
 /** Manually controlled half-second battles backed by the canonical raid engine. */
 import { heappop, heappush } from './compatibility.js';
+import { practiceGlitches, type PracticeGlitches } from './practice_glitches.js';
 import { PythonRandom } from './random.js';
 import type { RaidEngine } from './super_mega_raid_simulator.js';
-import type { ManualAction } from './types.js';
+import { sampleRejoinTime } from './rejoin_time.js';
+import type { ManualAction, RejoinTimeDistribution } from './types.js';
 
 type EngineMove = InstanceType<RaidEngine['Move']>;
 type EnginePokemon = InstanceType<RaidEngine['BattlePokemon']>;
@@ -30,7 +32,14 @@ export interface ManualRebuildRequest {
     stopped?: boolean;
 }
 
-export function createTurnBattle(engine: RaidEngine) {
+export interface ManualBattleOptions {
+    automaticFaints?: boolean;
+    glitches?: Partial<PracticeGlitches>;
+    rejoinTimeDistribution?: RejoinTimeDistribution;
+}
+export function createTurnBattle(engine: RaidEngine, options: ManualBattleOptions = {}) {
+    const FAINT_SECONDS = 2;
+    const glitches = practiceGlitches(options.glitches);
     const battleTimeLimit = Math.min(
         engine.RAID_SECONDS,
         Number((engine as any).BATTLE_TIME_LIMIT ?? engine.RAID_SECONDS),
@@ -43,6 +52,14 @@ export function createTurnBattle(engine: RaidEngine) {
         declare lobby: boolean;
         declare rejoin_at: number;
         declare stopped: boolean;
+        declare glitch_rng: PythonRandom;
+        declare lag_until: number;
+        declare charged_until: number;
+        declare lobby_transition_until: number;
+        declare lobby_reason: string | null;
+        declare lobby_message: string | null;
+        declare energy_epoch: number;
+        declare faint_until: number | null;
 
         override __post_init__(): void {
             super.__post_init__();
@@ -52,6 +69,15 @@ export function createTurnBattle(engine: RaidEngine) {
             this.lobby = false;
             this.rejoin_at = 0;
             this.stopped = false;
+            this.faint_until = null;
+            // A separate stream keeps phantom rolls from changing the boss RNG sequence.
+            this.glitch_rng = new PythonRandom(BigInt(engine.RANDOM_SEED) ^ 0x7068616e746f6dn);
+            this.lag_until = 0;
+            this.charged_until = 0;
+            this.lobby_transition_until = 0;
+            this.lobby_reason = null;
+            this.lobby_message = null;
+            this.energy_epoch = 0;
             this.push(0, 'boss_decision');
             this.resolve_until(0);
         }
@@ -87,10 +113,40 @@ export function createTurnBattle(engine: RaidEngine) {
                     super.apply_boss_hit(data[0], data[1]);
                 }
                 else if (kind === 'player_hit') {
+                    const player = this.players[data[0]], pokemon = player.pokemon;
+                    const delayed = glitches.energy_resolve && player.on_field && player.generation === data[1] && data[2] === pokemon.fast_move;
+                    const energy = pokemon.energy;
                     super.apply_player_hit(data[0], data[1], data[2]);
+                    if (delayed) {
+                        // Damage lands normally; energy resolves on the following input turn.
+                        // Keep the member reference so switching cannot credit the replacement.
+                        pokemon.energy = energy;
+                        this.push(time + 0.5, 'energy_hit', [pokemon, data[2].energy, this.energy_epoch]);
+                    }
+                }
+                else if (kind === 'energy_hit') {
+                    if (data[2] === this.energy_epoch && data[0].hp > 0)
+                        data[0].energy = Math.min(100, data[0].energy + data[1]);
                 }
                 else if (kind === 'gem_use') {
                     this.use_purified_gem(time, data[0]);
+                }
+                else if (kind === 'faint_replacement' && time < battleTimeLimit) {
+                    const player = this.players[0];
+                    if (player.generation !== data[0] || this.lobby || player.on_field) continue;
+                    this.faint_until = null;
+                    const index = player.team.findIndex(member => member.hp > 0);
+                    if (index < 0) this.enter_lobby('fainted');
+                    else {
+                        player.pokemon_index = index;
+                        player.on_field = true;
+                        player.switches += 1;
+                        player.action_start = time;
+                        player.action_end = time; // The two-second faint delay is already complete.
+                        this.freeze_charge(time);
+                        this.record_replay_action(time, 'player', 0, 'switch', index + 1);
+                        this.log(time, `P1 automatically sends out slot ${index + 1}: ${player.species.name}`);
+                    }
                 }
             }
             if (this.boss_hp > 0)
@@ -98,14 +154,28 @@ export function createTurnBattle(engine: RaidEngine) {
             this.tick = Math.round(this.current_time * 2);
         }
 
-        enter_lobby(): void {
+        freeze_charge(readyAt: number): void {
+            // The first turn after entry is blocked, in addition to normal switch recovery.
+            this.charged_until = glitches.switch_charge_freeze ? readyAt + 0.5 : 0;
+        }
+
+        enter_lobby(reason = 'quit'): void {
             const player = this.players[0];
             player.on_field = false;
             player.generation += 1;
             player.action_end = this.current_time;
             player.action_is_charged = false;
             this.lobby = true;
-            this.rejoin_at = this.current_time + this.rng.choice<number>(engine.REJOIN_TIMES);
+            this.lag_until = 0;
+            this.energy_epoch += 1;
+            this.faint_until = null;
+            this.lobby_reason = reason;
+            this.lobby_transition_until = reason === 'phantom' ? this.current_time + FAINT_SECONDS : 0;
+            // A phantom rejection wastes the defeat animation; the team is already healed.
+            const delay = reason === 'phantom' ? FAINT_SECONDS : options.rejoinTimeDistribution?.length
+                ? sampleRejoinTime(this.rng, options.rejoinTimeDistribution)
+                : this.rng.choice<number>(engine.REJOIN_TIMES);
+            this.rejoin_at = this.current_time + delay + (glitches.remote_lag ? 1 : 0);
             this.record_replay_action(this.current_time, 'player', 0, 'quit');
             this.log(this.current_time, `P1 enters lobby; ready to rejoin at ${this.rejoin_at.toFixed(1)}s`);
             this.pending_boss?.[2].delete(0);
@@ -118,6 +188,14 @@ export function createTurnBattle(engine: RaidEngine) {
             player.generation += 1;
             player.action_end = time;
             player.action_is_charged = false;
+            this.pending_boss?.[2].delete(playerId);
+            if (options.automaticFaints) {
+                this.faint_until = time + FAINT_SECONDS;
+                player.action_end = this.faint_until;
+                this.push(this.faint_until, 'faint_replacement', [player.generation]);
+                this.log(time, `P1 ${player.species.name} fainted; automatic replacement at ${this.faint_until.toFixed(1)}s`);
+                return;
+            }
             this.log(time, `P1 ${player.species.name} fainted; choose a surviving slot`);
             if (!player.team.some(member => member.hp > 0))
                 this.enter_lobby();
@@ -131,7 +209,9 @@ export function createTurnBattle(engine: RaidEngine) {
             const player = this.players[0];
             const alive = player.on_field && player.hp > 0;
             const animationBusy = alive && this.current_time < player.action_end;
-            const ready = alive && !animationBusy;
+            const lagged = this.current_time < this.lag_until;
+            const ready = alive && !animationBusy && !lagged;
+            const fainting = this.faint_until !== null;
             let dodge = ready && this.pending_boss !== null && !this.pending_boss[2].has(0);
             if (dodge && this.pending_boss) {
                 const hitTime = this.pending_boss[0];
@@ -139,16 +219,17 @@ export function createTurnBattle(engine: RaidEngine) {
             }
             return {
                 fast: ready,
-                charged: ready && player.energy >= player.pokemon.charged_move.energy,
+                charged: ready && this.current_time >= this.charged_until && player.energy >= player.pokemon.charged_move.energy,
                 dodge,
-                quit: !this.lobby,
+                quit: !this.lobby && !fainting && !lagged,
                 rejoin: this.lobby && this.current_time >= this.rejoin_at,
                 switch_slots: player.team
                     .map((member, index) => ({ member, index }))
                     .filter(({ member, index }) => member.hp > 0
                         && (index !== player.pokemon_index || !player.on_field)
                         && !this.lobby
-                        && !animationBusy)
+                        && !fainting
+                        && !animationBusy && !lagged)
                     .map(({ index }) => index + 1),
             };
         }
@@ -198,6 +279,7 @@ export function createTurnBattle(engine: RaidEngine) {
                 player.switches += 1;
                 player.action_start = time;
                 player.action_end = time + engine.SWITCH_SECONDS;
+                this.freeze_charge(player.action_end);
                 player.action_is_charged = false;
                 this.pending_boss?.[2].delete(0);
                 this.record_replay_action(time, 'player', 0, 'switch', slot);
@@ -209,7 +291,21 @@ export function createTurnBattle(engine: RaidEngine) {
             else if (action === 'rejoin') {
                 player.rejoins += 1;
                 this.lobby = false;
+                this.energy_epoch += 1;
                 super.rejoin(time, 0);
+                this.lobby_message = null;
+                this.lobby_reason = null;
+                this.lobby_transition_until = 0;
+                this.freeze_charge(time);
+                if (glitches.phantom_relobby && this.glitch_rng.random() < glitches.phantom_chance) {
+                    this.enter_lobby('phantom');
+                    this.lobby_message = 'All your Pokémon have fainted';
+                    this.log(time, `Phantom relobby: "${this.lobby_message}"`);
+                } else if (glitches.rejoin_snipe && this.pending_boss && this.pending_boss[1] === this.boss_charged) {
+                    this.lag_until = this.pending_boss[0];
+                    this.pending_boss[2].delete(0);
+                    this.log(time, `Rejoin snipe: controls frozen until ${this.lag_until.toFixed(1)}s`);
+                }
             }
         }
 
@@ -236,7 +332,7 @@ export function createTurnBattle(engine: RaidEngine) {
             const status = this.stopped ? 'stopped' : this.finished ? 'finished' : 'in_progress';
             text = text.replace(
                 '\nEvents:',
-                `\nRecording: manual; through=${this.current_time}; status=${status}\n\nEvents:`,
+                `\n${options.automaticFaints ? `Current glitches: ${JSON.stringify(glitches)}\n` : ''}Recording: ${options.automaticFaints ? 'practice' : 'manual'}; through=${this.current_time}; status=${status}\n\nEvents:`,
             );
             return `${text}\n\n# Full event log (comments; compact actions above drive playback)\n${this.event_log.map(line => `# ${line}`).join('\n')}\n`;
         }
@@ -279,6 +375,7 @@ export function createTurnBattle(engine: RaidEngine) {
                 raid_timer: engine.RAID_SECONDS,
                 status,
                 seed: String(engine.RANDOM_SEED),
+                glitches,
                 boss: {
                     name: engine.BOSS_NAME,
                     types: [...engine.BOSS_TYPES],
@@ -287,6 +384,7 @@ export function createTurnBattle(engine: RaidEngine) {
                     energy: this.boss_energy,
                     max_energy: engine.BOSS_MAX_ENERGY,
                     incoming: this.pending_boss?.[1].name ?? null,
+                    incoming_charged: this.pending_boss?.[1] === this.boss_charged,
                     hits_at: this.pending_boss?.[0] ?? null,
                     enraged: this.enraged,
                     purified_gems_used: this.purified_gems_used,
@@ -299,6 +397,15 @@ export function createTurnBattle(engine: RaidEngine) {
                     busy_until: player.action_end,
                     in_lobby: this.lobby,
                     rejoin_at: this.rejoin_at,
+                    lag_until: this.lag_until,
+                    charged_blocked_until: this.charged_until,
+                    lobby_message: this.lobby_message,
+                    lobby_reason: this.lobby_reason,
+                    lobby_phase: this.current_time < this.lobby_transition_until || (this.faint_until !== null && !player.team.some(member => member.hp > 0))
+                        ? 'defeated' : this.lobby ? 'lobby' : null,
+                    lobby_transition_until: this.lobby_transition_until || this.faint_until,
+                    fainting_until: this.faint_until,
+                    next_slot: this.faint_until === null ? null : (player.team.findIndex(member => member.hp > 0) + 1 || null),
                     faints: player.faints,
                     rejoins: player.rejoins,
                     purified_gems_used: player.purified_gems_used,

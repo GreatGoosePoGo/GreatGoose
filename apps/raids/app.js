@@ -265,7 +265,7 @@ function updateSimulationScope() {
   document.querySelector("#simulation-scope-note").textContent = pokemon
     ? `${combinations} boss moveset${combinations === 1 ? "" : "s"} × ${games || 0} game${games === 1 ? "" : "s"} = ${total} battle${total === 1 ? "" : "s"}. Maximum 500 battles per request.`
     : "Choose a boss to calculate the batch size.";
-  simulateButton.textContent = allMovesets
+  simulateButton.textContent = document.body.dataset.mode === "practice" ? "Start practice" : allMovesets
     ? "Simulate all boss movesets"
     : games === 1 ? "Simulate one raid" : `Simulate ${games || 0} games`;
 }
@@ -792,7 +792,15 @@ async function initialize() {
   if (!shared.loaded) { playersElement.replaceChildren(); addPlayer(); }
   addPlayerButton.disabled = false;
   clonePlayerButton.disabled = false;
-  if (shared.autoRun) window.setTimeout(() => form.requestSubmit(), 0);
+  if (document.body.dataset.mode === "practice") {
+    playerSections().slice(1).forEach(section => section.remove());
+    playerSections()[0].querySelector(".player-party").value = "0";
+    movesetModeSelect.value = "selected";
+    simulationCountInput.value = "1";
+    updateSimulationScope();
+  }
+  window.dispatchEvent(new Event("raid-setup-ready"));
+  if (shared.autoRun && document.body.dataset.mode !== "practice") window.setTimeout(() => form.requestSubmit(), 0);
 }
 
 function teamPayload(playerSection) {
@@ -856,6 +864,7 @@ function battlePayload() {
 }
 
 globalThis.RaidSetup = {
+  shareUrl(target) { return RaidShareCodec.createUrl(target, shareState()); },
   read({ singlePlayer = false } = {}) {
     const rows = [...playersElement.querySelectorAll(".pokemon-row")];
     if (!bossInput.pokemonSearch || !playerSections().length || !rows.length) throw new Error("Pokémon data is still loading.");
@@ -939,6 +948,10 @@ function showResult(result) {
 
 form.addEventListener("submit", async event => {
   event.preventDefault();
+  if (document.body.dataset.mode === "practice") {
+    globalThis.RaidPractice?.start();
+    return;
+  }
   const teamRows = [...playersElement.querySelectorAll(".pokemon-row")];
   const selectionsAreValid = bossInput.pokemonSearch.requireSelection()
     && teamRows.every(row => row.pokemonSearch.requireSelection());
@@ -991,3 +1004,11 @@ raidDifficultySelect.addEventListener("change", updatePurifiedGems);
 updatePlayerStrategy();
 updatePurifiedGems();
 initialize().catch(error => alert(error.message));
+
+// A configured simulator can hand its setup to practice without losing moves or IVs.
+document.querySelectorAll("a.practice-link").forEach(link => {
+  link.addEventListener("click", () => {
+    try { link.href = globalThis.RaidSetup.shareUrl(new URL("practice/", document.baseURI).href); }
+    catch { /* An empty setup still opens the practice builder. */ }
+  });
+});

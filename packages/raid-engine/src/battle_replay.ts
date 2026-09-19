@@ -1,4 +1,5 @@
 /** Native TypeScript port of the supplied Python reference. No Python runtime is used. */
+import { practiceGlitches } from './practice_glitches.js';
 import * as py from "./compatibility.js";
 import { re } from "./text.js";
 import { seconds_to_tick } from "./text.js";
@@ -496,6 +497,11 @@ function parse_replay_text(text: string): Record<string, any> {
                 throw new ReplayParseError(line_number, 'Purified Gems must be "use" or "none".');
             continue;
         }
+        if (line.startsWith('Current glitches: ')) {
+            try { settings.practice_glitches = practiceGlitches(JSON.parse(line.slice('Current glitches: '.length))); }
+            catch (error) { throw new ReplayParseError(line_number, `Invalid current glitches: ${error instanceof Error ? error.message : error}`); }
+            continue;
+        }
         if (py.truth(py.startswith(line, "Raid: "))) {
             raid[py.key("difficulty")] = py.strip(py.removeprefix(line, "Raid: "));
         }
@@ -686,11 +692,11 @@ function parse_replay_text(text: string): Record<string, any> {
                                                                                 }
                                                                                 else {
                                                                                     if (py.truth(py.startswith(line, "Recording: "))) {
-                                                                                        match = re.fullmatch("Recording: manual; through=([\\d.]+); status=(in_progress|stopped|finished)", line);
+                                                                                        match = re.fullmatch("Recording: (manual|practice); through=([\\d.]+); status=(in_progress|stopped|finished)", line);
                                                                                         if (py.truth(!py.truth(match))) {
                                                                                             throw new ReplayParseError(line_number, "Invalid manual recording header.");
                                                                                         }
-                                                                                        settings[py.key("recording")] = py.dict([["mode", "manual"], ["through_tick", seconds_to_tick(py.at(match, 1), line_number)], ["status", py.at(match, 2)]]);
+                                                                                        settings[py.key("recording")] = py.dict([["mode", py.at(match, 1)], ["through_tick", seconds_to_tick(py.at(match, 2), line_number)], ["status", py.at(match, 3)]]);
                                                                                     }
                                                                                     else {
                                                                                         if (py.truth(py.startswith(line, "Result: "))) {
