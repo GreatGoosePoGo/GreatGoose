@@ -22,3 +22,9 @@ test('vibration is opt-in, mute is independent, and unsupported audio cannot bre
  f.configure({haptics:false});assert.equal(vibrations.at(-1),0);
  visible=true;const count=vibrations.length;f.play('victory');assert.equal(vibrations.length,count);
 });
+
+test('unavailable buffered actions do not play an attack cue; wasted dodges still do',()=>{
+ const f=new BattleFeedback(),played=[];f.play=name=>played.push(name);f.observe(state());
+ f.observe({...state(),input_result:{action:'fast',outcome:'unavailable'}},'fast');assert.deepEqual(played,[]);
+ f.observe({...state(),input_result:{action:'dodge',outcome:'wasted'}},'dodge');assert.deepEqual(played,['dodge']);
+});

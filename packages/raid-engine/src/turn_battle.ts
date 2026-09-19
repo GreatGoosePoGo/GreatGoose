@@ -34,6 +34,7 @@ export interface ManualRebuildRequest {
 
 export interface ManualBattleOptions {
     automaticFaints?: boolean;
+    experimentalInputs?: boolean;
     glitches?: Partial<PracticeGlitches>;
     rejoinTimeDistribution?: RejoinTimeDistribution;
 }
@@ -60,11 +61,13 @@ export function createTurnBattle(engine: RaidEngine, options: ManualBattleOption
         declare lobby_message: string | null;
         declare energy_epoch: number;
         declare faint_until: number | null;
+        declare input_result: {action: ManualAction; outcome: 'accepted' | 'wasted' | 'unavailable'} | null;
 
         override __post_init__(): void {
             super.__post_init__();
             this.detailed = true;
             this.tick = 0;
+            this.input_result = null;
             this.pending_boss = null;
             this.lobby = false;
             this.rejoin_at = 0;
@@ -212,7 +215,7 @@ export function createTurnBattle(engine: RaidEngine, options: ManualBattleOption
             const lagged = this.current_time < this.lag_until;
             const ready = alive && !animationBusy && !lagged;
             const fainting = this.faint_until !== null;
-            let dodge = ready && this.pending_boss !== null && !this.pending_boss[2].has(0);
+            let dodge = ready && (!!options.experimentalInputs || (this.pending_boss !== null && !this.pending_boss[2].has(0)));
             if (dodge && this.pending_boss) {
                 const hitTime = this.pending_boss[0];
                 dodge = !(player.action_is_charged && player.action_start < hitTime && hitTime < player.action_end);
@@ -267,10 +270,16 @@ export function createTurnBattle(engine: RaidEngine, options: ManualBattleOption
                 this.push(player.action_end, 'player_hit', [0, player.generation, move]);
             }
             else if (action === 'dodge') {
-                this.pending_boss![2].add(0);
+                const protects = this.pending_boss !== null && !this.pending_boss[2].has(0);
+                this.pending_boss?.[2].add(0);
+                if (options.experimentalInputs) {
+                    player.action_start = time;
+                    player.action_is_charged = false;
+                }
                 player.action_end = Math.max(time, player.action_end) + engine.DODGE_SECONDS;
+                if (options.experimentalInputs) this.input_result = {action, outcome: protects ? 'accepted' : 'wasted'};
                 this.record_replay_action(time, 'player', 0, 'dodge');
-                this.log(time, `P1 dodges incoming ${this.pending_boss![1].name}`);
+                this.log(time, protects ? `P1 dodges incoming ${this.pending_boss![1].name}` : 'P1 dodges, but protects against no new hit');
             }
             else if (action === 'switch') {
                 player.generation += 1; // Cancel the departing Pokémon's unresolved hit.
@@ -310,8 +319,25 @@ export function createTurnBattle(engine: RaidEngine, options: ManualBattleOption
         }
 
         advance(action: ManualAction = 'wait', slot: number | null = null, snapshot = true): Record<string, any> | null {
-            this.act(action, slot);
-            this.resolve_until(Math.min(battleTimeLimit, (this.tick + 1) / 2));
+            if (options.experimentalInputs) {
+                // Inputs received since the previous snapshot start at the next boundary.
+                // Resolve hits first: a swipe cannot retroactively dodge an impact.
+                const player = this.players[0], generation = player.generation, slotBefore = player.pokemon_index, onField = player.on_field;
+                this.input_result = null;
+                this.resolve_until(Math.min(battleTimeLimit, (this.tick + 1) / 2));
+                const available = this.availability();
+                const allowed = action === 'switch' ? available.switch_slots.includes(slot!) : available[action as keyof Omit<ManualAvailability, 'switch_slots'>];
+                if (action !== 'wait') {
+                    this.input_result = {action, outcome: 'unavailable'};
+                    if (!this.finished && player.generation === generation && player.pokemon_index === slotBefore && player.on_field === onField && allowed) {
+                        this.input_result = {action, outcome: 'accepted'};
+                        this.act(action, slot);
+                    }
+                }
+            } else {
+                this.act(action, slot);
+                this.resolve_until(Math.min(battleTimeLimit, (this.tick + 1) / 2));
+            }
             return snapshot ? this.snapshot() : null;
         }
 
@@ -332,7 +358,7 @@ export function createTurnBattle(engine: RaidEngine, options: ManualBattleOption
             const status = this.stopped ? 'stopped' : this.finished ? 'finished' : 'in_progress';
             text = text.replace(
                 '\nEvents:',
-                `\n${options.automaticFaints ? `Current glitches: ${JSON.stringify(glitches)}\n` : ''}Recording: ${options.automaticFaints ? 'practice' : 'manual'}; through=${this.current_time}; status=${status}\n\nEvents:`,
+                `\n${options.experimentalInputs ? 'Experimental inputs: true\n' : ''}${options.automaticFaints ? `Current glitches: ${JSON.stringify(glitches)}\n` : ''}Recording: ${options.automaticFaints ? 'practice' : 'manual'}; through=${this.current_time}; status=${status}\n\nEvents:`,
             );
             return `${text}\n\n# Full event log (comments; compact actions above drive playback)\n${this.event_log.map(line => `# ${line}`).join('\n')}\n`;
         }
@@ -376,6 +402,7 @@ export function createTurnBattle(engine: RaidEngine, options: ManualBattleOption
                 status,
                 seed: String(engine.RANDOM_SEED),
                 glitches,
+                input_result: this.input_result,
                 boss: {
                     name: engine.BOSS_NAME,
                     types: [...engine.BOSS_TYPES],

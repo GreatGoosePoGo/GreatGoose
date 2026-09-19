@@ -50,7 +50,13 @@ export class PracticeController {
   queue(action, slot = null) {
     if (!this.running || this.battle?.status !== 'in_progress') return;
     if (this.realistic && this.now() - this.deadline >= 500) return;
-    this.pending = {action, slot, incomingAt: action === 'dodge' ? this.battle.boss.hits_at : null}; this.notify();
+    const command = {action, slot};
+    // Ready inputs belong to the next turn. During recovery, keep only the newest
+    // input for 250 ms of battle time; never store an attack for a whole animation.
+    const turnMs = 500 / this.speed;
+    const nextTurn = this.deadline + Math.max(this.busy ? 1 : 0, Math.ceil((this.now() - this.deadline) / turnMs)) * turnMs;
+    const expiresAt = this.allowed(command) ? Math.max(this.now(), nextTurn) : this.now() + 250 / this.speed;
+    this.pending = {...command, expiresAt, targetTurn: nextTurn}; this.notify();
   }
   allowed(command) {
     const available = this.battle?.available;
@@ -70,12 +76,13 @@ export class PracticeController {
     try {
       for (let i = 0; i < steps && this.running; i++) {
         const previous = this.battle;
-        if (this.pending?.action === 'dodge' && this.pending.incomingAt !== previous.boss.hits_at) this.pending = null;
         let command = {action: 'wait', slot: null};
-        if (!this.catchingUp && this.pending) {
-          if (this.allowed(this.pending)) { command = this.pending; this.pending = null; }
-          else if (this.pending.action === 'dodge' && !previous.boss.incoming) this.pending = null;
-        } else if (!this.realistic && this.repeatFast && previous.available.fast) command.action = 'fast';
+        if (!this.catchingUp && this.pending && this.pending.targetTurn <= this.deadline) {
+          // Judge expiry against the turn's scheduled time, allowing normal timer jitter.
+          if (this.pending.expiresAt >= this.deadline) command = {action: this.pending.action, slot: this.pending.slot};
+          this.pending = null;
+        } else if (!this.realistic && this.repeatFast && (previous.available.fast ||
+          (previous.player.on_field && previous.player.busy_until <= previous.elapsed + .5 && previous.player.lag_until <= previous.elapsed + .5))) command.action = 'fast';
         const battle = await this.request('practice/step', {
           session_id: previous.session_id, expected_tick: previous.tick, ...command,
         });

@@ -70,6 +70,7 @@ export class BattleFeedback {
     if (battle.status === 'time_expired' && previous.status !== 'time_expired') { this.play('defeated'); return; }
     if (p.lobby_phase === 'defeated' && before.lobby_phase !== 'defeated') { this.play('defeated'); return; }
     if (p.faints > before.faints) { this.play('faint'); return; }
+    if (battle.input_result?.outcome === 'unavailable') command = 'wait';
     if (['fast','charged','dodge'].includes(command)) this.play(command);
     if (before.in_lobby && !p.in_lobby) this.play('rejoin');
     if (p.slot === before.slot && p.hp < before.hp) this.play('hit');

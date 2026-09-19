@@ -142,7 +142,7 @@ function render() {
     .map(([key, name]) => key === 'phantom_relobby' ? `${name} (${Math.round(battle.glitches.phantom_chance * 100)}%)` : name);
   text('glitches-active', `Current glitches: ${enabledGlitches.join(' · ') || 'off'}`);
   const pending = controller.pending;
-  text('queued', pending ? `Queued: ${pending.action === 'switch' ? `switch to slot ${pending.slot}` : pending.action} · new input replaces it` : controller.repeatFast && active ? 'Repeating fast attacks when ready' : '');
+  text('queued', pending ? `Queued: ${pending.action === 'switch' ? `switch to slot ${pending.slot}` : pending.action} · next turn only` : battle.input_result?.outcome === 'wasted' ? 'Dodge used · no new hit avoided' : battle.input_result?.outcome === 'unavailable' ? 'Input missed · Pokémon was unavailable' : controller.repeatFast && active ? 'Repeating fast attacks when ready' : '');
   if (battle.tick !== lastTick || battle.session_id !== lastSession) {
     text('feedback', realistic ? '' : battle.log.at(-1) || '');
     text('log', realistic ? '' : battle.log.join('\n')); lastTick = battle.tick; lastSession = battle.session_id;
@@ -265,7 +265,7 @@ function canAct(action) {
   if (editing || at('options').open || !controller.running || !b?.player.on_field || b.player.in_lobby) return false;
   if (b.player.lag_until > b.elapsed) return false;
   if (action === 'charged') return !(b.player.charged_blocked_until > b.elapsed) && b.player.energy >= b.player.charged_energy;
-  if (action === 'dodge') return !!b.boss.incoming;
+  if (action === 'dodge') return true;
   return true;
 }
 installBattleGestures(document.body, {

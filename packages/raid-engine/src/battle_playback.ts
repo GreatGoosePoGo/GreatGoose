@@ -382,17 +382,22 @@ function reconstruct(document: any, engine: any): any {
                                     }
                                     else {
                                         if (py.truth(((py.equal(action, "dodge"))))) {
-                                            if (py.truth(py.or(!py.truth(player.on_field), () => ((pending_boss === null))))) {
-                                                fail(`p${py.str(external_id)} has no incoming boss move to dodge.`);
+                                            const experimental = document.settings.experimental_inputs === true;
+                                            if (!player.on_field || player.hp <= 0 || (experimental && tick / 2 < player.action_end))
+                                                fail(`p${external_id} cannot dodge while unavailable.`);
+                                            if (!experimental && !pending_boss)
+                                                fail(`p${external_id} has no incoming boss move to dodge.`);
+                                            if (pending_boss) {
+                                                [hit_tick, move, dodgers] = pending_boss;
+                                                if (!experimental && dodgers.has(i)) fail(`p${external_id} already dodged this move.`);
+                                                if (player.action_is_charged && player.action_start < hit_tick / 2 && hit_tick / 2 < player.action_end)
+                                                    fail(`p${external_id} cannot dodge during its charged-move animation.`);
+                                                dodgers.add(i);
                                             }
-                                            if (py.truth(((py.has(py.at(pending_boss, 2), i))))) {
-                                                fail(`p${py.str(external_id)} already dodged this move.`);
+                                            if (experimental) {
+                                                player.action_start = tick / 2;
+                                                player.action_is_charged = false;
                                             }
-                                            [hit_tick, move, dodgers] = pending_boss;
-                                            if (py.truth(py.and(player.action_is_charged, () => ((player.action_start < (hit_tick / 2)) && ((hit_tick / 2) < player.action_end))))) {
-                                                fail(`p${py.str(external_id)} cannot dodge during its charged-move animation.`);
-                                            }
-                                            dodgers.add(i);
                                             player.action_end = py.add(py.max((tick / 2), player.action_end), engine.DODGE_SECONDS);
                                         }
                                         else {

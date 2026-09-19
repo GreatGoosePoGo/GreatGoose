@@ -497,6 +497,10 @@ function parse_replay_text(text: string): Record<string, any> {
                 throw new ReplayParseError(line_number, 'Purified Gems must be "use" or "none".');
             continue;
         }
+        if (line === 'Experimental inputs: true') {
+            settings.experimental_inputs = true;
+            continue;
+        }
         if (line.startsWith('Current glitches: ')) {
             try { settings.practice_glitches = practiceGlitches(JSON.parse(line.slice('Current glitches: '.length))); }
             catch (error) { throw new ReplayParseError(line_number, `Invalid current glitches: ${error instanceof Error ? error.message : error}`); }

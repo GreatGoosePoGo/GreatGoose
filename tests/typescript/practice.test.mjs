@@ -31,12 +31,21 @@ test('practice clock advances without player input, pause freezes and resume res
   c.pause();assert.equal(h.timers.size,0);await c.tick();assert.equal(c.battle.tick,1);
   h.setTime(10000);c.resume();assert.equal(c.deadline,10500);await c.tick();assert.equal(c.battle.tick,2);
 });
-test('one queued action waits for recovery, replaces old input, and precedes repeated fast attacks',async()=>{
-  const h=harness(),c=h.controller;await c.start({});c.repeatFast=true;
-  c.battle.available.fast=false;c.queue('fast');c.queue('charged');await c.tick();
-  assert.equal(h.calls.at(-1).payload.action,'wait');assert.equal(c.pending.action,'charged');
-  c.battle.available.charged=true;await c.tick();assert.equal(h.calls.at(-1).payload.action,'charged');assert.equal(c.pending,null);
-  await c.tick();assert.equal(h.calls.at(-1).payload.action,'fast');
+test('ready inputs target the next turn; recovery inputs expire after 250ms and newest wins',async()=>{
+  const h=harness(),c=h.controller;await c.start({});
+  c.queue('fast');h.setTime(500);await c.tick();assert.equal(h.calls.at(-1).payload.action,'fast');
+  c.battle.available.fast=false;c.queue('fast');h.setTime(1000);await c.tick();
+  assert.equal(h.calls.at(-1).payload.action,'wait');assert.equal(c.pending,null);
+  h.setTime(1300);c.queue('fast');c.queue('dodge');h.setTime(1500);await c.tick();
+  assert.equal(h.calls.at(-1).payload.action,'dodge');assert.equal(c.pending,null);
+  c.repeatFast=true;c.battle.available.fast=true;h.setTime(2000);await c.tick();
+  assert.equal(h.calls.at(-1).payload.action,'fast');
+});
+test('recovery buffering scales with slow motion and pause discards pending inputs',async()=>{
+  const h=harness(),c=h.controller;await c.start({});c.setSpeed(.5);
+  c.battle.available.fast=false;h.setTime(600);c.queue('fast');h.setTime(1000);await c.tick();
+  assert.equal(h.calls.at(-1).payload.action,'fast');
+  c.queue('fast');c.pause();assert.equal(c.pending,null);
 });
 test('slow or failed worker never creates overlapping or runaway ticks',async()=>{
   const h=harness(),c=h.controller;await c.start({});let release;
@@ -87,8 +96,8 @@ test('practice worker handles solo combat, switch, full faint, rejoin, timeout, 
   assert.equal(replacementTime,faintTime+2);
   assert.equal(b.player.next_slot,1);
   assert.deepEqual(b.available.switch_slots,[]);
-  await assert.rejects(call('practice/step',{session_id:b.session_id,expected_tick:b.tick,action:'switch',slot:1}),/cannot switch/);
-  await assert.rejects(call('practice/step',{session_id:b.session_id,expected_tick:b.tick,action:'fast'}),/Cannot fast/);
+  await step('switch',1);assert.equal(b.input_result.outcome,'unavailable');
+  await step('fast');assert.equal(b.input_result.outcome,'unavailable');
   while(b.elapsed<replacementTime){
     await step();
     if(b.elapsed<replacementTime) assert.equal(b.player.on_field,false);
@@ -119,7 +128,8 @@ test('practice worker handles solo combat, switch, full faint, rejoin, timeout, 
   const dodged=await step('dodge');
   b=await call('practice/start',request);
   const undodged=await step();
-  assert(dodged.player.hp>undodged.player.hp,'manual dodge reduces the incoming hit');
+  assert.equal(dodged.player.hp,undodged.player.hp,'a swipe on the impact turn cannot dodge a hit retroactively');
+  assert.equal(dodged.input_result.outcome,'wasted');
   assert.equal(first.tick,0);
  }finally{await worker.terminate();}
 });
@@ -160,4 +170,10 @@ test('realistic catch-up yields in bounded batches and stops at the battle endpo
  await c.tick();assert.equal(c.battle.tick,20);assert(c.running);assert.equal(h.timers.size,1);
  h.setHandler(async()=>snapshot({tick:21,status:'time_expired'}));await c.tick();
  assert.equal(c.battle.tick,21);assert(!c.running);assert.equal(h.timers.size,0);
+});
+
+test('inputs received after a delayed clock boundary cannot be backdated',async()=>{
+ const h=harness(),c=h.controller;await c.start({});h.setTime(600);c.queue('dodge');
+ await c.tick();assert.equal(h.calls.at(-1).payload.action,'wait');assert.equal(c.pending.action,'dodge');
+ h.setTime(1000);await c.tick();assert.equal(h.calls.at(-1).payload.action,'dodge');
 });
