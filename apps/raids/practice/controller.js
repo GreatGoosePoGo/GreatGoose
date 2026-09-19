@@ -7,6 +7,8 @@ export class PracticeController {
     this.running = false;
     this.busy = false;
     this.pending = null;
+    this.realistic = false;
+    this.catchingUp = false;
     this.repeatFast = false;
     this.speed = 1;
     this.timer = null;
@@ -14,9 +16,9 @@ export class PracticeController {
   }
   notify() { this.change(this); }
   clearTimer() { if (this.timer !== null) this.cancel(this.timer); this.timer = null; }
-  pause() { this.running = false; this.pending = null; this.clearTimer(); this.notify(); }
+  pause(force = false) { if (this.realistic && !force) return; this.running = false; this.pending = null; this.clearTimer(); this.notify(); }
   resume() {
-    if (this.busy || this.battle?.status !== 'in_progress') return;
+    if (this.running || this.busy || this.battle?.status !== 'in_progress') return;
     this.running = true;
     this.deadline = this.now() + 500 / this.speed;
     this.arm(); this.notify();
@@ -27,7 +29,9 @@ export class PracticeController {
   }
   async start(payload) {
     if (this.busy) return false;
-    this.pause();
+    this.pause(true);
+    this.realistic = !!payload.realistic;
+    if (this.realistic) { this.speed = 1; this.repeatFast = false; }
     this.busy = true; this.notify();
     const epoch = ++this.epoch;
     try {
@@ -45,6 +49,7 @@ export class PracticeController {
   }
   queue(action, slot = null) {
     if (!this.running || this.battle?.status !== 'in_progress') return;
+    if (this.realistic && this.now() - this.deadline >= 500) return;
     this.pending = {action, slot, incomingAt: action === 'dodge' ? this.battle.boss.hits_at : null}; this.notify();
   }
   allowed(command) {
@@ -53,44 +58,52 @@ export class PracticeController {
   }
   async tick() {
     if (!this.running || this.busy || this.battle?.status !== 'in_progress') return;
-    // A suspended browser must never replay a burst of missed ticks.
-    if (this.now() - this.deadline > 1000) {
+    if (!this.realistic && this.now() - this.deadline > 1000) {
       this.pause(); this.error(new Error('Practice paused because the browser fell behind. Press Resume to continue.')); return;
     }
     this.busy = true;
-    const previous = this.battle, epoch = this.epoch;
-    if (this.pending?.action === 'dodge' && this.pending.incomingAt !== previous.boss.hits_at) this.pending = null;
-    let command = {action: 'wait', slot: null};
-    if (this.pending) {
-      if (this.allowed(this.pending)) { command = this.pending; this.pending = null; }
-      else if (this.pending.action === 'dodge' && !previous.boss.incoming) this.pending = null;
-    } else if (this.repeatFast && previous.available.fast) command.action = 'fast';
+    const epoch = this.epoch;
+    // Catch up elapsed real time with waits, never a burst of stale attacks. Yield between batches.
+    const steps = this.realistic ? Math.min(20, Math.max(1, Math.floor((this.now() - this.deadline) / 500) + 1)) : 1;
+    this.catchingUp = steps > 1;
+    if (this.catchingUp) this.pending = null;
     try {
-      const battle = await this.request('practice/step', {
-        session_id: previous.session_id, expected_tick: previous.tick, ...command,
-      });
-      if (epoch !== this.epoch) return;
-      this.battle = battle;
-      if (battle.player.faints !== previous.player.faints || battle.player.slot !== previous.player.slot || battle.player.in_lobby !== previous.player.in_lobby)
-        this.pending = null;
-      if (battle.status !== 'in_progress') { this.running = false; this.pending = null; }
-    } catch (error) { this.pause(); this.error(error); }
+      for (let i = 0; i < steps && this.running; i++) {
+        const previous = this.battle;
+        if (this.pending?.action === 'dodge' && this.pending.incomingAt !== previous.boss.hits_at) this.pending = null;
+        let command = {action: 'wait', slot: null};
+        if (!this.catchingUp && this.pending) {
+          if (this.allowed(this.pending)) { command = this.pending; this.pending = null; }
+          else if (this.pending.action === 'dodge' && !previous.boss.incoming) this.pending = null;
+        } else if (!this.realistic && this.repeatFast && previous.available.fast) command.action = 'fast';
+        const battle = await this.request('practice/step', {
+          session_id: previous.session_id, expected_tick: previous.tick, ...command,
+        });
+        if (epoch !== this.epoch) return;
+        this.battle = battle;
+        this.deadline += 500 / this.speed;
+        if (battle.player.faints !== previous.player.faints || battle.player.slot !== previous.player.slot || battle.player.in_lobby !== previous.player.in_lobby)
+          this.pending = null;
+        if (battle.status !== 'in_progress') { this.running = false; this.pending = null; }
+      }
+    } catch (error) { this.pause(true); this.error(error); }
     finally {
       this.busy = false;
-      this.deadline += 500 / this.speed;
+      this.catchingUp = false;
       this.notify(); this.arm();
     }
   }
+
   async end() {
     if (this.busy || this.battle?.status !== 'in_progress') return;
-    this.pause(); this.busy = true; this.notify();
+    this.pause(true); this.busy = true; this.notify();
     try {
       this.battle = await this.request('practice/stop', {session_id: this.battle.session_id, expected_tick: this.battle.tick});
     } catch (error) { this.error(error); }
     finally { this.busy = false; this.notify(); }
   }
   setSpeed(speed) {
-    if (![0.5, 1].includes(speed)) return;
+    if (this.realistic || ![0.5, 1].includes(speed)) return;
     this.speed = speed;
     if (this.running && !this.busy) { this.deadline = this.now() + 500 / speed; this.arm(); }
   }

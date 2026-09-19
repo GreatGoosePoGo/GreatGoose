@@ -140,3 +140,24 @@ test('pointer gestures distinguish all swipe directions, taps, controls, cancell
  fire('pointerdown',100,100);fire('pointerdown',110,110,{pointerId:2,isPrimary:false});fire('pointerup',100,100);assert.deepEqual(actions,[]);
  enabled=false;fire('pointerdown',100,100);fire('pointerup',100,100);assert.deepEqual(actions,[]);
 });
+
+test('realistic mode refuses pause, slow motion and auto attacks; catches up real time with waits',async()=>{
+ const h=harness(),c=h.controller;c.repeatFast=true;c.speed=.5;
+ await c.start({realistic:true});assert.equal(c.speed,1);assert.equal(c.repeatFast,false);
+ c.pause();assert(c.running);c.setSpeed(.5);assert.equal(c.speed,1);
+ c.repeatFast=true;h.setTime(500);await c.tick();assert.equal(h.calls.at(-1).payload.action,'wait');
+ c.queue('fast');h.setTime(3000);await c.tick();
+ assert.equal(c.battle.tick,6);assert.equal(c.pending,null);assert(c.running);
+ assert(h.calls.slice(1).every(call=>call.payload.action==='wait'),'background catch-up cannot replay queued attacks');
+ const deadline=c.deadline;c.resume();assert.equal(c.deadline,deadline,'settings cannot reset real time');
+ c.queue('fast');h.setTime(3500);await c.tick();assert.equal(h.calls.at(-1).payload.action,'fast');
+ await c.end();assert.equal(c.battle.status,'stopped');assert(!c.running);
+ await c.start({realistic:false});c.pause();assert(!c.running);c.setSpeed(.5);assert.equal(c.speed,.5);
+});
+
+test('realistic catch-up yields in bounded batches and stops at the battle endpoint',async()=>{
+ const h=harness(),c=h.controller;await c.start({realistic:true});h.setTime(60000);
+ await c.tick();assert.equal(c.battle.tick,20);assert(c.running);assert.equal(h.timers.size,1);
+ h.setHandler(async()=>snapshot({tick:21,status:'time_expired'}));await c.tick();
+ assert.equal(c.battle.tick,21);assert(!c.running);assert.equal(h.timers.size,0);
+});

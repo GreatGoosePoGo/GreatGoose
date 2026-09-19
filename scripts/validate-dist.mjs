@@ -95,6 +95,8 @@ for (const asset of ['styles.css', 'client.js', 'pokemon_code.js', 'share.js', '
 const practiceScript = await readFile(join(raidsRoot, 'practice', 'practice.js'), 'utf8');
 if (!practiceScript.includes(`./controller.js?v=${build.version}`)) throw new Error('Practice controller is not versioned.');
 await stat(join(raidsRoot, 'practice', 'controller.js'));
+if (!practiceScript.includes(`./feedback.js?v=${build.version}`)) throw new Error('Practice feedback is not versioned.');
+await stat(join(raidsRoot, 'practice', 'feedback.js'));
 
 const rankingsIndex = await readFile(join(rankingsRoot, 'index.html'), 'utf8');
 await stat(join(rankingsRoot, 'assets', 'pokemon-go-type-icons.png'));

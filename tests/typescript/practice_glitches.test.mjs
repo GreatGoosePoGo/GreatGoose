@@ -143,3 +143,27 @@ test('glitch settings survive reconstruction and seeded retries, stay isolated, 
   const manual=await new TurnService(catalog).start({...request,practice_glitches:settings});
   assert.equal(manual.glitches.energy_resolve,false);
 });
+
+test('actual team wipe shows defeat for exactly the existing two seconds, then a distinct lobby',()=>{
+ const {sim,p}=make();p.team.forEach(m=>m.hp=0);sim.switch(0,0,false);
+ assert.equal(sim.snapshot().player.lobby_phase,'defeated');
+ assert.equal(sim.snapshot().player.lobby_transition_until,2);
+ for(let turn=1;turn<=3;turn++){
+   sim.advance();assert.equal(sim.snapshot().player.lobby_phase,'defeated');assert(!sim.availability().rejoin);
+ }
+ sim.advance();assert.equal(sim.current_time,2);assert.equal(sim.snapshot().player.lobby_phase,'lobby');
+ assert.equal(sim.rejoin_at,4);assert.equal(sim.lobby_reason,'fainted');
+ until(sim,4);sim.advance('rejoin');assert.equal(sim.snapshot().player.lobby_phase,null);
+});
+
+test('phantom penalty is a two-second defeat screen, not another full healing delay; remote adds one',()=>{
+ for(const remote_lag of [false,true]){
+  const {sim,p}=make({phantom_relobby:true,phantom_chance:1,remote_lag});
+  sim.act('quit');until(sim,sim.rejoin_at);const rejoinedAt=sim.current_time;sim.act('rejoin');
+  assert.equal(sim.snapshot().player.lobby_phase,'defeated');assert(p.team.every(m=>m.hp===m.max_hp));
+  assert.equal(sim.rejoin_at,rejoinedAt+2+Number(remote_lag));
+  until(sim,rejoinedAt+1.5);assert.equal(sim.snapshot().player.lobby_phase,'defeated');assert(!sim.availability().rejoin);
+  sim.advance();assert.equal(sim.snapshot().player.lobby_phase,'lobby');assert.equal(sim.availability().rejoin,!remote_lag);
+  until(sim,sim.rejoin_at);assert(sim.availability().rejoin);
+ }
+});

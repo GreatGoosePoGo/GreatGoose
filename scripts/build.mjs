@@ -137,7 +137,8 @@ const practiceIndex = (await readFile(practicePath, 'utf8'))
 await writeFile(practicePath, practiceIndex);
 const practiceScriptPath = join('dist', 'raids', 'practice', 'practice.js');
 await writeFile(practiceScriptPath, (await readFile(practiceScriptPath, 'utf8'))
-  .replace("'./controller.js'", `'./controller.js?v=${version}'`));
+  .replace("'./controller.js'", `'./controller.js?v=${version}'`)
+  .replace("'./feedback.js'", `'./feedback.js?v=${version}'`));
 
 const countersClientPath = join('dist', 'counters', 'app.js');
 const countersClient = (await readFile(countersClientPath, 'utf8'))

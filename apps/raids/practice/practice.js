@@ -1,3 +1,4 @@
+import {BattleFeedback} from './feedback.js';
 import {PracticeController, installBattleGestures} from './controller.js';
 const at = id => document.getElementById(`practice-${id}`);
 const glitchNames = {phantom_relobby:'Phantom relobby', rejoin_snipe:'Rejoin snipe',
@@ -13,6 +14,32 @@ function readGlitches() {
 at('glitch-phantom_relobby').addEventListener('change', () => {
   at('glitch-phantom_chance').disabled = !at('glitch-phantom_relobby').checked;
 });
+const feedback = new BattleFeedback();
+const feedbackSettings = document.querySelector('[data-feedback-settings]');
+at('feedback-options').append(feedbackSettings.cloneNode(true));
+function syncFeedback(event) {
+  const kind = event?.target.dataset.feedback;
+  if (kind) {
+    const value = kind === 'volume' ? Number(event.target.value) / 100 : event.target.checked;
+    feedback.configure({[kind]: value});
+  }
+  document.querySelectorAll('[data-feedback]').forEach(input => {
+    const key = input.dataset.feedback;
+    if (key === 'volume') input.value = String(feedback.volume * 100);
+    else input.checked = key === 'sound' ? feedback.sound : feedback.haptics;
+  });
+  feedback.unlock();
+}
+for (const input of document.querySelectorAll('[data-feedback]')) input.addEventListener('input', syncFeedback);
+for (const button of document.querySelectorAll('[data-feedback-test]')) button.addEventListener('click', () => {
+  feedback.unlock(); setTimeout(() => feedback.play('charged'), 60);
+});
+if (!navigator.vibrate) {
+  document.querySelectorAll('[data-feedback="haptics"]').forEach(input => { input.disabled = true; });
+  document.querySelectorAll('[data-vibration-note]').forEach(el => { el.textContent = 'Vibration is unavailable in this browser.'; });
+}
+for (const event of ['pointerdown','keydown']) document.addEventListener(event, () => feedback.unlock(), {capture:true});
+const healthLabel = member => member.hp <= 0 ? 'Fainted' : member.hp / member.max_hp > .5 ? 'Healthy' : member.hp / member.max_hp > .2 ? 'Hurt' : 'Low health';
 let resumeAfterOptions = false;
 let ready = false, editing = true, heldFast = false, lastTick = -1, lastSession = '', incomingKey = '', incomingStart = 0;
 const text = (id, value) => { const el = at(id); if (el.textContent !== value) el.textContent = value; };
@@ -28,12 +55,23 @@ function types(id, values) {
 }
 function meter(id, value, maximum, health = false) {
   const host = at(id), percent = Math.max(0, Math.min(100, value / maximum * 100));
-  host.setAttribute('aria-valuenow', String(value)); host.setAttribute('aria-valuemax', String(maximum));
+  if (controller.realistic) {
+    host.setAttribute('role', 'img'); host.removeAttribute('aria-valuenow'); host.removeAttribute('aria-valuemax'); host.removeAttribute('aria-valuemin');
+    host.setAttribute('aria-label', `${id === 'boss-hp' ? 'Boss' : 'Your Pokémon'}: ${healthLabel({hp:value,max_hp:maximum})}`);
+  } else {
+    host.setAttribute('role', 'progressbar'); host.setAttribute('aria-valuemin','0');
+    host.setAttribute('aria-valuenow', String(value)); host.setAttribute('aria-valuemax', String(maximum));
+    host.setAttribute('aria-label', id === 'boss-hp' ? 'Boss HP' : 'Your Pokémon HP');
+  }
   host.firstElementChild.style.width = `${percent}%`;
   if (health) host.firstElementChild.style.background = percent > 50 ? '#67dbac' : percent > 20 ? '#f4bd59' : '#ff7a85';
 }
 const controller = new PracticeController({
-  request: (...args) => globalThis.RaidClient.request(...args),
+  request: async (method, payload) => {
+    const result = await globalThis.RaidClient.request(method, payload);
+    feedback.observe(result, payload?.action, controller.catchingUp);
+    return result;
+  },
   change: render,
   error: error => status(error.message, true),
 });
@@ -43,40 +81,57 @@ function render() {
   if (!battle) return;
   const {boss, player, available} = battle;
   const live = battle.status === 'in_progress';
+  const realistic = controller.realistic;
+  const lobbyPhase = live ? player.lobby_phase : null;
+  document.body.classList.toggle('practice-realistic', realistic);
+  at('arena').classList.toggle('in-lobby', !!lobbyPhase);
+  at('arena').classList.toggle('defeated', lobbyPhase === 'defeated');
+  at('lobby').hidden = !lobbyPhase;
+  text('lobby-eyebrow', lobbyPhase === 'defeated' ? 'TEAM DOWN' : 'RAID LOBBY');
+  text('lobby-title', lobbyPhase === 'defeated' ? 'All your Pokémon have fainted' : 'Raid lobby');
+  text('lobby-description', lobbyPhase === 'defeated' ? 'Returning to the lobby…' : player.lobby_reason === 'phantom' ? 'Your healed team is ready for another rejoin attempt.' : 'Get ready to return with the same team.');
+  text('lobby-wait', lobbyPhase === 'defeated' ? '' : available.rejoin ? 'Ready to rejoin' : realistic ? 'Preparing your team…' : `Ready in ${Math.max(0,player.rejoin_at-battle.elapsed).toFixed(1)}s`);
+  at('auto').disabled = realistic; at('speed').disabled = realistic;
+  if (realistic) { at('auto').checked = false; at('speed').value = '1'; }
+  text('mode-note', realistic ? 'Realistic mode · The clock continues while settings are open.' : 'Training mode · Opening settings pauses the raid.');
+  at('log-details').hidden = realistic;
+  at('export').disabled = realistic && live;
+  at('pause').hidden = realistic;
   const active = controller.running && live && !editing;
-  text('state', !live ? battle.status === 'victory' ? 'VICTORY' : battle.status === 'time_expired' ? 'TIME EXPIRED' : 'ATTEMPT ENDED' : controller.running ? 'LIVE PRACTICE' : 'PAUSED');
+  text('state', !live ? battle.status === 'victory' ? 'VICTORY' : battle.status === 'time_expired' ? 'TIME EXPIRED' : 'ATTEMPT ENDED' : controller.running ? realistic ? 'REALISTIC RAID' : 'LIVE PRACTICE' : 'PAUSED');
   text('time', battle.remaining.toFixed(1));
   at('time').parentElement.classList.toggle('urgent', battle.remaining <= 30);
   text('seed', `Seed ${battle.seed}`);
   text('boss-name', boss.name + (boss.enraged ? ' · Enraged' : boss.subdued ? ' · Subdued' : ''));
   types('boss-types', boss.types); meter('boss-hp', boss.hp, boss.max_hp, true);
-  text('boss-numbers', `${boss.hp.toLocaleString()} / ${boss.max_hp.toLocaleString()} HP`);
+  text('boss-numbers', realistic ? '' : `${boss.hp.toLocaleString()} / ${boss.max_hp.toLocaleString()} HP`);
   const key = `${battle.session_id}:${boss.incoming}:${boss.hits_at}`;
   if (key !== incomingKey) { incomingKey = key; incomingStart = battle.elapsed; }
   const untilHit = boss.incoming ? Math.max(0, boss.hits_at - battle.elapsed) : 0;
   text('incoming', boss.incoming ? `${boss.incoming} incoming` : live ? 'Boss is between moves' : 'Battle finished');
-  text('hit-time', boss.incoming ? `Hits in ${untilHit.toFixed(1)}s` : '');
-  at('warning').classList.toggle('imminent', live && !!boss.incoming && untilHit <= 1);
+  text('hit-time', !realistic && boss.incoming ? `Hits in ${untilHit.toFixed(1)}s` : '');
+  at('warning').classList.toggle('imminent', !realistic && live && !!boss.incoming && untilHit <= 1);
   at('windup').style.width = boss.incoming ? `${100 * (1 - untilHit / Math.max(.5, boss.hits_at - incomingStart))}%` : '0%';
   text('player-name', `${player.slot}. ${player.name}`); types('player-types', player.types);
   meter('player-hp', player.hp, player.max_hp, true);
-  text('player-numbers', `${player.hp} / ${player.max_hp} HP`);
+  text('player-numbers', realistic ? '' : `${player.hp} / ${player.max_hp} HP`);
   const lagged = player.lag_until > battle.elapsed;
   const chargeFrozen = player.charged_blocked_until > battle.elapsed;
   const chargeReady = player.energy >= player.charged_energy;
   at('charged').style.setProperty('--charge', `${Math.min(100, 100 * player.energy / player.charged_energy)}%`);
   at('charged').classList.toggle('ready', chargeReady);
-  at('charged').setAttribute('aria-label', `${player.charged}: ${player.energy} energy, needs ${player.charged_energy}${chargeReady ? ', ready' : ''}`);
-  text('energy-label', `${player.energy} / ${player.charged_energy}`);
+  at('charged').setAttribute('aria-label', realistic ? `${player.charged}${chargeReady ? ', ready' : ', charging'}` : `${player.charged}: ${player.energy} energy, needs ${player.charged_energy}${chargeReady ? ', ready' : ''}`);
+  text('energy-label', realistic ? '' : `${player.energy} / ${player.charged_energy}`);
   text('action', !live ? 'Attempt complete' : player.in_lobby ? `In lobby · ${available.rejoin ? 'ready to rejoin' : `ready in ${Math.max(0, player.rejoin_at - battle.elapsed).toFixed(1)}s`}` : !player.on_field ? `Fainted · ${player.next_slot ? `slot ${player.next_slot} enters` : 'entering lobby'} in ${Math.max(0, (player.fainting_until ?? battle.elapsed) - battle.elapsed).toFixed(1)}s` : player.busy_until > battle.elapsed ? `${player.current_action} · ${(player.busy_until - battle.elapsed).toFixed(1)}s remaining` : 'Ready');
   text('fast-name', player.fast); text('charged-name', player.charged);
   if (player.lobby_message && player.in_lobby) text('action', `${player.lobby_message} · Phantom relobby · ${available.rejoin ? 'ready to rejoin' : `${Math.max(0, player.rejoin_at - battle.elapsed).toFixed(1)}s to rejoin`}`);
   else if (lagged) text('action', `Rejoin snipe · frozen until impact (${(player.lag_until - battle.elapsed).toFixed(1)}s)`);
   else if (chargeFrozen && player.on_field && player.busy_until <= battle.elapsed) text('action', 'Switch glitch · charged move frozen this turn');
+  if (realistic) text('action', !live ? 'Attempt complete' : lagged ? 'Rejoin snipe · controls frozen' : !player.on_field ? 'Sending out your next Pokémon…' : chargeFrozen ? 'Charged move frozen' : player.busy_until > battle.elapsed ? player.current_action : 'Ready');
   at('charged').disabled = !active || !player.on_field || lagged || chargeFrozen || player.energy < player.charged_energy;
   at('quit').disabled = !live || !available.quit;
-  at('rejoin').hidden = !player.in_lobby;
-  at('charged').hidden = player.in_lobby;
+  at('rejoin').hidden = lobbyPhase !== 'lobby';
+  at('charged').hidden = !!lobbyPhase;
   at('rejoin').disabled = !active || !available.rejoin;
   at('pause').disabled = !live || controller.busy;
   text('pause', controller.running ? 'Pause (P)' : 'Resume (P)');
@@ -89,8 +144,8 @@ function render() {
   const pending = controller.pending;
   text('queued', pending ? `Queued: ${pending.action === 'switch' ? `switch to slot ${pending.slot}` : pending.action} · new input replaces it` : controller.repeatFast && active ? 'Repeating fast attacks when ready' : '');
   if (battle.tick !== lastTick || battle.session_id !== lastSession) {
-    text('feedback', battle.log.at(-1) || '');
-    text('log', battle.log.join('\n')); lastTick = battle.tick; lastSession = battle.session_id;
+    text('feedback', realistic ? '' : battle.log.at(-1) || '');
+    text('log', realistic ? '' : battle.log.join('\n')); lastTick = battle.tick; lastSession = battle.session_id;
   }
   // Keep slot buttons stable so keyboard focus and pointer clicks survive each tick.
   const host = at('team');
@@ -104,21 +159,22 @@ function render() {
     }
     const selected = member.slot === player.slot && player.on_field;
     button.firstElementChild.textContent = `${member.slot}. ${member.name}`;
-    button.lastElementChild.textContent = member.hp <= 0 ? 'Fainted' : `${member.hp}/${member.max_hp} HP`;
+    button.lastElementChild.textContent = realistic ? healthLabel(member) : member.hp <= 0 ? 'Fainted' : `${member.hp}/${member.max_hp} HP`;
     button.setAttribute('aria-pressed', String(selected));
     button.disabled = !active || lagged || selected || member.hp <= 0 || player.in_lobby || !player.on_field;
-    button.title = `${member.slot}. ${member.name} · ${member.hp}/${member.max_hp} HP · ${member.energy} energy`;
+    button.title = realistic ? `${member.slot}. ${member.name} · ${healthLabel(member)}` : `${member.slot}. ${member.name} · ${member.hp}/${member.max_hp} HP · ${member.energy} energy`;
     button.setAttribute('aria-label', button.title);
   });
   at('result').hidden = live;
   if (!live) {
     text('result-title', battle.status === 'victory' ? 'Victory!' : battle.status === 'time_expired' ? 'Time expired' : 'Attempt ended');
-    text('result-stats', `${battle.elapsed.toFixed(1)}s elapsed · ${(100 * (1 - boss.hp / boss.max_hp)).toFixed(1)}% damage dealt · ${player.faints} faints · ${player.rejoins} rejoins`);
+    text('result-stats', `${battle.elapsed.toFixed(1)}s elapsed · ${realistic ? '' : `${(100 * (1 - boss.hp / boss.max_hp)).toFixed(1)}% damage dealt · `}${player.faints} faints · ${player.rejoins} rejoins`);
   }
 }
-function edit() {
+async function edit() {
+  if (controller.realistic && controller.battle?.status === 'in_progress') await controller.end();
   closeOptions(); document.body.classList.remove('practice-playing');
-  controller.pause(); heldFast = false; syncRepeat(); editing = true;
+  controller.pause(true); feedback.silence(); heldFast = false; syncRepeat(); editing = true;
   document.querySelector('#simulator-view').hidden = false;
   at('intro').hidden = false; at('battle').hidden = true;
   document.querySelector('#simulate').textContent = 'Start practice';
@@ -127,7 +183,8 @@ function edit() {
 async function start(payload) {
   if (!ready || controller.busy) return;
   try {
-    const request = payload || {...globalThis.RaidSetup.read({singlePlayer: true}), practice_glitches: readGlitches()};
+    const request = payload || {...globalThis.RaidSetup.read({singlePlayer: true}), practice_glitches: readGlitches(), realistic: at('realistic').checked};
+    feedback.unlock();
     closeOptions(); status('Starting raid…');
     heldFast = false; syncRepeat();
     if (await controller.start(request)) {
@@ -135,7 +192,7 @@ async function start(payload) {
       at('intro').hidden = true; at('battle').hidden = false;
       if (document.hidden) controller.pause();
       render(); status(''); at('battle').scrollIntoView({block: 'start', behavior: 'instant'});
-      at('pause').focus({preventScroll: true});
+      (controller.realistic ? at('options-open') : at('pause')).focus({preventScroll: true});
     }
   } catch (error) { status(error.message, true); }
 }
@@ -155,11 +212,13 @@ window.addEventListener('raid-setup-ready', setupReady);
 // The catalog can already be cached before this module finishes loading.
 if (document.querySelector('#boss').pokemonSearch) setupReady();
 else document.querySelector('#simulate').disabled = true;
-function syncRepeat() { controller.repeatFast = heldFast || at('auto').checked; render(); }
+function syncRepeat() { controller.repeatFast = !controller.realistic && (heldFast || at('auto').checked); render(); }
 for (const action of ['charged', 'rejoin']) at(action).addEventListener('click', () => controller.queue(action));
 at('auto').addEventListener('change', syncRepeat);
 at('speed').addEventListener('change', () => controller.setSpeed(Number(at('speed').value)));
 function togglePause() {
+  if (controller.realistic) return;
+  feedback.silence();
   heldFast = false; syncRepeat();
   if (controller.running) controller.pause(); else { status(''); controller.resume(); }
 }
@@ -192,13 +251,13 @@ window.addEventListener('keydown', event => {
     const slot = Number(event.code.slice(-1)), member = controller.battle.team[slot - 1];
     if (member?.hp > 0 && controller.battle.player.on_field && !controller.battle.player.in_lobby && (slot !== controller.battle.player.slot || !controller.battle.player.on_field)) controller.queue('switch', slot);
   } else if (canAct(action)) {
-    if (action === 'fast') { heldFast = true; syncRepeat(); }
+    if (action === 'fast' && !controller.realistic) { heldFast = true; syncRepeat(); }
     controller.queue(action);
   }
 });
 window.addEventListener('keyup', event => { if (['KeyF', 'Space'].includes(event.code)) { heldFast = false; syncRepeat(); } });
-window.addEventListener('blur', () => { heldFast = false; syncRepeat(); controller.pause(); });
-document.addEventListener('visibilitychange', () => { if (document.hidden) { heldFast = false; syncRepeat(); controller.pause(); } });
+window.addEventListener('blur', () => { heldFast = false; controller.pending = null; syncRepeat(); controller.pause(); feedback.silence(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden) { heldFast = false; controller.pending = null; syncRepeat(); controller.pause(); feedback.silence(); } });
 window.addEventListener('pagehide', () => controller.pause());
 
 function canAct(action) {
@@ -216,8 +275,8 @@ installBattleGestures(document.body, {
 });
 function closeOptions() { resumeAfterOptions = false; if (at('options').open) at('options').close(); }
 at('options-open').addEventListener('click', () => {
-  resumeAfterOptions = controller.running;
-  heldFast = false; syncRepeat(); controller.pause();
+  resumeAfterOptions = controller.running && !controller.realistic;
+  heldFast = false; controller.pending = null; syncRepeat(); controller.pause(); feedback.silence();
   at('options').showModal();
 });
 at('options-close').addEventListener('click', () => at('options').close());

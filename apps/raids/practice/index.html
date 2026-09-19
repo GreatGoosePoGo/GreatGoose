@@ -26,6 +26,14 @@
     <div id="practice-intro" class="practice-intro">
       <h2>Set up a practice raid</h2>
       <p>Choose a boss and up to six Pokémon, then play the raid in real time. You control Player 1; the boss attacks automatically. Solo practice has no Party Power.</p>
+      <label class="practice-mode"><input id="practice-realistic" type="checkbox"> <strong>Realistic mode</strong> — health bars and attack announcements, without exact HP, energy or hit timing. No pause, slow motion or automatic fast attacks; the clock keeps running in settings and other tabs.</label>
+      <div class="practice-feedback-settings" data-feedback-settings>
+        <label><input data-feedback="sound" type="checkbox" checked> Sound effects</label>
+        <label>Volume <input data-feedback="volume" type="range" min="0" max="100" value="30" aria-label="Sound volume"></label>
+        <label><input data-feedback="haptics" type="checkbox"> Vibration</label>
+        <span class="practice-hint" data-vibration-note>Vibration needs a supported device and browser.</span>
+        <button type="button" class="secondary" data-feedback-test>Test feedback</button>
+      </div>
       <details class="practice-glitches">
         <summary>Current glitches <span>Optional · all off by default</span></summary>
         <p>Choose which glitches to practise with. Settings apply when you start an attempt.</p>
@@ -46,6 +54,15 @@
       </div>
       <div class="practice-arena" id="practice-arena">
         <div class="practice-topline"><span id="practice-state">LIVE PRACTICE</span><div class="practice-clock" role="timer" aria-label="Time remaining"><strong id="practice-time">300</strong><span>seconds left</span></div><span id="practice-seed"></span></div>
+        <section id="practice-lobby" class="practice-lobby" hidden aria-live="polite">
+          <p class="practice-lobby-eyebrow" id="practice-lobby-eyebrow">RAID LOBBY</p>
+          <div class="practice-lobby-symbol" aria-hidden="true">↻</div>
+          <h2 id="practice-lobby-title">Raid lobby</h2>
+          <p id="practice-lobby-description"></p>
+          <p id="practice-lobby-wait"></p>
+          <button id="practice-rejoin" class="primary" type="button" disabled>Rejoin raid</button>
+          <p class="practice-hint">The raid clock keeps running.</p>
+        </section>
         <section class="practice-boss" aria-label="Raid boss">
           <div class="combatant-title"><h2 id="practice-boss-name"></h2><span id="practice-boss-types"></span></div>
           <div class="practice-hp" id="practice-boss-hp" role="progressbar" aria-label="Boss HP" aria-valuemin="0"><span></span></div>
@@ -62,7 +79,6 @@
         <div class="practice-actions" aria-label="Battle controls">
           <p class="practice-gesture-hint">Tap anywhere to use <strong id="practice-fast-name"></strong><br>Swipe ← → ↑ ↓ to dodge</p>
           <button id="practice-charged" class="practice-charge" type="button" disabled aria-describedby="practice-energy-label"><span class="practice-charge-fill" aria-hidden="true"></span><strong id="practice-charged-name">Charged attack</strong><span id="practice-energy-label"></span><kbd>C</kbd></button>
-          <button id="practice-rejoin" class="primary" type="button" hidden>Rejoin raid</button>
         </div>
         <p id="practice-queued" class="practice-queued" aria-live="polite"></p>
         <section id="practice-result" class="panel" hidden aria-live="polite"><h2 id="practice-result-title"></h2><p id="practice-result-stats"></p><p>Open Settings &amp; replay to retry, export, or edit your team.</p></section>
@@ -82,10 +98,12 @@
         <label class="practice-auto"><input id="practice-auto" type="checkbox"> Repeat fast attacks</label>
         <label class="practice-speed">Speed <select id="practice-speed"><option value="1">1× real time</option><option value="0.5">0.5× learning</option></select></label>
       </div>
+      <p id="practice-mode-note"></p>
+      <div id="practice-feedback-options"></div>
       <p id="practice-glitches-active"></p>
       <p class="practice-hint">To change glitches, choose Edit boss &amp; team and start a new attempt. Retry same seed keeps these settings.</p>
-      <details class="practice-help"><summary>Controls &amp; practice rules</summary><p>Tap the battle screen for a fast move. Swipe left, right, up or down to dodge; dragging with a mouse also works. Buttons keep their own actions. Tap the circular charged-move button when it fills. F / Space, C and D also work; 1–6 switches teammates and P pauses.</p><p>After a faint, wait 2 seconds while the first surviving team slot enters automatically. A full team wipe sends you to the lobby. Wait out the rejoin delay, then press Rejoin raid. Team slots stay on screen throughout the battle.</p><p>One action can be queued during a move. The battle uses the simulator’s half-second manual timing and dodge window. Switching tabs pauses practice. Export a replay before leaving or reloading to keep your attempt.</p></details>
-      <details><summary>Battle log</summary><pre id="practice-log" class="turn-log"></pre></details>
+      <details class="practice-help"><summary>Controls &amp; practice rules</summary><p>Tap the battle screen for a fast move. Swipe left, right, up or down to dodge; dragging with a mouse also works. Buttons keep their own actions. Tap the circular charged-move button when it fills. F / Space, C and D also work; 1–6 switches teammates and P pauses.</p><p>After a faint, wait 2 seconds while the first surviving team slot enters automatically. A full team wipe shows “All your Pokémon have fainted” for those 2 seconds, then opens the lobby. A phantom relobby shows the same screen for 2 seconds; your team is already healed. Wait out the rejoin delay, then press Rejoin raid. Team slots stay on screen throughout the battle.</p><p>One action can be queued during a move. The battle uses the simulator’s half-second manual timing and dodge window. Training mode pauses when switching tabs. Realistic mode keeps the clock running and disables pauses, slow motion and automatic fast attacks. Export a replay before leaving or reloading to keep your attempt.</p></details>
+      <details id="practice-log-details"><summary>Battle log</summary><pre id="practice-log" class="turn-log"></pre></details>
     </dialog>
     <p id="practice-status" role="status" aria-live="polite">Loading Pokémon data…</p>
   </main>

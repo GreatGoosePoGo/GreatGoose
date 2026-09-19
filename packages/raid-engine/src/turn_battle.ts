@@ -55,6 +55,8 @@ export function createTurnBattle(engine: RaidEngine, options: ManualBattleOption
         declare glitch_rng: PythonRandom;
         declare lag_until: number;
         declare charged_until: number;
+        declare lobby_transition_until: number;
+        declare lobby_reason: string | null;
         declare lobby_message: string | null;
         declare energy_epoch: number;
         declare faint_until: number | null;
@@ -72,6 +74,8 @@ export function createTurnBattle(engine: RaidEngine, options: ManualBattleOption
             this.glitch_rng = new PythonRandom(BigInt(engine.RANDOM_SEED) ^ 0x7068616e746f6dn);
             this.lag_until = 0;
             this.charged_until = 0;
+            this.lobby_transition_until = 0;
+            this.lobby_reason = null;
             this.lobby_message = null;
             this.energy_epoch = 0;
             this.push(0, 'boss_decision');
@@ -132,7 +136,7 @@ export function createTurnBattle(engine: RaidEngine, options: ManualBattleOption
                     if (player.generation !== data[0] || this.lobby || player.on_field) continue;
                     this.faint_until = null;
                     const index = player.team.findIndex(member => member.hp > 0);
-                    if (index < 0) this.enter_lobby();
+                    if (index < 0) this.enter_lobby('fainted');
                     else {
                         player.pokemon_index = index;
                         player.on_field = true;
@@ -155,7 +159,7 @@ export function createTurnBattle(engine: RaidEngine, options: ManualBattleOption
             this.charged_until = glitches.switch_charge_freeze ? readyAt + 0.5 : 0;
         }
 
-        enter_lobby(): void {
+        enter_lobby(reason = 'quit'): void {
             const player = this.players[0];
             player.on_field = false;
             player.generation += 1;
@@ -165,7 +169,10 @@ export function createTurnBattle(engine: RaidEngine, options: ManualBattleOption
             this.lag_until = 0;
             this.energy_epoch += 1;
             this.faint_until = null;
-            const delay = options.rejoinTimeDistribution?.length
+            this.lobby_reason = reason;
+            this.lobby_transition_until = reason === 'phantom' ? this.current_time + FAINT_SECONDS : 0;
+            // A phantom rejection wastes the defeat animation; the team is already healed.
+            const delay = reason === 'phantom' ? FAINT_SECONDS : options.rejoinTimeDistribution?.length
                 ? sampleRejoinTime(this.rng, options.rejoinTimeDistribution)
                 : this.rng.choice<number>(engine.REJOIN_TIMES);
             this.rejoin_at = this.current_time + delay + (glitches.remote_lag ? 1 : 0);
@@ -287,9 +294,11 @@ export function createTurnBattle(engine: RaidEngine, options: ManualBattleOption
                 this.energy_epoch += 1;
                 super.rejoin(time, 0);
                 this.lobby_message = null;
+                this.lobby_reason = null;
+                this.lobby_transition_until = 0;
                 this.freeze_charge(time);
                 if (glitches.phantom_relobby && this.glitch_rng.random() < glitches.phantom_chance) {
-                    this.enter_lobby();
+                    this.enter_lobby('phantom');
                     this.lobby_message = 'All your Pokémon have fainted';
                     this.log(time, `Phantom relobby: "${this.lobby_message}"`);
                 } else if (glitches.rejoin_snipe && this.pending_boss && this.pending_boss[1] === this.boss_charged) {
@@ -375,6 +384,7 @@ export function createTurnBattle(engine: RaidEngine, options: ManualBattleOption
                     energy: this.boss_energy,
                     max_energy: engine.BOSS_MAX_ENERGY,
                     incoming: this.pending_boss?.[1].name ?? null,
+                    incoming_charged: this.pending_boss?.[1] === this.boss_charged,
                     hits_at: this.pending_boss?.[0] ?? null,
                     enraged: this.enraged,
                     purified_gems_used: this.purified_gems_used,
@@ -390,6 +400,10 @@ export function createTurnBattle(engine: RaidEngine, options: ManualBattleOption
                     lag_until: this.lag_until,
                     charged_blocked_until: this.charged_until,
                     lobby_message: this.lobby_message,
+                    lobby_reason: this.lobby_reason,
+                    lobby_phase: this.current_time < this.lobby_transition_until || (this.faint_until !== null && !player.team.some(member => member.hp > 0))
+                        ? 'defeated' : this.lobby ? 'lobby' : null,
+                    lobby_transition_until: this.lobby_transition_until || this.faint_until,
                     fainting_until: this.faint_until,
                     next_slot: this.faint_until === null ? null : (player.team.findIndex(member => member.hp > 0) + 1 || null),
                     faints: player.faints,
