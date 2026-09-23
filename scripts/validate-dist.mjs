@@ -87,9 +87,14 @@ if (!client.includes(`${build.engine_directory}/worker.js`))
 const practiceIndex = await readFile(join(raidsRoot, 'practice', 'index.html'), 'utf8');
 if (!practiceIndex.includes('<base href="../">') || !practiceIndex.includes('id="simulator-form"'))
   throw new Error('Practice must load the shared setup and resolve assets from /raids/.');
+const experimentalPracticeIndex = await readFile(join(raidsRoot, 'practice', 'experimental', 'index.html'), 'utf8');
+if (!experimentalPracticeIndex.includes('<base href="../../">')
+    || !experimentalPracticeIndex.includes('id="simulator-form"'))
+  throw new Error('Experimental practice must load the shared setup and resolve assets from /raids/.');
 if (!index.includes('href="practice/"')) throw new Error('Raid practice navigation is missing.');
 for (const asset of ['styles.css', 'client.js', 'pokemon_code.js', 'share.js', 'app.js', 'practice/practice.css', 'practice/practice.js']) {
   if (!practiceIndex.includes(`${asset}?v=${build.version}`)) throw new Error(`Practice has an unversioned asset: ${asset}`);
+  if (!experimentalPracticeIndex.includes(`${asset}?v=${build.version}`)) throw new Error(`Experimental practice has an unversioned asset: ${asset}`);
   await stat(join(raidsRoot, asset));
 }
 const practiceScript = await readFile(join(raidsRoot, 'practice', 'practice.js'), 'utf8');

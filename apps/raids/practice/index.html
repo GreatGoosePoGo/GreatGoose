@@ -16,13 +16,17 @@
 </head>
 <body data-mode="practice">
   <header>
-    <div><p class="eyebrow">Great Goose Pokémon GO</p><h1>Raid practice · experimental controls</h1></div>
+    <div><p class="eyebrow">Great Goose Pokémon GO</p><h1>Raid practice</h1></div>
     <nav class="site-nav" aria-label="Great Goose tools">
       <a href="../">Home</a><a href="./">Raids</a><a href="../counters/">Counters</a><a href="../rankings/">Rankings</a>
     </nav>
   </header>
   <main>
     <nav class="practice-nav" aria-label="Raid tools"><a href="./">← Raid simulator</a><span aria-current="page">Raid practice</span></nav>
+    <aside class="practice-version" aria-label="Practice control version">
+      <div><strong id="practice-version-title">Stable controls</strong><span id="practice-version-description">The original raid-practice input handling.</span></div>
+      <a id="practice-version-link" href="practice/experimental/">Try experimental controls →</a>
+    </aside>
     <div id="practice-intro" class="practice-intro">
       <h2>Set up a practice raid</h2>
       <p>Choose a boss and up to six Pokémon, then play the raid in real time. You control Player 1; the boss attacks automatically. Solo practice has no Party Power.</p>
@@ -101,7 +105,7 @@
       <div id="practice-feedback-options"></div>
       <p id="practice-glitches-active"></p>
       <p class="practice-hint">To change glitches, choose Edit boss &amp; team and start a new attempt. Retry same seed keeps these settings.</p>
-      <details class="practice-help"><summary>Controls &amp; practice rules</summary><p>Tap the battle screen for a fast move. Swipe left, right, up or down to dodge; dragging with a mouse also works. Buttons keep their own actions. Tap the circular charged-move button when it fills. F / Space, C and D also work; 1–6 switches teammates and P pauses.</p><p>After a faint, wait 2 seconds while the first surviving team slot enters automatically. A full team wipe shows “All your Pokémon have fainted” for those 2 seconds, then opens the lobby. A phantom relobby shows the same screen for 2 seconds; your team is already healed. Wait out the rejoin delay, then press Rejoin raid. Team slots stay on screen throughout the battle.</p><p>Inputs start on the next half-second turn, after any hits due on that turn. During recovery, only your latest input is buffered for 250 milliseconds of battle time; earlier taps expire. Every dodge takes one second, even with no incoming attack or if you already dodged that attack. A dodge does not protect against an attack announced later. These are experimental controls for comparison, not a claim of exact game timing. Training mode pauses when switching tabs. Realistic mode keeps the clock running and disables pauses, slow motion and automatic fast attacks. Export a replay before leaving or reloading to keep your attempt.</p></details>
+      <details class="practice-help"><summary>Controls &amp; practice rules</summary><p>Tap the battle screen for a fast move. Swipe left, right, up or down to dodge; dragging with a mouse also works. Buttons keep their own actions. Tap the circular charged-move button when it fills. F / Space, C and D also work; 1–6 switches teammates and P pauses.</p><p>After a faint, wait 2 seconds while the first surviving team slot enters automatically. A full team wipe shows “All your Pokémon have fainted” for those 2 seconds, then opens the lobby. A phantom relobby shows the same screen for 2 seconds; your team is already healed. Wait out the rejoin delay, then press Rejoin raid. Team slots stay on screen throughout the battle.</p><p id="practice-input-rules">Stable controls keep one action queued until your Pokémon is ready. Dodge is available while a boss attack is incoming. Training mode pauses when switching tabs. Realistic mode keeps the clock running and disables pauses, slow motion and automatic fast attacks. Export a replay before leaving or reloading to keep your attempt.</p></details>
       <details id="practice-log-details"><summary>Battle log</summary><pre id="practice-log" class="turn-log"></pre></details>
     </dialog>
     <p id="practice-status" role="status" aria-live="polite">Loading Pokémon data…</p>

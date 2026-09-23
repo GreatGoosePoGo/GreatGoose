@@ -1,6 +1,17 @@
 import {BattleFeedback} from './feedback.js';
 import {PracticeController, installBattleGestures} from './controller.js';
 const at = id => document.getElementById(`practice-${id}`);
+const experimental = location.pathname.replace(/\/+$/, '').endsWith('/practice/experimental');
+document.body.dataset.inputMode = experimental ? 'experimental' : 'stable';
+at('version-title').textContent = experimental ? 'Experimental controls' : 'Stable controls';
+at('version-description').textContent = experimental
+  ? 'Short input buffering and dodges that can be wasted.'
+  : 'The original raid-practice input handling.';
+at('version-link').textContent = experimental ? '← Return to stable controls' : 'Try experimental controls →';
+at('version-link').href = experimental ? 'practice/' : 'practice/experimental/';
+at('input-rules').textContent = experimental
+  ? 'Experimental inputs start on the next half-second turn, after hits due on that turn. During recovery, only your latest input is buffered for 250 milliseconds of battle time; earlier taps expire. Every dodge takes one second, even with no incoming attack or if you already dodged that attack. A dodge does not protect against an attack announced later. These are experimental controls for comparison, not a claim of exact game timing. Training mode pauses when switching tabs. Realistic mode keeps the clock running and disables pauses, slow motion and automatic fast attacks. Export a replay before leaving or reloading to keep your attempt.'
+  : 'Stable controls keep one action queued until your Pokémon is ready. Dodge is available while a boss attack is incoming. Training mode pauses when switching tabs. Realistic mode keeps the clock running and disables pauses, slow motion and automatic fast attacks. Export a replay before leaving or reloading to keep your attempt.';
 const glitchNames = {phantom_relobby:'Phantom relobby', rejoin_snipe:'Rejoin snipe',
   energy_resolve:'Energy resolve bug', switch_charge_freeze:'Charge move freeze on switch', remote_lag:'Remote lag'};
 function readGlitches() {
@@ -68,12 +79,16 @@ function meter(id, value, maximum, health = false) {
 }
 const controller = new PracticeController({
   request: async (method, payload) => {
-    const result = await globalThis.RaidClient.request(method, payload);
+    const endpoint = experimental && method.startsWith('practice/')
+      ? method.replace('practice/', 'practice-experimental/')
+      : method;
+    const result = await globalThis.RaidClient.request(endpoint, payload);
     feedback.observe(result, payload?.action, controller.catchingUp);
     return result;
   },
   change: render,
   error: error => status(error.message, true),
+  experimental,
 });
 function render() {
   const battle = controller.battle;
@@ -142,7 +157,7 @@ function render() {
     .map(([key, name]) => key === 'phantom_relobby' ? `${name} (${Math.round(battle.glitches.phantom_chance * 100)}%)` : name);
   text('glitches-active', `Current glitches: ${enabledGlitches.join(' · ') || 'off'}`);
   const pending = controller.pending;
-  text('queued', pending ? `Queued: ${pending.action === 'switch' ? `switch to slot ${pending.slot}` : pending.action} · next turn only` : battle.input_result?.outcome === 'wasted' ? 'Dodge used · no new hit avoided' : battle.input_result?.outcome === 'unavailable' ? 'Input missed · Pokémon was unavailable' : controller.repeatFast && active ? 'Repeating fast attacks when ready' : '');
+  text('queued', pending ? `Queued: ${pending.action === 'switch' ? `switch to slot ${pending.slot}` : pending.action}${experimental ? ' · next turn only' : ''}` : battle.input_result?.outcome === 'wasted' ? 'Dodge used · no new hit avoided' : battle.input_result?.outcome === 'unavailable' ? 'Input missed · Pokémon was unavailable' : controller.repeatFast && active ? 'Repeating fast attacks when ready' : '');
   if (battle.tick !== lastTick || battle.session_id !== lastSession) {
     text('feedback', realistic ? '' : battle.log.at(-1) || '');
     text('log', realistic ? '' : battle.log.join('\n')); lastTick = battle.tick; lastSession = battle.session_id;
@@ -265,7 +280,7 @@ function canAct(action) {
   if (editing || at('options').open || !controller.running || !b?.player.on_field || b.player.in_lobby) return false;
   if (b.player.lag_until > b.elapsed) return false;
   if (action === 'charged') return !(b.player.charged_blocked_until > b.elapsed) && b.player.energy >= b.player.charged_energy;
-  if (action === 'dodge') return true;
+  if (action === 'dodge') return experimental || !!b.boss.incoming;
   return true;
 }
 installBattleGestures(document.body, {

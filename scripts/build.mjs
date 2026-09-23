@@ -135,6 +135,12 @@ const practiceIndex = (await readFile(practicePath, 'utf8'))
   .replace(/\b(href|src)="((?:practice\/)?[a-z_-]+\.(?:css|js))(?:\?v=[^"]*)?"/g,
     (_match, attribute, asset) => `${attribute}="${asset}?v=${version}"`);
 await writeFile(practicePath, practiceIndex);
+const experimentalPracticePath = join('dist', 'raids', 'practice', 'experimental');
+await mkdir(experimentalPracticePath, {recursive: true});
+await writeFile(
+  join(experimentalPracticePath, 'index.html'),
+  practiceIndex.replace('<base href="../">', '<base href="../../">'),
+);
 const practiceScriptPath = join('dist', 'raids', 'practice', 'practice.js');
 await writeFile(practiceScriptPath, (await readFile(practiceScriptPath, 'utf8'))
   .replace("'./controller.js'", `'./controller.js?v=${version}'`)

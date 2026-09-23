@@ -1,8 +1,8 @@
 /** Real-time adapter over the canonical manual engine. At most one tick is in flight. */
 export class PracticeController {
   constructor({request, change = () => {}, error = () => {}, now = () => performance.now(),
-    schedule = (fn, ms) => setTimeout(fn, ms), cancel = id => clearTimeout(id)}) {
-    Object.assign(this, {request, change, error, now, schedule, cancel});
+    schedule = (fn, ms) => setTimeout(fn, ms), cancel = id => clearTimeout(id), experimental = false}) {
+    Object.assign(this, {request, change, error, now, schedule, cancel, experimental});
     this.battle = null;
     this.running = false;
     this.busy = false;
@@ -50,6 +50,11 @@ export class PracticeController {
   queue(action, slot = null) {
     if (!this.running || this.battle?.status !== 'in_progress') return;
     if (this.realistic && this.now() - this.deadline >= 500) return;
+    if (!this.experimental) {
+      this.pending = {action, slot, incomingAt: action === 'dodge' ? this.battle.boss.hits_at : null};
+      this.notify();
+      return;
+    }
     const command = {action, slot};
     // Ready inputs belong to the next turn. During recovery, keep only the newest
     // input for 250 ms of battle time; never store an attack for a whole animation.
@@ -76,13 +81,22 @@ export class PracticeController {
     try {
       for (let i = 0; i < steps && this.running; i++) {
         const previous = this.battle;
-        let command = {action: 'wait', slot: null};
-        if (!this.catchingUp && this.pending && this.pending.targetTurn <= this.deadline) {
-          // Judge expiry against the turn's scheduled time, allowing normal timer jitter.
-          if (this.pending.expiresAt >= this.deadline) command = {action: this.pending.action, slot: this.pending.slot};
+        if (!this.experimental && this.pending?.action === 'dodge' && this.pending.incomingAt !== previous.boss.hits_at)
           this.pending = null;
+        let command = {action: 'wait', slot: null};
+        if (!this.catchingUp && this.pending && (!this.experimental || this.pending.targetTurn <= this.deadline)) {
+          if (this.experimental) {
+            // Judge expiry against the scheduled turn, allowing normal timer jitter.
+            if (this.pending.expiresAt >= this.deadline) command = {action: this.pending.action, slot: this.pending.slot};
+            this.pending = null;
+          } else if (this.allowed(this.pending)) {
+            command = this.pending;
+            this.pending = null;
+          } else if (this.pending.action === 'dodge' && !previous.boss.incoming) {
+            this.pending = null;
+          }
         } else if (!this.realistic && this.repeatFast && (previous.available.fast ||
-          (previous.player.on_field && previous.player.busy_until <= previous.elapsed + .5 && previous.player.lag_until <= previous.elapsed + .5))) command.action = 'fast';
+          (this.experimental && previous.player.on_field && previous.player.busy_until <= previous.elapsed + .5 && previous.player.lag_until <= previous.elapsed + .5))) command.action = 'fast';
         const battle = await this.request('practice/step', {
           session_id: previous.session_id, expected_tick: previous.tick, ...command,
         });

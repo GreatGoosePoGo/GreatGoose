@@ -2,6 +2,11 @@
 .practice-nav { display: flex; gap: 24px; align-items: center; margin-bottom: 24px; font-size: 15px; }
 .practice-nav a { color: var(--blue); }
 .practice-nav span { font-weight: 700; }
+.practice-version { max-width: 740px; display: flex; align-items: center; justify-content: space-between; gap: 18px; margin: -8px 0 22px; padding: 13px 15px; border: 1px solid #b8cbe4; border-radius: 10px; background: #edf4fd; }
+.practice-version div { display: grid; gap: 3px; }
+.practice-version span { color: var(--muted); font-size: 13px; }
+.practice-version a { color: var(--blue); font-weight: 700; white-space: nowrap; }
+body[data-input-mode=experimental] .practice-version { border-color: #d1b063; background: #fff8e8; }
 .practice-intro { max-width: 740px; margin: 0 0 24px; }
 .practice-intro h2 { font-size: 27px; margin-bottom: 8px; }
 .practice-intro p { color: var(--muted); line-height: 1.6; }
@@ -22,7 +27,7 @@ body[data-mode=practice] #result { display: none; }
 /* During a battle, the arena and the six-slot dock share the visible viewport. */
 body.practice-playing { overflow: hidden; touch-action: none; }
 .practice-playing #practice-status:empty { display: none; }
-.practice-playing > header, .practice-playing .practice-nav { display: none; }
+.practice-playing > header, .practice-playing .practice-nav, .practice-playing .practice-version { display: none; }
 .practice-playing main { width: 100%; max-width: none; padding: 0; margin: 0; }
 #practice-battle { height: 100dvh; padding: 10px max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left)); display: flex; flex-direction: column; gap: 8px; max-width: 1200px; margin: auto; touch-action: none; user-select: none; }
 .practice-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 0 16px; }
@@ -87,6 +92,7 @@ body.practice-playing { overflow: hidden; touch-action: none; }
 #practice-status.error { color: #b32838; }
 .practice-playing #practice-status:not(:empty) { position: fixed; bottom: 8px; left: 10px; right: 10px; padding: 8px; background: white; border: 1px solid var(--line); border-radius: 6px; z-index: 5; }
 @media (max-width: 600px) {
+ .practice-version { align-items: flex-start; flex-direction: column; gap: 8px; }
  .practice-arena { padding: 10px 12px; }
  .practice-team { grid-template-columns: repeat(3,minmax(0,1fr)); }
  .practice-team button { height: 54px; padding: 5px; }

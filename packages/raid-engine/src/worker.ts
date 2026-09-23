@@ -38,7 +38,8 @@ function runAutomaticSimulation(payload: any, entries: CalculatorEntry[]) {
 let sessions: TurnService | undefined;
 // Practice is ephemeral: don't rewrite an IndexedDB recording twice a second.
 // It uses the same manual engine and exports the same replay format.
-let practice: TurnService | undefined;
+let stablePractice: TurnService | undefined;
+let experimentalPractice: TurnService | undefined;
 async function route(method: string, payload: any) {
     if (method === 'replay/parse') {
         if (typeof payload?.text !== 'string' || payload.text.length > 2000000)
@@ -52,16 +53,22 @@ async function route(method: string, payload: any) {
         return runAutomaticSimulation(payload, entries);
     if (method === 'replay/playback')
         return buildStrategyPlayback(payload.text, entries);
-    if (method.startsWith('practice/')) {
-        practice ??= new TurnService(entries, undefined, { automaticFaints: true, experimentalInputs: true });
-        if (method === 'practice/start') {
+    if (method.startsWith('practice/') || method.startsWith('practice-experimental/')) {
+        const experimental = method.startsWith('practice-experimental/');
+        const operation = method.slice(method.indexOf('/') + 1);
+        if (experimental)
+            experimentalPractice ??= new TurnService(entries, undefined, { automaticFaints: true, experimentalInputs: true });
+        else
+            stablePractice ??= new TurnService(entries, undefined, { automaticFaints: true });
+        const practice = experimental ? experimentalPractice! : stablePractice!;
+        if (operation === 'start') {
             const solo = { ...payload };
             if (Array.isArray(solo.players))
                 solo.players = solo.players.slice(0, 1).map((player: any) => ({ ...player, party_group: 0 }));
             return practice.start(solo);
         }
-        if (method === 'practice/step') return practice.update(payload);
-        if (method === 'practice/stop') return practice.update(payload, true);
+        if (operation === 'step') return practice.update(payload);
+        if (operation === 'stop') return practice.update(payload, true);
         throw new Error('Unknown practice request.');
     }
     sessions ??= new TurnService(entries, saveBattle);

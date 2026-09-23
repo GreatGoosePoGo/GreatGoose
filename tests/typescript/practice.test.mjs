@@ -9,7 +9,7 @@ function snapshot(extra = {}) {
     boss:{incoming:'Hit',hits_at:2}, player:{slot:1,faints:0,in_lobby:false},
     available:{fast:true,charged:false,dodge:true,switch_slots:[2]}, ...extra};
 }
-function harness() {
+function harness(experimental = false) {
   const calls = [], timers = new Map(); let time = 0, sequence = 0, state = snapshot(), handler;
   const errors = [];
   const controller = new PracticeController({
@@ -21,6 +21,7 @@ function harness() {
       return structuredClone(state);
     }, error: error => errors.push(error), now:()=>time,
     schedule:(fn,delay)=>{const id=++sequence;timers.set(id,{fn,delay});return id;},cancel:id=>timers.delete(id),
+    experimental,
   });
   return {controller,calls,timers,errors,setTime:value=>time=value,setHandler:value=>handler=value};
 }
@@ -32,7 +33,7 @@ test('practice clock advances without player input, pause freezes and resume res
   h.setTime(10000);c.resume();assert.equal(c.deadline,10500);await c.tick();assert.equal(c.battle.tick,2);
 });
 test('ready inputs target the next turn; recovery inputs expire after 250ms and newest wins',async()=>{
-  const h=harness(),c=h.controller;await c.start({});
+  const h=harness(true),c=h.controller;await c.start({});
   c.queue('fast');h.setTime(500);await c.tick();assert.equal(h.calls.at(-1).payload.action,'fast');
   c.battle.available.fast=false;c.queue('fast');h.setTime(1000);await c.tick();
   assert.equal(h.calls.at(-1).payload.action,'wait');assert.equal(c.pending,null);
@@ -42,10 +43,18 @@ test('ready inputs target the next turn; recovery inputs expire after 250ms and 
   assert.equal(h.calls.at(-1).payload.action,'fast');
 });
 test('recovery buffering scales with slow motion and pause discards pending inputs',async()=>{
-  const h=harness(),c=h.controller;await c.start({});c.setSpeed(.5);
+  const h=harness(true),c=h.controller;await c.start({});c.setSpeed(.5);
   c.battle.available.fast=false;h.setTime(600);c.queue('fast');h.setTime(1000);await c.tick();
   assert.equal(h.calls.at(-1).payload.action,'fast');
   c.queue('fast');c.pause();assert.equal(c.pending,null);
+});
+test('stable controls retain one replacement input until recovery and tie dodge to the announced hit',async()=>{
+  const h=harness(),c=h.controller;await c.start({});
+  c.battle.available.fast=false;c.queue('fast');c.queue('charged');await c.tick();
+  assert.equal(h.calls.at(-1).payload.action,'wait');assert.equal(c.pending.action,'charged');
+  c.battle.available.charged=true;await c.tick();assert.equal(h.calls.at(-1).payload.action,'charged');
+  c.queue('dodge');c.battle.boss.hits_at=3;await c.tick();
+  assert.equal(h.calls.at(-1).payload.action,'wait');assert.equal(c.pending,null);
 });
 test('slow or failed worker never creates overlapping or runaway ticks',async()=>{
   const h=harness(),c=h.controller;await c.start({});let release;
@@ -72,24 +81,24 @@ test('practice worker handles solo combat, switch, full faint, rejoin, timeout, 
   const call=async(method,payload={})=>{const response=once(worker,'message');worker.postMessage({id:++id,method,payload});const [r]=await response;if(r.error)throw new Error(r.error);return r.result;};
   const member={name:'MEWTWO',fast_move:'Confusion',charged_move:'Psystrike',level:50};
   const request={boss:'STARMIE',boss_fast_move:'Water Gun',boss_charged_move:'Hydro Pump',raid_difficulty:'Tier 3',random_seed:'42',players:[{team:[member,member],party_group:1},{team:[member],party_group:1}]};
-  let b=await call('practice/start',request);assert.equal(b.boss.max_energy,100);
+  let b=await call('practice-experimental/start',request);assert.equal(b.boss.max_energy,100);
   const first=b; const steps=[];
-  const step=async(action='wait',slot=null)=>{b=await call('practice/step',{session_id:b.session_id,expected_tick:b.tick,action,slot});steps.push({action,slot});return b;};
+  const step=async(action='wait',slot=null)=>{b=await call('practice-experimental/step',{session_id:b.session_id,expected_tick:b.tick,action,slot});steps.push({action,slot});return b;};
   await step('fast');assert(b.player.energy>=0);
-  await assert.rejects(call('practice/step',{session_id:b.session_id,expected_tick:0,action:'fast'}),/already advanced/);
+  await assert.rejects(call('practice-experimental/step',{session_id:b.session_id,expected_tick:0,action:'fast'}),/already advanced/);
   while(!b.available.switch_slots.includes(2))await step();
   await step('switch',2);assert.equal(b.player.slot,2);
   await step('quit');assert(b.player.in_lobby);
   while(!b.available.rejoin)await step();
   await step('rejoin');assert(b.player.on_field);assert.equal(b.player.rejoins,1);
   const beforeRetry=b;
-  b=await call('practice/start',request);const recorded=[...steps];steps.length=0;
+  b=await call('practice-experimental/start',request);const recorded=[...steps];steps.length=0;
   for(const command of recorded)await step(command.action,command.slot);
   assert.equal(b.boss.hp,beforeRetry.boss.hp);assert.equal(b.player.hp,beforeRetry.player.hp);assert.equal(b.elapsed,beforeRetry.elapsed);
   const replay=await call('replay/parse',{text:b.replay_text});assert.equal(replay.players.length,1);
   const playback=await call('replay/playback',{text:b.replay_text});assert(playback);
   // Start with slot 2: a faint must return to the first survivor, not the next index.
-  b=await call('practice/start',{...request,players:[{team:[{...member,level:10},{...member,level:10}]}]});
+  b=await call('practice-experimental/start',{...request,players:[{team:[{...member,level:10},{...member,level:10}]}]});
   await step('switch',2);
   while(b.player.on_field) await step();
   const faintTime=b.elapsed, replacementTime=b.player.fainting_until;
@@ -118,15 +127,15 @@ test('practice worker handles solo combat, switch, full faint, rejoin, timeout, 
   assert(b.player.in_lobby);assert.equal(b.player.faints,2);assert.deepEqual(b.available.switch_slots,[]);
   while(b.status==='in_progress')await step();assert.equal(b.status,'time_expired');assert.equal(b.remaining,0);
   await assert.rejects(step(),/already ended/);
-  b=await call('practice/start',{...request,raid_difficulty:'Tier 1'});
+  b=await call('practice-experimental/start',{...request,raid_difficulty:'Tier 1'});
   while(b.status==='in_progress'){
     const action=b.available.charged?'charged':b.available.fast?'fast':b.available.rejoin?'rejoin':'wait';
     await step(action,action==='switch'?b.available.switch_slots[0]:null);
   }
   assert.equal(b.status,'victory');assert.equal(b.boss.hp,0);
-  b=await call('practice/start',request);
+  b=await call('practice-experimental/start',request);
   const dodged=await step('dodge');
-  b=await call('practice/start',request);
+  b=await call('practice-experimental/start',request);
   const undodged=await step();
   assert.equal(dodged.player.hp,undodged.player.hp,'a swipe on the impact turn cannot dodge a hit retroactively');
   assert.equal(dodged.input_result.outcome,'wasted');
@@ -151,6 +160,23 @@ test('pointer gestures distinguish all swipe directions, taps, controls, cancell
  enabled=false;fire('pointerdown',100,100);fire('pointerup',100,100);assert.deepEqual(actions,[]);
 });
 
+test('stable and experimental worker sessions are separate and mark only experimental replays',async()=>{
+ const worker=new Worker(new URL('./worker_harness.mjs',import.meta.url));
+ try {
+  await once(worker,'message');let id=0;
+  const call=async(method,payload={})=>{const response=once(worker,'message');worker.postMessage({id:++id,method,payload});const [r]=await response;if(r.error)throw new Error(r.error);return r.result;};
+  const member={name:'MEWTWO',fast_move:'Psycho Cut',charged_move:'Hyper Beam',level:50};
+  const request={boss:'STARMIE',boss_fast_move:'Water Gun',boss_charged_move:'Hydro Pump',raid_difficulty:'Tier 3',random_seed:'42',players:[{team:[member]}]};
+  const stable=await call('practice/start',request);
+  const experimental=await call('practice-experimental/start',request);
+  assert.notEqual(stable.session_id,experimental.session_id);
+  assert.doesNotMatch(stable.replay_text,/Experimental inputs: true/);
+  assert.match(experimental.replay_text,/Experimental inputs: true/);
+  await assert.rejects(call('practice/step',{session_id:experimental.session_id,expected_tick:0}),/Choose a saved battle/);
+  await assert.rejects(call('practice-experimental/step',{session_id:stable.session_id,expected_tick:0}),/Choose a saved battle/);
+ }finally{await worker.terminate();}
+});
+
 test('realistic mode refuses pause, slow motion and auto attacks; catches up real time with waits',async()=>{
  const h=harness(),c=h.controller;c.repeatFast=true;c.speed=.5;
  await c.start({realistic:true});assert.equal(c.speed,1);assert.equal(c.repeatFast,false);
@@ -173,7 +199,7 @@ test('realistic catch-up yields in bounded batches and stops at the battle endpo
 });
 
 test('inputs received after a delayed clock boundary cannot be backdated',async()=>{
- const h=harness(),c=h.controller;await c.start({});h.setTime(600);c.queue('dodge');
+ const h=harness(true),c=h.controller;await c.start({});h.setTime(600);c.queue('dodge');
  await c.tick();assert.equal(h.calls.at(-1).payload.action,'wait');assert.equal(c.pending.action,'dodge');
  h.setTime(1000);await c.tick();assert.equal(h.calls.at(-1).payload.action,'dodge');
 });
