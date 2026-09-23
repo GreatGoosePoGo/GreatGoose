@@ -11,6 +11,8 @@
 }
 
 * { box-sizing: border-box; }
+.practice-link { display: inline-flex; align-items: center; padding: 12px 16px; font-weight: 700; color: var(--blue); text-decoration: none; border: 1px solid var(--line); border-radius: 8px; background: white; }
+.practice-link:hover { background: #eaf1ff; }
 
 /* Manual battles are a text-first working surface, without sprite placeholders. */
 .turn-toolbar, .turn-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }

@@ -107,6 +107,7 @@ export interface PlayerInput {
     party_group?: number;
 }
 export interface SimulationRequest {
+    practice_glitches?: Partial<import('./practice_glitches.js').PracticeGlitches>;
     boss: string;
     boss_fast_move: string;
     boss_charged_move: string;

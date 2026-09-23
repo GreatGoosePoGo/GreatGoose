@@ -84,6 +84,25 @@ const client = await readFile(join(raidsRoot, 'client.js'), 'utf8');
 if (!client.includes(`${build.engine_directory}/worker.js`))
   throw new Error('The page client does not load the matching engine directory.');
 
+const practiceIndex = await readFile(join(raidsRoot, 'practice', 'index.html'), 'utf8');
+if (!practiceIndex.includes('<base href="../">') || !practiceIndex.includes('id="simulator-form"'))
+  throw new Error('Practice must load the shared setup and resolve assets from /raids/.');
+const experimentalPracticeIndex = await readFile(join(raidsRoot, 'practice', 'experimental', 'index.html'), 'utf8');
+if (!experimentalPracticeIndex.includes('<base href="../../">')
+    || !experimentalPracticeIndex.includes('id="simulator-form"'))
+  throw new Error('Experimental practice must load the shared setup and resolve assets from /raids/.');
+if (!index.includes('href="practice/"')) throw new Error('Raid practice navigation is missing.');
+for (const asset of ['styles.css', 'client.js', 'pokemon_code.js', 'share.js', 'app.js', 'practice/practice.css', 'practice/practice.js']) {
+  if (!practiceIndex.includes(`${asset}?v=${build.version}`)) throw new Error(`Practice has an unversioned asset: ${asset}`);
+  if (!experimentalPracticeIndex.includes(`${asset}?v=${build.version}`)) throw new Error(`Experimental practice has an unversioned asset: ${asset}`);
+  await stat(join(raidsRoot, asset));
+}
+const practiceScript = await readFile(join(raidsRoot, 'practice', 'practice.js'), 'utf8');
+if (!practiceScript.includes(`./controller.js?v=${build.version}`)) throw new Error('Practice controller is not versioned.');
+await stat(join(raidsRoot, 'practice', 'controller.js'));
+if (!practiceScript.includes(`./feedback.js?v=${build.version}`)) throw new Error('Practice feedback is not versioned.');
+await stat(join(raidsRoot, 'practice', 'feedback.js'));
+
 const rankingsIndex = await readFile(join(rankingsRoot, 'index.html'), 'utf8');
 await stat(join(rankingsRoot, 'assets', 'pokemon-go-type-icons.png'));
 for (const asset of ['styles.css', 'app.js']) {

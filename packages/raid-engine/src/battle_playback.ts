@@ -1,4 +1,5 @@
 /** Native TypeScript port of the supplied Python reference. No Python runtime is used. */
+import { practiceGlitches } from './practice_glitches.js';
 import * as py from "./compatibility.js";
 import { PythonRandom } from "./random.js";
 import { re } from "./text.js";
@@ -103,6 +104,8 @@ function reconstruct(document: any, engine: any): any {
     id_to_index = py.dict(py.iter(py.enumerate(player_ids)).map(([i, p]: any) => ([p, i])));
     fast = py.next(py.iter(py.values(engine.BOSS_FAST_MOVES)));
     charged = py.next(py.iter(py.values(engine.BOSS_CHARGED_MOVES)));
+    const glitches = practiceGlitches(document.settings.practice_glitches);
+    let energyEpoch = 0;
     class ObservedSimulation extends engine.Simulation {
         declare frames: any;
         declare messages: any;
@@ -274,11 +277,19 @@ function reconstruct(document: any, engine: any): any {
             sim.current_time = (tick / 2);
             finish_tick = tick;
             if (py.truth(((py.equal(kind, "player_hit"))))) {
-                sim.apply_player_hit(...(data as [
-                    any,
-                    any,
-                    any
-                ]));
+                const [id, generation, hitMove] = data;
+                const attacker = sim.players[id], member = attacker.pokemon;
+                const delayed = glitches.energy_resolve && attacker.on_field && attacker.generation === generation && hitMove === member.fast_move;
+                const energy = member.energy;
+                sim.apply_player_hit(id, generation, hitMove);
+                if (delayed) {
+                    member.energy = energy;
+                    push(tick + 1, 'energy_hit', [member, hitMove.energy, energyEpoch]);
+                }
+            }
+            else if (kind === 'energy_hit') {
+                if (data[2] === energyEpoch && data[0].hp > 0)
+                    data[0].energy = Math.min(100, data[0].energy + data[1]);
             }
             else {
                 if (py.truth(((py.equal(kind, "boss_hit"))))) {
@@ -332,6 +343,7 @@ function reconstruct(document: any, engine: any): any {
                                 player.pokemon_index = sim.first_normal_index(player);
                                 player.on_field = true;
                                 player.generation = py.add(player.generation, 1);
+                                energyEpoch += 1;
                                 player.rejoins = py.add(player.rejoins, 1);
                                 player.action_end = (tick / 2);
                                 player.action_is_charged = false;
@@ -339,6 +351,7 @@ function reconstruct(document: any, engine: any): any {
                             }
                             else {
                                 if (py.truth(((py.equal(action, "quit"))))) {
+                                    energyEpoch += 1;
                                     player.on_field = false;
                                     player.generation = py.add(player.generation, 1);
                                     player.action_end = (tick / 2);
@@ -356,10 +369,12 @@ function reconstruct(document: any, engine: any): any {
                                         if (py.truth(((py.at(player.team, slot).hp <= 0)))) {
                                             fail(`p${py.str(external_id)} slot ${py.str(py.add(slot, 1))} has fainted.`);
                                         }
+                                        // Practice records the automatic switch after the full faint delay.
+                                        const replacedAfterFaint = recording?.mode === 'practice' && !player.on_field && player.hp <= 0;
                                         player.generation = py.add(player.generation, 1);
                                         player.pokemon_index = slot;
                                         player.on_field = true;
-                                        player.action_end = py.add((tick / 2), engine.SWITCH_SECONDS);
+                                        player.action_end = tick / 2 + (replacedAfterFaint ? 0 : engine.SWITCH_SECONDS);
                                         player.action_is_charged = false;
                                         if (py.truth(pending_boss)) {
                                             py.discard(py.at(pending_boss, 2), i);
@@ -367,17 +382,22 @@ function reconstruct(document: any, engine: any): any {
                                     }
                                     else {
                                         if (py.truth(((py.equal(action, "dodge"))))) {
-                                            if (py.truth(py.or(!py.truth(player.on_field), () => ((pending_boss === null))))) {
-                                                fail(`p${py.str(external_id)} has no incoming boss move to dodge.`);
+                                            const experimental = document.settings.experimental_inputs === true;
+                                            if (!player.on_field || player.hp <= 0 || (experimental && tick / 2 < player.action_end))
+                                                fail(`p${external_id} cannot dodge while unavailable.`);
+                                            if (!experimental && !pending_boss)
+                                                fail(`p${external_id} has no incoming boss move to dodge.`);
+                                            if (pending_boss) {
+                                                [hit_tick, move, dodgers] = pending_boss;
+                                                if (!experimental && dodgers.has(i)) fail(`p${external_id} already dodged this move.`);
+                                                if (player.action_is_charged && player.action_start < hit_tick / 2 && hit_tick / 2 < player.action_end)
+                                                    fail(`p${external_id} cannot dodge during its charged-move animation.`);
+                                                dodgers.add(i);
                                             }
-                                            if (py.truth(((py.has(py.at(pending_boss, 2), i))))) {
-                                                fail(`p${py.str(external_id)} already dodged this move.`);
+                                            if (experimental) {
+                                                player.action_start = tick / 2;
+                                                player.action_is_charged = false;
                                             }
-                                            [hit_tick, move, dodgers] = pending_boss;
-                                            if (py.truth(py.and(player.action_is_charged, () => ((player.action_start < (hit_tick / 2)) && ((hit_tick / 2) < player.action_end))))) {
-                                                fail(`p${py.str(external_id)} cannot dodge during its charged-move animation.`);
-                                            }
-                                            dodgers.add(i);
                                             player.action_end = py.add(py.max((tick / 2), player.action_end), engine.DODGE_SECONDS);
                                         }
                                         else {
