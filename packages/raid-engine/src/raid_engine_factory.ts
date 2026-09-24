@@ -60,7 +60,7 @@ export function createAutomaticRaidEngine(input: RaidConfig, catalog: Calculator
     // reads engine.RAID_SECONDS and therefore keeps the authentic 180/300 clock.
     const coreInput = {...input, raid_seconds: battleLimit};
     const engine = createRaidEngineWithDodgePolicy(coreInput, currentCatalog);
-    applyCurrentEngineMoveOverrides(engine, input);
+    applyCurrentEngineMoveOverrides(engine, input, currentCatalog);
     engine.RAID_SECONDS = raidSeconds;
     (engine as any).BATTLE_TIME_LIMIT = battleLimit;
 
@@ -94,7 +94,7 @@ export function createReplayRaidEngine(
 ) {
     const currentCatalog = withCurrentCatalogOverrides(catalog);
     const engine = createRaidEngineWithDodgeCompatibility(input, currentCatalog);
-    applyCurrentEngineMoveOverrides(engine, input);
+    applyCurrentEngineMoveOverrides(engine, input, currentCatalog);
     if (options.canonical !== false)
         applyCanonicalEventOrderPolicy(engine);
     if (options.legacyStrategy === true) {
@@ -119,7 +119,7 @@ export function createManualRaidEngine(input: RaidConfig, catalog: CalculatorEnt
         throw new Error(`Battle time limit cannot exceed the ${raidSeconds}-second raid timer.`);
     const currentCatalog = withCurrentCatalogOverrides(catalog);
     const engine = createRaidEngine({...input, raid_seconds: raidSeconds}, currentCatalog);
-    applyCurrentEngineMoveOverrides(engine, input);
+    applyCurrentEngineMoveOverrides(engine, input, currentCatalog);
     (engine as any).BATTLE_TIME_LIMIT = battleLimit;
     makeReplayTimerSelfContained(engine);
     return engine;

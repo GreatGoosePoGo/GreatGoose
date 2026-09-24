@@ -25,9 +25,9 @@ export const RANKING_LEVELS = [20, 25, 30, 35, 40, 45, 50] as const;
 export type RankingLevel = typeof RANKING_LEVELS[number];
 
 /**
- * Mega forms whose Super Max eligibility and additional charged move were
- * released by 2026-09-08. Keeping this form-specific avoids granting announced
- * or future "+" moves before they are actually available in Pokémon GO.
+ * Mega forms whose Super Max eligibility and additional charged move are
+ * released or announced as of 2026-09-24. Keeping this form-specific avoids
+ * granting future "+" moves before their details are known.
  */
 export const RELEASED_MEGA_PLUS_FORM_IDS: ReadonlySet<string> = new Set([
     'BEEDRILL_MEGA',
@@ -45,6 +45,7 @@ export const RELEASED_MEGA_PLUS_FORM_IDS: ReadonlySet<string> = new Set([
     'GRENINJA_MEGA',
     'MALAMAR_MEGA',
     'FALINKS_MEGA',
+    'MANECTRIC_MEGA',
 ]);
 
 export interface RankingSettings {

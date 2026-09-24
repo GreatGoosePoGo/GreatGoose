@@ -152,8 +152,8 @@ test('Party Power, party size, and relobby time affect general ranking metrics',
 });
 
 test('released Mega plus moves scale with Mega Level and Super Max stats', () => {
-  assert.equal(RELEASED_MEGA_PLUS_FORM_IDS.size, 15);
-  for (const formId of ['BEEDRILL_MEGA', 'HOUNDOOM_MEGA', 'DELPHOX_MEGA', 'MEWTWO_MEGA_X']) {
+  assert.equal(RELEASED_MEGA_PLUS_FORM_IDS.size, 16);
+  for (const formId of ['BEEDRILL_MEGA', 'HOUNDOOM_MEGA', 'DELPHOX_MEGA', 'MEWTWO_MEGA_X', 'MANECTRIC_MEGA']) {
     assert(RELEASED_MEGA_PLUS_FORM_IDS.has(formId), `Missing released Super Max form ${formId}`);
   }
   assert(!RELEASED_MEGA_PLUS_FORM_IDS.has('STARAPTOR_MEGA'));
