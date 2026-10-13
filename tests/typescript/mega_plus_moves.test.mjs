@@ -5,10 +5,13 @@ import {createAutomaticRaidEngine} from '../../build/raid_engine_factory.js';
 import {
   DISCHARGE_PLUS,
   DISCHARGE_PLUS_POWERS,
+  OMINOUS_WIND_PLUS_POWERS,
   withCurrentCatalogOverrides,
 } from '../../build/catalog_overrides.js';
-import {RELEASED_MEGA_PLUS_FORM_IDS} from '../../build/rankings.js';
-import {battle_config} from '../../build/website_api.js';
+import {calculateRankings, RELEASED_MEGA_PLUS_FORM_IDS} from '../../build/rankings.js';
+import {battle_config, publicCatalog, run_simulations} from '../../build/website_api.js';
+import {buildStrategyPlayback} from '../../build/strategy_playback.js';
+import {counterCandidate} from '../../build/raid_counters.js';
 
 const rawCatalog = JSON.parse(readFileSync(new URL('../../simulator/calculator_data.json', import.meta.url)));
 const catalog = withCurrentCatalogOverrides(rawCatalog);
@@ -72,4 +75,74 @@ test('Discharge+ remains exclusive to Mega Manectric', () => {
   config.player_teams[0][0][0] = 'MANECTRIC';
   const engine = createAutomaticRaidEngine(config, rawCatalog);
   assert.throws(() => engine.validate_settings(), /Discharge\+ can only be used by Mega Manectric/);
+});
+
+test('Mega Chandelure is available without mutating or duplicating the pinned catalog', () => {
+  const before = JSON.stringify(rawCatalog);
+  const current = withCurrentCatalogOverrides(rawCatalog);
+  const twice = withCurrentCatalogOverrides(current);
+  assert.equal(JSON.stringify(rawCatalog), before);
+  assert.equal(twice.filter(entry => entry.form_id === 'CHANDELURE_MEGA').length, 1);
+  const mega = twice.find(entry => entry.form_id === 'CHANDELURE_MEGA');
+  assert.equal(mega.released, true);
+  assert.equal(mega.name, 'Mega Chandelure');
+  assert.deepEqual(mega.types, ['ghost', 'fire']);
+  assert.deepEqual(mega.stats, {attack: 335, defense: 227, stamina: 155});
+  assert.deepEqual(mega.fast_moves, rawCatalog.find(e => e.form_id === 'CHANDELURE').fast_moves);
+  assert.deepEqual(mega.charged_moves, rawCatalog.find(e => e.form_id === 'CHANDELURE').charged_moves);
+  assert.equal(mega.mega_charged_moves.filter(m => m.name === 'Ominous Wind+').length, 1);
+  const publicMega = publicCatalog(rawCatalog).find(e => e.form_id === 'CHANDELURE_MEGA');
+  assert(publicMega.charged_moves.includes('Ominous Wind+'));
+  assert(!publicMega.boss_charged_moves.includes('Ominous Wind+'));
+});
+
+test('Ominous Wind+ uses the requested energy, duration and power at every Mega Level', () => {
+  assert.deepEqual(OMINOUS_WIND_PLUS_POWERS, [145, 160, 174, 188]);
+  for (let level = 1; level <= 4; level++) {
+    const engine = createAutomaticRaidEngine(
+      battle_config(requestFor('CHANDELURE_MEGA', 'Ominous Wind+', level), rawCatalog), rawCatalog);
+    engine.validate_settings();
+    const p = engine.createSimulation().players[0].pokemon;
+    assert.equal(p.species.name, 'Mega Chandelure');
+    assert.equal(p.species.attack, 335);
+    assert.equal(p.charged_move.power, 145);
+    assert.equal(p.charged_move.energy, 100);
+    assert.equal(p.charged_move.duration, 2.5);
+    assert.equal(p.charged_move.move_type, 'Ghost');
+    assert.equal(engine.effective_player_move_power(p.charged_move, p), OMINOUS_WIND_PLUS_POWERS[level - 1]);
+    assert.equal(engine.displayed_player_move_name(p.charged_move, p), `Ominous Wind${'+'.repeat(level)}`);
+  }
+});
+
+test('Mega Chandelure battles and generated replays agree', () => {
+  const result = run_simulations(requestFor('CHANDELURE_MEGA', 'Ominous Wind+'), rawCatalog);
+  assert(result.replay_text.includes('Ominous Wind++++'));
+  const playback = buildStrategyPlayback(result.replay_text, rawCatalog);
+  assert.equal(playback.result.boss_hp, result.boss_hp);
+  assert.equal(playback.result.finish_time, result.finish_time);
+  assert.deepEqual(playback.warnings, []);
+});
+
+test('ordinary Chandelure cannot use the Mega-exclusive Ominous Wind+', () => {
+  const request = requestFor('CHANDELURE_MEGA', 'Ominous Wind+');
+  const config = battle_config(request, rawCatalog);
+  config.player_teams[0][0][0] = 'CHANDELURE';
+  assert.throws(() => createAutomaticRaidEngine(config, rawCatalog).validate_settings(), /only be used by Mega Chandelure/);
+  request.players[0].team[0].name = 'CHANDELURE';
+  assert.throws(() => battle_config(request, rawCatalog), /legal moves/);
+});
+
+test('rankings and raid counters accept Mega Chandelure with Ominous Wind+', () => {
+  const mega = catalog.find(e => e.form_id === 'CHANDELURE_MEGA');
+  const result = calculateRankings([mega], {attackType: 'ghost', megaLevel: 4});
+  assert.equal(result.rows.length, 1);
+  assert.equal(result.rows[0].formId, 'CHANDELURE_MEGA');
+  assert.equal(result.rows[0].mega, true);
+  assert(result.rows[0].simpleDps > 0);
+  assert.equal(calculateRankings([mega], {attackType: 'ghost', includeMegas: false}).rows.length, 0);
+  const candidate = counterCandidate(catalog,
+    {formId: 'CHANDELURE_MEGA', fastMoveId: 'HEX_FAST', chargedMoveId: 'OMINOUS_WIND_PLUS', shadow: false},
+    {bossFormId: 'STARMIE', raidDifficulty: 'Tier 3', includeMegas: true}, new Set(), new Set());
+  assert.equal(candidate.entry.name, 'Mega Chandelure');
+  assert.equal(candidate.chargedMove.name, 'Ominous Wind+');
 });
