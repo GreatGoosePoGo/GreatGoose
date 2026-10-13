@@ -3,7 +3,7 @@ import { createRaidEngine } from './super_mega_raid_simulator.js';
 import { createRaidEngineWithDodgeCompatibility, createRaidEngineWithDodgePolicy } from './dodge_policy.js';
 import { applyCanonicalEventOrderPolicy } from './event_order_policy.js';
 import { applySavedEnergyReturnValuePolicy } from './saved_energy_policy.js';
-import { applyCatchTankRejoinPolicy } from './catch_tank_policy.js';
+import { applyCatchTankRejoinPolicy, applyCatchTankTimingPolicy } from './catch_tank_policy.js';
 import { automaticRejoinTimeDistribution, applyRejoinTimeDistributionPolicy } from './rejoin_time.js';
 import {
     automaticBattleTimeLimit,
@@ -67,6 +67,7 @@ export function createAutomaticRaidEngine(input: RaidConfig, catalog: Calculator
     applyCanonicalEventOrderPolicy(engine);
     applySavedEnergyReturnValuePolicy(engine);
     applyCatchTankRejoinPolicy(engine);
+    applyCatchTankTimingPolicy(engine);
     applyRejoinTimeDistributionPolicy(engine, automaticRejoinTimeDistribution(input.rejoin_time_distribution));
     makeReplayTimerSelfContained(engine);
     return engine;

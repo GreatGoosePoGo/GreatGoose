@@ -369,6 +369,9 @@ function reconstruct(document: any, engine: any): any {
                                         if (py.truth(((py.at(player.team, slot).hp <= 0)))) {
                                             fail(`p${py.str(external_id)} slot ${py.str(py.add(slot, 1))} has fainted.`);
                                         }
+                                        if (player.on_field && player.hp > 0 && tick / 2 < player.action_end) {
+                                            fail(`p${external_id} cannot switch while busy until ${player.action_end}s.`);
+                                        }
                                         // Practice records the automatic switch after the full faint delay.
                                         const replacedAfterFaint = recording?.mode === 'practice' && !player.on_field && player.hp <= 0;
                                         player.generation = py.add(player.generation, 1);
