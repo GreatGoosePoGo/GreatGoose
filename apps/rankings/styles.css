@@ -122,7 +122,7 @@ select { min-width: 10rem; padding: .55rem .7rem; border: 1px solid var(--line);
 .number-with-unit input { width: 100%; min-width: 5rem; padding: .55rem .2rem .55rem .7rem; border: 0; outline: 0; color: inherit; background: transparent; font: inherit; }
 .number-with-unit span { padding-right: .7rem; color: var(--muted); font-size: .75rem; font-weight: 600; }
 
-.ranking-tools { display: flex; align-items: end; justify-content: space-between; gap: 1rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e2e5e9; }
+.ranking-tools { display: flex; align-items: end; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e2e5e9; }
 .filter-group { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem; }
 .filter-label { margin-right: .15rem; color: var(--muted); font-size: .76rem; font-weight: 750; text-transform: uppercase; }
 .filter-button {

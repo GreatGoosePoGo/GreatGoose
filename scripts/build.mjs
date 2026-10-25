@@ -66,6 +66,7 @@ const engineDirectory = `engine-${version}`;
 
 await rm('dist', {recursive: true, force: true});
 await cp('apps/home', 'dist', {recursive: true});
+await cp('apps/about', join('dist', 'about'), {recursive: true});
 await cp('apps/raids', join('dist', 'raids'), {recursive: true});
 await cp('apps/counters', join('dist', 'counters'), {recursive: true});
 await cp('apps/rankings', join('dist', 'rankings'), {recursive: true});
@@ -174,4 +175,4 @@ await writeFile(
   JSON.stringify({version, engine_directory: engineDirectory}, null, 2) + '\n',
 );
 
-console.log(`Built Great Goose site ${version} with /raids/, /counters/, and /rankings/ in dist/.`);
+console.log(`Built Great Goose site ${version} with /about/, /raids/, /counters/, and /rankings/ in dist/.`);

@@ -24,6 +24,8 @@
   let includeMegas = initialFlag("megas");
   let includeShadows = initialFlag("shadows");
   let includeLegendaries = initialFlag("legendaries");
+  let excludeLegacy = new URL(location.href).searchParams.get("excludeLegacy") === "1";
+  let splitLegacy = new URL(location.href).searchParams.get("splitLegacy") === "1";
   let bossAttack = initialBossAttack();
   let bossMoveType = initialBossMoveType();
   let megaLevel = initialMegaLevel();
@@ -44,6 +46,8 @@
     megas: document.querySelector("#include-megas"),
     shadows: document.querySelector("#include-shadows"),
     legendaries: document.querySelector("#include-legendaries"),
+    excludeLegacy: document.querySelector("#exclude-legacy"),
+    splitLegacy: document.querySelector("#split-legacy"),
     bossAttack: document.querySelector("#boss-attack"),
     bossMoveType: document.querySelector("#boss-move-type"),
     megaLevel: document.querySelector("#mega-level"),
@@ -150,6 +154,8 @@
     url.searchParams.set("megas", includeMegas ? "1" : "0");
     url.searchParams.set("shadows", includeShadows ? "1" : "0");
     url.searchParams.set("legendaries", includeLegendaries ? "1" : "0");
+    url.searchParams.set("excludeLegacy", excludeLegacy ? "1" : "0");
+    url.searchParams.set("splitLegacy", splitLegacy ? "1" : "0");
     url.searchParams.set("boss", bossAttack);
     url.searchParams.set("bossType", bossMoveType);
     url.searchParams.set("megaLevel", String(megaLevel));
@@ -186,7 +192,7 @@
   }
 
   function cacheKey(type) {
-    return [rankingMode, type, includeMegas, includeShadows, includeLegendaries,
+    return [rankingMode, type, includeMegas, includeShadows, includeLegendaries, excludeLegacy, splitLegacy,
       bossAttack, bossMoveType, megaLevel, level, partyPowerPlayers, partySize, relobbySeconds]
       .map(value => typeof value === "boolean" ? Number(value) : value)
       .join(":");
@@ -205,6 +211,8 @@
         includeMegas,
         includeShadows,
         includeLegendaries,
+        excludeLegacy,
+        splitLegacy,
         bossAttack,
         bossMoveType,
         megaLevel,
@@ -337,6 +345,9 @@
       const detail = document.createElement("span");
       detail.className = "dex";
       detail.textContent = `#${row.dexNumber} · ${row.pokemonTypes.join(" / ")}`;
+      if (currentResult.splitLegacy && !currentResult.excludeLegacy) {
+        detail.textContent += row.eliteFast || row.eliteCharged ? " · Legacy" : " · Non-legacy";
+      }
       pokemon.append(detail);
       tr.append(
         rank,
@@ -429,6 +440,8 @@
     [elements.megas, () => includeMegas, value => { includeMegas = value; }],
     [elements.shadows, () => includeShadows, value => { includeShadows = value; }],
     [elements.legendaries, () => includeLegendaries, value => { includeLegendaries = value; }],
+    [elements.excludeLegacy, () => excludeLegacy, value => { excludeLegacy = value; }],
+    [elements.splitLegacy, () => splitLegacy, value => { splitLegacy = value; }],
   ];
   for (const [button, read, write] of filters) {
     button.setAttribute("aria-pressed", String(read()));

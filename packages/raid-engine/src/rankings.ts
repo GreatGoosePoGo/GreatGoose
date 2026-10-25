@@ -58,6 +58,8 @@ export interface RankingSettings {
     includeMegas?: boolean;
     includeShadows?: boolean;
     includeLegendaries?: boolean;
+    excludeLegacy?: boolean;
+    splitLegacy?: boolean;
     bossAttack?: BossAttackLevel;
     bossMoveType?: BossMoveType;
     megaLevel?: MegaLevel;
@@ -93,6 +95,8 @@ export interface RankingResult {
     includeMegas: boolean;
     includeShadows: boolean;
     includeLegendaries: boolean;
+    excludeLegacy: boolean;
+    splitLegacy: boolean;
     bossAttack: BossAttackLevel;
     bossMoveType: BossMoveType;
     megaLevel: MegaLevel;
@@ -261,20 +265,20 @@ function uniqueMoves(moves: CalculatorMove[]): CalculatorMove[] {
     return [...result.values()];
 }
 
-function playerFastMoves(entry: CalculatorEntry, shadow = false): CalculatorMove[] {
+function playerFastMoves(entry: CalculatorEntry, shadow = false, excludeLegacy = false): CalculatorMove[] {
     return uniqueMoves([
         ...entry.fast_moves,
         ...(entry.exclusive_fast_moves ?? []),
-    ]).filter(move => isPlayerMoveAvailable(move, {shadow}));
+    ]).filter(move => isPlayerMoveAvailable(move, {shadow, excludeLegacy}));
 }
 
-function playerChargedMoves(entry: CalculatorEntry, shadow = false): CalculatorMove[] {
+function playerChargedMoves(entry: CalculatorEntry, shadow = false, excludeLegacy = false): CalculatorMove[] {
     return uniqueMoves([
         ...entry.charged_moves,
         ...(entry.exclusive_charged_moves ?? []),
         ...(RELEASED_MEGA_PLUS_FORM_IDS.has(entry.form_id)
             ? entry.mega_charged_moves ?? [] : []),
-    ]).filter(move => isPlayerMoveAvailable(move, {shadow}));
+    ]).filter(move => isPlayerMoveAvailable(move, {shadow, excludeLegacy}));
 }
 
 function effectiveStats(entry: CalculatorEntry, level: RankingLevel, megaLevel: MegaLevel): EffectiveStats {
@@ -708,6 +712,8 @@ export function calculateRankings(
     const includeMegas = settings.includeMegas !== false;
     const includeShadows = Boolean(settings.includeShadows);
     const includeLegendaries = settings.includeLegendaries !== false;
+    const excludeLegacy = Boolean(settings.excludeLegacy);
+    const splitLegacy = Boolean(settings.splitLegacy);
 
     const bestByForm = new Map<string, RankingRow>();
     let candidateMovesets = 0;
@@ -727,9 +733,9 @@ export function calculateRankings(
         const typedBossAttackCoefficient = bossAttackCoefficient
             * bossMoveEffectiveness(bossMoveType, entry.types);
         for (const shadow of shadowStates) {
-            const chargedMoves = playerChargedMoves(entry, shadow)
+            const chargedMoves = playerChargedMoves(entry, shadow, excludeLegacy)
                 .filter(move => (mode === 'anti' || normalizeType(move.type) === attackType) && move.energy < 0);
-            for (const candidateFast of playerFastMoves(entry, shadow).filter(move => move.energy > 0)) {
+            for (const candidateFast of playerFastMoves(entry, shadow, excludeLegacy).filter(move => move.energy > 0)) {
                 // Hidden Power's timing/energy are type-independent. The legal type
                 // with greatest STAB × effectiveness dominates for every DPS metric.
                 let fastMove = candidateFast;
@@ -783,8 +789,8 @@ export function calculateRankings(
                         chargedMove: displayedMoveName(chargedMove, megaLevel),
                         chargedMoveType: normalizeType(chargedMove.type),
                         chargedEnergy: Math.abs(chargedMove.energy),
-                        eliteFast: Boolean(fastMove.elite),
-                        eliteCharged: Boolean(chargedMove.elite),
+                        eliteFast: Boolean(fastMove.elite || fastMove.glitch_legacy),
+                        eliteCharged: Boolean(chargedMove.elite || chargedMove.glitch_legacy),
                         mega,
                         shadow,
                         legendary,
@@ -795,7 +801,9 @@ export function calculateRankings(
                             appearanceDamage, appearance, partySize, relobbySeconds,
                         ),
                     };
-                    const key = `${entry.form_id}:${shadow ? 'shadow' : 'normal'}`;
+                    const legacyVariant = splitLegacy
+                        ? `:${row.eliteFast || row.eliteCharged ? 'legacy' : 'non-legacy'}` : '';
+                    const key = `${entry.form_id}:${shadow ? 'shadow' : 'normal'}${legacyVariant}`;
                     const previous = bestByForm.get(key);
                     if (!previous || isBetter(row, previous)) bestByForm.set(key, row);
                 }
@@ -820,6 +828,8 @@ export function calculateRankings(
         includeMegas,
         includeShadows,
         includeLegendaries,
+        excludeLegacy,
+        splitLegacy,
         bossAttack,
         bossMoveType,
         megaLevel,
