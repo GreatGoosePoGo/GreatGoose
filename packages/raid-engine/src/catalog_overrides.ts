@@ -122,7 +122,7 @@ function currentMegaClefable(base: CalculatorEntry, existing?: CalculatorEntry):
         name: 'Mega Clefable',
         dex_number: 36,
         released: true,
-        types: ['fairy'],
+        types: ['fairy', 'flying'],
         // GO stats: https://db.pokemongohub.net/pokemon/36-Mega
         stats: {attack: 253, defense: 205, stamina: 216},
         fast_moves: [...(existing?.fast_moves ?? base.fast_moves)],

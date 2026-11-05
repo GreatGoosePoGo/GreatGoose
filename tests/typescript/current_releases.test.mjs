@@ -26,7 +26,7 @@ test('Mega Clefable exposes its own stats and exclusive plus move without duplic
   assert.equal(mega.name, 'Mega Clefable');
   assert.equal(mega.released, true);
   assert.deepEqual(mega.stats, {attack: 253, defense: 205, stamina: 216});
-  assert.deepEqual(mega.types, ['fairy']);
+  assert.deepEqual(mega.types, ['fairy', 'flying']);
   assert.equal(withCurrentCatalogOverrides(catalog).filter(e => e.form_id === 'CLEFABLE_MEGA').length, 1);
   assert(!raw.some(e => e.form_id === 'CLEFABLE_MEGA'), 'overrides preserve the pinned export');
   const publicMega = publicCatalog(raw).find(e => e.form_id === 'CLEFABLE_MEGA');
@@ -46,6 +46,9 @@ test('Moonblast+ scales at all Mega Levels and generated battles replay exactly'
     const p = sim.players[0];
     const move = p.pokemon.charged_move;
     assert.equal(p.species.attack, 253);
+    assert.deepEqual(p.species.types, ['Fairy', 'Flying']);
+    assert.equal(engine.type_effectiveness('Electric', p.species.types), 1.6);
+    assert.equal(engine.type_effectiveness('Ground', p.species.types), 0.390625);
     assert.equal(move.power, 160);
     assert.equal(move.energy, 100);
     assert.equal(move.duration, 4);
