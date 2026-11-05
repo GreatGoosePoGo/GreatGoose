@@ -8,9 +8,11 @@ import type {CalculatorEntry, CalculatorMove, RaidConfig} from './types.js';
 const STARAPTOR_MEGA_FORM_ID = 'STARAPTOR_MEGA';
 const MANECTRIC_MEGA_FORM_ID = 'MANECTRIC_MEGA';
 const CHANDELURE_MEGA_FORM_ID = 'CHANDELURE_MEGA';
+const CLEFABLE_MEGA_FORM_ID = 'CLEFABLE_MEGA';
 (RELEASED_MEGA_PLUS_FORM_IDS as Set<string>).add(STARAPTOR_MEGA_FORM_ID);
 (RELEASED_MEGA_PLUS_FORM_IDS as Set<string>).add(MANECTRIC_MEGA_FORM_ID);
 (RELEASED_MEGA_PLUS_FORM_IDS as Set<string>).add(CHANDELURE_MEGA_FORM_ID);
+(RELEASED_MEGA_PLUS_FORM_IDS as Set<string>).add(CLEFABLE_MEGA_FORM_ID);
 
 export const BRAVE_BIRD_PLUS_POWERS: [number, number, number, number] = [150, 165, 180, 195];
 export const BRAVE_BIRD_PLUS: CalculatorMove = {
@@ -44,6 +46,19 @@ export const OMINOUS_WIND_PLUS: CalculatorMove = {
     duration_ms: 2500,
     type: 'ghost',
     plus_powers: [...OMINOUS_WIND_PLUS_POWERS],
+};
+
+export const MOONBLAST_PLUS_POWERS: [number, number, number, number] = [160, 176, 192, 208];
+export const MOONBLAST_PLUS: CalculatorMove = {
+    id: 'MOONBLAST_PLUS',
+    name: 'Moonblast+',
+    power: 160,
+    // Provisional energy and timing retain ordinary Moonblast's values until
+    // separate +move data is available; the announced power is user-supplied.
+    energy: -100,
+    duration_ms: 4000,
+    type: 'fairy',
+    plus_powers: [...MOONBLAST_PLUS_POWERS],
 };
 
 const STARAPTOR_BASE_FORM_ID = 'STARAPTOR';
@@ -100,6 +115,27 @@ function currentMegaChandelure(base: CalculatorEntry, existing?: CalculatorEntry
     };
 }
 
+function currentMegaClefable(base: CalculatorEntry, existing?: CalculatorEntry): CalculatorEntry {
+    return {
+        ...(existing ?? base),
+        form_id: CLEFABLE_MEGA_FORM_ID,
+        name: 'Mega Clefable',
+        dex_number: 36,
+        released: true,
+        types: ['fairy'],
+        // GO stats: https://db.pokemongohub.net/pokemon/36-Mega
+        stats: {attack: 253, defense: 205, stamina: 216},
+        fast_moves: [...(existing?.fast_moves ?? base.fast_moves)],
+        charged_moves: [...(existing?.charged_moves ?? base.charged_moves)],
+        exclusive_fast_moves: [...(existing?.exclusive_fast_moves ?? base.exclusive_fast_moves ?? [])],
+        exclusive_charged_moves: [...(existing?.exclusive_charged_moves ?? base.exclusive_charged_moves ?? [])],
+        mega_charged_moves: [
+            ...(existing?.mega_charged_moves ?? []).filter(move => move.name !== MOONBLAST_PLUS.name),
+            {...MOONBLAST_PLUS, plus_powers: [...MOONBLAST_PLUS_POWERS]},
+        ],
+    };
+}
+
 /** Add or refresh small post-snapshot forms without mutating the supplied catalog. */
 export function withCurrentCatalogOverrides(catalog: CalculatorEntry[]): CalculatorEntry[] {
     const base = catalog.find(entry => entry.form_id === STARAPTOR_BASE_FORM_ID);
@@ -121,6 +157,14 @@ export function withCurrentCatalogOverrides(catalog: CalculatorEntry[]): Calcula
         const mega = currentMegaChandelure(chandelure, existingChandelure);
         current = existingChandelure
             ? current.map(entry => entry === existingChandelure ? mega : entry)
+            : [...current, mega];
+    }
+    const clefable = current.find(entry => entry.form_id === 'CLEFABLE');
+    const existingClefable = current.find(entry => entry.form_id === CLEFABLE_MEGA_FORM_ID);
+    if (clefable) {
+        const mega = currentMegaClefable(clefable, existingClefable);
+        current = existingClefable
+            ? current.map(entry => entry === existingClefable ? mega : entry)
             : [...current, mega];
     }
     return current;
