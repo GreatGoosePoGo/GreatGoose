@@ -1,5 +1,5 @@
 /** Browser worker for deterministic, client-side attacker rankings. */
-import {calculateRankings} from './rankings.js';
+import {calculateRankings, calculatePokemonMovesets} from './rankings.js';
 import {withCurrentCatalogOverrides} from './catalog_overrides.js';
 import type {CalculatorEntry} from './types.js';
 
@@ -51,30 +51,26 @@ function rankingData(): Promise<RankingData> {
 
 self.onmessage = async (event: MessageEvent) => {
     const {
-        id, attackType, includeMegas, includeShadows, includeLegendaries,
+        id, attackType, secondaryType, includeMegas, includeShadows, includeLegendaries,
         bossAttack, bossMoveType, megaLevel, mode, level, partyPowerPlayers,
-        partySize, relobbySeconds, excludeLegacy, splitLegacy,
+        partySize, relobbySeconds, excludeLegacy, splitLegacy, kind, formId, shadow,
     } = event.data ?? {};
     try {
         const {catalog, shadowFormIds, legendaryDexNumbers} = await rankingData();
-        const result = calculateRankings(
+        const settings = {
+            attackType, secondaryType, mode, level, partyPowerPlayers, partySize, relobbySeconds,
+            includeMegas: includeMegas !== false,
+            includeShadows: Boolean(includeShadows),
+            includeLegendaries: includeLegendaries !== false,
+            excludeLegacy: Boolean(excludeLegacy),
+            splitLegacy: Boolean(splitLegacy),
+            bossAttack, bossMoveType, megaLevel,
+        };
+        const result = kind === 'movesets' ? calculatePokemonMovesets(
+            catalog, settings, {formId, shadow: Boolean(shadow)}, shadowFormIds, legendaryDexNumbers,
+        ) : calculateRankings(
             catalog,
-            {
-                attackType,
-                mode,
-                level,
-                partyPowerPlayers,
-                partySize,
-                relobbySeconds,
-                includeMegas: includeMegas !== false,
-                includeShadows: Boolean(includeShadows),
-                includeLegendaries: includeLegendaries !== false,
-                excludeLegacy: Boolean(excludeLegacy),
-                splitLegacy: Boolean(splitLegacy),
-                bossAttack,
-                bossMoveType,
-                megaLevel,
-            },
+            settings,
             shadowFormIds,
             legendaryDexNumbers,
         );

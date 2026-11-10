@@ -19,7 +19,10 @@
   const pending = new Map();
   let requestId = 0;
   let selectedType = initialType();
+  let secondaryType = initialSecondaryType();
   let rankingMode = new URL(location.href).searchParams.get("mode") === "anti" ? "anti" : "attack";
+  let savedAntiPrimaryType;
+  let savedAttackType = selectedType ?? "dragon";
   document.documentElement.dataset.rankingMode = rankingMode;
   let includeMegas = initialFlag("megas");
   let includeShadows = initialFlag("shadows");
@@ -36,9 +39,14 @@
   let searchQuery = initialSearch();
   let sortMetric = initialSort();
   let currentResult = null;
+  let detailsResult = null;
+  let detailsRequestId = 0;
 
   const elements = {
     types: document.querySelector("#types"),
+    primaryTypeLabel: document.querySelector("#primary-type-label"),
+    secondaryTypes: document.querySelector("#secondary-types"),
+    secondaryTypesSection: document.querySelector("#secondary-types-section"),
     mode: document.querySelector("#anti-type"),
     typeHeading: document.querySelector("#type-heading"),
     typeDescription: document.querySelector("#type-description"),
@@ -62,6 +70,16 @@
     summary: document.querySelector("#summary"),
     body: document.querySelector("#ranking-body"),
     error: document.querySelector("#error"),
+    details: document.querySelector("#pokemon-details"),
+    detailsTitle: document.querySelector("#pokemon-details-title"),
+    detailsInfo: document.querySelector("#pokemon-details-info"),
+    detailsSettings: document.querySelector("#pokemon-details-settings"),
+    detailsClose: document.querySelector("#pokemon-details-close"),
+    detailsSort: document.querySelector("#pokemon-details-sort"),
+    detailsStatus: document.querySelector("#pokemon-details-status"),
+    detailsError: document.querySelector("#pokemon-details-error"),
+    detailsResults: document.querySelector("#pokemon-details-results"),
+    detailsBody: document.querySelector("#pokemon-details-body"),
     strategyWarning: document.querySelector("#strategy-warning"),
     dismissStrategyWarning: document.querySelector("#strategy-warning-dismiss"),
     acknowledgeStrategyWarning: document.querySelector("#strategy-warning-acknowledge"),
@@ -95,8 +113,15 @@
   }
 
   function initialType() {
-    const requested = new URL(location.href).searchParams.get("type")?.toLowerCase();
+    const params = new URL(location.href).searchParams;
+    const requested = params.get("type")?.toLowerCase();
+    if (requested === "none" && params.get("mode") === "anti") return null;
     return TYPES.includes(requested) ? requested : "dragon";
+  }
+
+  function initialSecondaryType() {
+    const requested = new URL(location.href).searchParams.get("type2")?.toLowerCase();
+    return TYPES.includes(requested) && requested !== selectedType ? requested : null;
   }
 
   function initialFlag(name) {
@@ -147,9 +172,20 @@
     return value.charAt(0).toUpperCase() + value.slice(1);
   }
 
+  function defendingTypeLabel(type, secondType) {
+    return [type, secondType].filter(Boolean).map(label).join(" / ") || "Overall";
+  }
+
+  function matchupLabel(type, secondType, mode) {
+    if (mode !== "anti") return `${label(type)} attackers`;
+    return type || secondType ? `Attackers against ${defendingTypeLabel(type, secondType)}` : "Overall rankings";
+  }
+
   function updateUrl() {
     const url = new URL(location.href);
-    url.searchParams.set("type", selectedType);
+    url.searchParams.set("type", selectedType ?? "none");
+    if (secondaryType) url.searchParams.set("type2", secondaryType);
+    else url.searchParams.delete("type2");
     url.searchParams.set("mode", rankingMode);
     url.searchParams.set("megas", includeMegas ? "1" : "0");
     url.searchParams.set("shadows", includeShadows ? "1" : "0");
@@ -170,36 +206,53 @@
   }
 
   function typeButtons() {
-    for (const type of TYPES) {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "type-button";
-      button.textContent = type;
-      button.dataset.type = type;
-      button.setAttribute("aria-pressed", String(type === selectedType));
-      button.addEventListener("click", () => selectType(type));
-      elements.types.append(button);
+    for (const [bar, slot] of [[elements.types, "primary"], [elements.secondaryTypes, "secondary"]]) {
+      for (const type of [...TYPES, null]) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "type-button";
+        button.textContent = type ?? "None";
+        button.dataset.type = type ?? "none";
+        button.addEventListener("click", () => chooseType(slot, type));
+        bar.append(button);
+      }
+    }
+  }
+
+  function chooseType(slot, type) {
+    if (rankingMode !== "anti") {
+      if (slot === "primary" && type) selectType(type);
+      return;
+    }
+    const current = slot === "primary" ? selectedType : secondaryType;
+    const other = slot === "primary" ? secondaryType : selectedType;
+    if (type === current || (type && type === other)) return;
+    if (slot === "secondary") {
+      secondaryType = type;
+      selectType(selectedType);
+    } else {
+      selectType(type);
     }
   }
 
   function setLoading() {
     elements.section.setAttribute("aria-busy", "true");
     elements.error.hidden = true;
-    elements.selectedType.textContent = rankingMode === "anti" ? `Attackers against ${label(selectedType)}` : `${label(selectedType)} attackers`;
+    elements.selectedType.textContent = matchupLabel(selectedType, secondaryType, rankingMode);
     elements.title.textContent = "Calculating rankings…";
     elements.summary.textContent = "";
     elements.body.innerHTML = `<tr class="loading-row"><td colspan="7">Checking every eligible Level ${level} moveset…</td></tr>`;
   }
 
   function cacheKey(type) {
-    return [rankingMode, type, includeMegas, includeShadows, includeLegendaries, excludeLegacy, splitLegacy,
+    return [rankingMode, type, rankingMode === "anti" ? secondaryType : null, includeMegas, includeShadows, includeLegendaries, excludeLegacy, splitLegacy,
       bossAttack, bossMoveType, megaLevel, level, partyPowerPlayers, partySize, relobbySeconds]
       .map(value => typeof value === "boolean" ? Number(value) : value)
       .join(":");
   }
 
-  function request(type) {
-    const key = cacheKey(type);
+  function request(type, pokemon = null) {
+    const key = cacheKey(type) + (pokemon ? `:movesets:${pokemon.formId}:${Number(pokemon.shadow)}` : "");
     if (cache.has(key)) return Promise.resolve(cache.get(key));
     const id = ++requestId;
     return new Promise((resolve, reject) => {
@@ -207,6 +260,7 @@
       worker.postMessage({
         id,
         attackType: type,
+        secondaryType: rankingMode === "anti" ? secondaryType : null,
         mode: rankingMode,
         includeMegas,
         includeShadows,
@@ -220,6 +274,7 @@
         partyPowerPlayers,
         partySize,
         relobbySeconds,
+        ...(pokemon ? {kind: "movesets", formId: pokemon.formId, shadow: pokemon.shadow} : {}),
       });
     });
   }
@@ -241,20 +296,37 @@
   });
 
   async function selectType(type) {
+    closePokemonDetails();
     selectedType = type;
+    if (rankingMode === "anti" && selectedType && secondaryType === selectedType) secondaryType = null;
     currentResult = null;
     document.documentElement.dataset.rankingMode = rankingMode;
     elements.mode.setAttribute("aria-checked", String(rankingMode === "anti"));
     elements.typeHeading.textContent = rankingMode === "anti" ? "Anti type" : "Attack type";
-    elements.types.setAttribute("aria-label", rankingMode === "anti" ? "Defending type" : "Attack type");
+    elements.types.setAttribute("aria-label", rankingMode === "anti" ? "First defending type" : "Attack type");
+    elements.primaryTypeLabel.hidden = rankingMode !== "anti";
+    elements.secondaryTypesSection.hidden = rankingMode !== "anti";
     elements.typeDescription.textContent = rankingMode === "anti"
-      ? "All movesets against a single defending type, including weaknesses and resistances. Boss Move Type controls incoming damage separately."
+      ? "Choose one type in each bar. Set both to None for overall rankings."
       : "Only movesets with a charged attack of this type are ranked.";
     const requestedKey = cacheKey(type);
     updateUrl();
-    document.querySelectorAll(".type-button").forEach(button => {
-      button.setAttribute("aria-pressed", String(button.dataset.type === type));
-    });
+    for (const [bar, slot] of [[elements.types, "primary"], [elements.secondaryTypes, "secondary"]]) {
+      const current = slot === "primary" ? selectedType : secondaryType;
+      const other = slot === "primary" ? secondaryType : selectedType;
+      for (const button of bar.children) {
+        const buttonType = button.dataset.type === "none" ? null : button.dataset.type;
+        const selected = buttonType === current;
+        button.hidden = rankingMode !== "anti" && buttonType === null;
+        button.disabled = rankingMode === "anti" && buttonType !== null && buttonType === other;
+        button.dataset.selection = selected ? slot : "";
+        button.setAttribute("aria-pressed", String(selected));
+        const name = buttonType ? label(buttonType) : "None";
+        const role = rankingMode === "anti" ? `${slot === "primary" ? "first" : "second"} defending type` : "attack type";
+        button.setAttribute("aria-label", `${name}: ${role}`);
+        button.title = button.disabled ? `${name} is selected in the other bar` : `${name}: ${role}`;
+      }
+    }
     setLoading();
     try {
       const result = await request(type);
@@ -325,6 +397,70 @@
     return name.includes(query);
   }
 
+  function closePokemonDetails() {
+    detailsRequestId += 1;
+    detailsResult = null;
+    if (elements.details.open) elements.details.close();
+  }
+
+  async function openPokemonDetails(row) {
+    const token = ++detailsRequestId;
+    detailsResult = null;
+    elements.detailsTitle.textContent = `${row.shadow ? "Shadow " : ""}${row.name}`;
+    elements.detailsInfo.textContent = `#${row.dexNumber} · ${row.pokemonTypes.join(" / ")} · 15/15/15 IVs`;
+    elements.detailsSettings.textContent = `${rankingMode === "anti" ? selectedType || secondaryType ? `Against ${defendingTypeLabel(selectedType, secondaryType)}` : "Overall" : `Attack type: ${label(selectedType)}`} · Level ${level} · ${partyPowerPlayers === 1 ? "Party Power off" : `${partyPowerPlayers}-player Party Power`} · ${partySize} Pokémon per party · ${relobbySeconds}s relobby · ${label(bossAttack)} boss Attack · ${label(bossMoveType)} boss moves · Mega Level ${megaLevel} · ${excludeLegacy ? "Legacy excluded" : "Legacy included"}`;
+    elements.detailsSort.value = sortMetric;
+    elements.detailsStatus.textContent = "Calculating every moveset…";
+    elements.detailsError.hidden = true;
+    elements.detailsResults.setAttribute("aria-busy", "true");
+    elements.detailsBody.innerHTML = '<tr class="loading-row"><td colspan="7">Calculating movesets…</td></tr>';
+    if (!elements.details.open) elements.details.showModal();
+    try {
+      const result = await request(selectedType, row);
+      if (token !== detailsRequestId || !elements.details.open) return;
+      detailsResult = result;
+      renderPokemonDetails();
+    } catch (error) {
+      if (token !== detailsRequestId || !elements.details.open) return;
+      elements.detailsResults.setAttribute("aria-busy", "false");
+      elements.detailsStatus.textContent = "Movesets unavailable";
+      elements.detailsBody.innerHTML = "";
+      elements.detailsError.textContent = error instanceof Error ? error.message : String(error);
+      elements.detailsError.hidden = false;
+    }
+  }
+
+  function renderPokemonDetails() {
+    const sort = elements.detailsSort.value;
+    const rows = [...detailsResult.rows].sort((a, b) =>
+      b[sort] - a[sort] || b.idealDps - a.idealDps || a.fastMove.localeCompare(b.fastMove));
+    const fragment = document.createDocumentFragment();
+    rows.forEach((row, index) => {
+      const tr = document.createElement("tr");
+      const rank = document.createElement("td");
+      rank.className = "rank";
+      rank.textContent = String(index + 1);
+      const availability = document.createElement("td");
+      availability.textContent = `${row.eliteFast || row.eliteCharged ? "Legacy" : "Non-legacy"}${row.belowCutoff ? " · Below ranking cutoff" : ""}`;
+      tr.append(rank,
+        moveCell(row.fastMove, row.fastMoveType, row.eliteFast),
+        moveCell(row.chargedMove, row.chargedMoveType, row.eliteCharged),
+        metricCell(row.idealDps, sort === "idealDps"),
+        metricCell(row.simpleDps, sort === "simpleDps"),
+        metricCell(row.effectiveDps, sort === "effectiveDps"), availability);
+      fragment.append(tr);
+    });
+    if (!rows.length) {
+      const empty = document.createElement("tr");
+      empty.className = "loading-row";
+      empty.innerHTML = '<td colspan="7">No movesets are available with these settings.</td>';
+      fragment.append(empty);
+    }
+    elements.detailsBody.replaceChildren(fragment);
+    elements.detailsResults.setAttribute("aria-busy", "false");
+    elements.detailsStatus.textContent = `${rows.length.toLocaleString()} movesets · All charged move types · Sorted by ${elements.detailsSort.selectedOptions[0].textContent}`;
+  }
+
   function render() {
     const sort = sortMetric;
     const rankedRows = [...currentResult.rows].sort((a, b) =>
@@ -336,12 +472,25 @@
 
     visibleRows.forEach(({row, rank: trueRank}) => {
       const tr = document.createElement("tr");
+      tr.className = "ranking-entry";
+      tr.title = "View all movesets and DPS";
+      tr.addEventListener("click", () => openPokemonDetails(row));
       const rank = document.createElement("td");
       rank.className = "rank";
       rank.textContent = String(trueRank);
       const pokemon = document.createElement("td");
       pokemon.className = "pokemon";
-      appendPokemonName(pokemon, row);
+      const nameButton = document.createElement("button");
+      nameButton.type = "button";
+      nameButton.className = "pokemon-details-button";
+      nameButton.setAttribute("aria-haspopup", "dialog");
+      nameButton.setAttribute("aria-controls", "pokemon-details");
+      nameButton.addEventListener("click", event => {
+        event.stopPropagation();
+        openPokemonDetails(row);
+      });
+      appendPokemonName(nameButton, row);
+      pokemon.append(nameButton);
       const detail = document.createElement("span");
       detail.className = "dex";
       detail.textContent = `#${row.dexNumber} · ${row.pokemonTypes.join(" / ")}`;
@@ -370,7 +519,7 @@
 
     elements.body.replaceChildren(fragment);
     elements.section.setAttribute("aria-busy", "false");
-    elements.selectedType.textContent = currentResult.mode === "anti" ? `Attackers against ${label(currentResult.attackType)}` : `${label(currentResult.attackType)} attackers`;
+    elements.selectedType.textContent = matchupLabel(currentResult.attackType, currentResult.secondaryType, currentResult.mode);
     elements.title.textContent = searchQuery
       ? `${visibleRows.length.toLocaleString()} of ${rankedRows.length.toLocaleString()} ranked Pokémon`
       : `${rankedRows.length.toLocaleString()} ranked Pokémon`;
@@ -383,9 +532,25 @@
     elements.summary.textContent = `Level ${currentResult.level} · ${partyPowerSummary} · ${currentResult.partySize} Pokémon · ${currentResult.relobbySeconds}s relobby · ${label(currentResult.bossAttack)} boss Attack · ${label(currentResult.bossMoveType)} boss moves · Mega Level ${currentResult.megaLevel} · ${currentResult.candidateMovesets.toLocaleString()} movesets checked${shadowSummary} · ${currentResult.excludedLowQuality.toLocaleString()} excluded below the 10% first-charged cutoff`;
   }
 
+  elements.detailsClose.addEventListener("click", closePokemonDetails);
+  elements.details.addEventListener("close", () => {
+    detailsRequestId += 1;
+    detailsResult = null;
+  });
+  elements.detailsSort.addEventListener("change", () => {
+    if (detailsResult) renderPokemonDetails();
+  });
+
   elements.mode.addEventListener("click", () => {
-    rankingMode = rankingMode === "anti" ? "attack" : "anti";
-    selectType(selectedType);
+    if (rankingMode === "anti") {
+      savedAntiPrimaryType = selectedType;
+      rankingMode = "attack";
+      selectType(savedAttackType);
+    } else {
+      savedAttackType = selectedType;
+      rankingMode = "anti";
+      selectType(savedAntiPrimaryType === undefined ? selectedType : savedAntiPrimaryType);
+    }
   });
   elements.sort.value = sortMetric;
   elements.sort.addEventListener("change", () => {

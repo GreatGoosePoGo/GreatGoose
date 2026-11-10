@@ -1,5 +1,6 @@
 /** Native TypeScript port of the supplied Python reference. No Python runtime is used. */
 import { practiceGlitches } from './practice_glitches.js';
+import { parseAdventureEffectBoostPercent } from './super_mega_raid_simulator.js';
 import * as py from "./compatibility.js";
 import { re } from "./text.js";
 import { seconds_to_tick } from "./text.js";
@@ -487,6 +488,15 @@ function parse_replay_text(text: string): Record<string, any> {
             continue;
         }
         in_teams = false;
+        if (line.startsWith('Adventure Effect boost: ')) {
+            const rawPercent = line.slice('Adventure Effect boost: '.length).trim();
+            try {
+                if (!/^\d+(?:\.\d+)?%$/.test(rawPercent)) throw new Error('Expected a percentage such as 10%.');
+                settings.adventure_effect_boost_percent = parseAdventureEffectBoostPercent(Number(rawPercent.slice(0, -1)));
+            }
+            catch (error) { throw new ReplayParseError(line_number, error instanceof Error ? error.message : String(error)); }
+            continue;
+        }
         if (py.truth(py.startswith(line, "Purified Gems: "))) {
             value = py.lower(py.strip(py.removeprefix(line, "Purified Gems: ")));
             if (py.truth(py.has(new Set<any>(["use", "true", "yes", "on", "1"]), value)))

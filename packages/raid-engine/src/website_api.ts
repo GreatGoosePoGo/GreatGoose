@@ -1,5 +1,6 @@
 /** Application boundary used by the browser worker and optional Node callers. */
 import { createAutomaticRaidEngine } from './raid_engine_factory.js';
+import { parseAdventureEffectBoostPercent } from './super_mega_raid_simulator.js';
 import { parseSeed } from './compatibility.js';
 import {isPlayerMoveAvailable} from './move_availability.js';
 import {DEFAULT_RAID_REJOIN_INPUT, parseRejoinTimeInput} from './rejoin_time.js';
@@ -141,6 +142,7 @@ export function battle_config(request: SimulationRequest, catalog: CalculatorEnt
         : parseBattleTimeLimit(request.battle_time_limit, raidDifficulty);
     return {
         trials, random_seed: seed, raid_difficulty: raidDifficulty, boss_form_id: request.boss,
+        adventure_effect_boost_percent: parseAdventureEffectBoostPercent(request.adventure_effect_boost_percent),
         boss_fast_move_names: fast, boss_charged_move_names: charged, player_teams: teams,
         friendship_multipliers: friendships, zacian_adventure_effect: requestedPlayers.map(p => (p.zacian_adventure_effect ?? request.zacian_adventure_effect) === true),
         behemoth_bash_adventure_effect: requestedPlayers.map(p => (p.behemoth_bash_adventure_effect ?? request.behemoth_bash_adventure_effect) === true), dynamic_punch_adventure_effect: requestedPlayers.map(p => (p.dynamic_punch_adventure_effect ?? request.dynamic_punch_adventure_effect) === true),

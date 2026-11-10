@@ -26,6 +26,7 @@ const SHARE_SELECTS = {
   strategy: "#player-strategy",
   weather: "#weather",
   seasonal: "#seasonal-friendship",
+  adventureBoost: "#adventure-effect-boost",
   gems: "#purified-gems",
   log: "#battle-log-mode",
 };
@@ -568,8 +569,8 @@ function addPlayer(configs = null, defaultId = null, settings = {}) {
       <label>Adventure Effect
         <select class="player-adventure">
           <option value="none">None</option>
-          <option value="behemoth_blade">Behemoth Blade (1.1× Attack)</option>
-          <option value="behemoth_bash">Behemoth Bash (1.1× Defense)</option>
+          <option value="behemoth_blade">Behemoth Blade (Attack boost)</option>
+          <option value="behemoth_bash">Behemoth Bash (Defense boost)</option>
           <option value="dynamic_punch">Dynamic Punch+ (1.15× Attack vs Mega)</option>
         </select>
       </label>
@@ -653,6 +654,7 @@ function shareState(seedOverride = undefined) {
       s: selectValue(SHARE_SELECTS.strategy),
       w: selectValue(SHARE_SELECTS.weather),
       sf: selectValue(SHARE_SELECTS.seasonal),
+      ab: Number(selectValue(SHARE_SELECTS.adventureBoost)),
       g: selectValue(SHARE_SELECTS.gems),
       l: selectValue(SHARE_SELECTS.log),
       z: seedOverride === undefined ? requestedSeed : String(seedOverride),
@@ -711,6 +713,7 @@ function applySharedSetup(state) {
   setSharedSelect(SHARE_SELECTS.strategy, options.s, "player strategy");
   setSharedSelect(SHARE_SELECTS.weather, options.w, "weather");
   setSharedSelect(SHARE_SELECTS.seasonal, options.sf ?? "normal", "seasonal friendship");
+  setSharedSelect(SHARE_SELECTS.adventureBoost, options.ab ?? 10, "Adventure Effect boost");
   updatePurifiedGems();
   setSharedSelect(SHARE_SELECTS.gems, options.g, "Purified Gems");
   setSharedSelect(SHARE_SELECTS.log, options.l, "battle log");
@@ -857,6 +860,7 @@ function battlePayload() {
     player_strategy: playerStrategySelect.value,
     weather: document.querySelector("#weather").value,
     seasonal_friendship: selectValue(SHARE_SELECTS.seasonal) === "double",
+    adventure_effect_boost_percent: Number(selectValue(SHARE_SELECTS.adventureBoost)),
     use_purified_gems: purifiedGemsSelect.value === "use",
     battle_log_mode: document.querySelector("#battle-log-mode").value,
     random_seed: randomSeed || null,
@@ -893,30 +897,49 @@ function showResult(result) {
   document.querySelectorAll(".single-replay-action").forEach(button => { button.hidden = batch; });
   const logDetails = document.querySelector("#battle-log-details");
   if (batch) {
+    const losses = result.total_battles - result.total_wins;
+    const average = (field, count, total) => total
+      ? result.movesets.reduce((sum, row) => sum + (row[field] ?? 0) * count(row), 0) / total
+      : null;
+    const winTime = average("average_win_time", row => row.wins, result.total_wins);
+    const bossHp = average("average_boss_hp_on_loss", row => row.games - row.wins, losses);
     panel.classList.toggle("loss", result.total_wins === 0);
-    document.querySelector("#result-title").textContent = "Batch complete";
-    document.querySelector("#result-time").textContent = `${result.total_battles.toLocaleString()} battles`;
+    document.querySelector("#result-title").textContent = "Simulation summary";
+    const movesets = result.movesets.length;
+    document.querySelector("#result-time").textContent =
+      `${result.total_battles.toLocaleString()} battles across ${movesets.toLocaleString()} boss moveset${movesets === 1 ? "" : "s"}`;
     document.querySelector("#result-seed").textContent = `Base seed ${result.random_seed}`;
-    document.querySelector("#batch-battles").textContent = result.total_battles.toLocaleString();
-    document.querySelector("#batch-movesets").textContent = result.movesets.length.toLocaleString();
-    document.querySelector("#batch-wins").textContent = result.total_wins.toLocaleString();
     document.querySelector("#batch-win-rate").textContent = `${result.win_percent.toFixed(1)}%`;
+    document.querySelector("#batch-wins").textContent =
+      `${result.total_wins.toLocaleString()} / ${result.total_battles.toLocaleString()}`;
+    document.querySelector("#batch-losses").textContent = `${losses.toLocaleString()} lost`;
+    document.querySelector("#batch-win-time").textContent = winTime === null ? "—" : `${winTime.toFixed(1)}s`;
+    document.querySelector("#batch-boss-hp").textContent = bossHp === null ? "—" : Math.round(bossHp).toLocaleString();
+    for (const stat of ["faints", "retreats", "rejoins", "catch_tanks"]) {
+      const value = average(`average_${stat}`, row => row.games, result.total_battles);
+      document.querySelector(`#batch-${stat.replaceAll("_", "-")}`).textContent = value.toFixed(1);
+      if (stat === "catch_tanks") document.querySelector("#batch-catch-tanks-stat").hidden = value === 0;
+    }
     document.querySelector("#batch-rows").replaceChildren(...result.movesets.map(row => {
       const tr = document.createElement("tr");
       const hiddenTypes = Object.entries(row.hidden_power_types || {})
         .map(([type, count]) => `${type} ${count}`).join(", ");
       const values = [
         row.fast_move + (hiddenTypes ? ` (${hiddenTypes})` : ""), row.charged_move,
-        row.games.toLocaleString(), `${row.win_percent.toFixed(1)}%`,
+        `${row.wins.toLocaleString()} / ${row.games.toLocaleString()}`, `${row.win_percent.toFixed(1)}%`,
         row.average_win_time === null ? "—" : `${row.average_win_time.toFixed(1)}s`,
         row.wins === row.games ? "—" : Math.round(row.average_boss_hp_on_loss).toLocaleString(),
+        row.average_faints.toFixed(1), row.average_retreats.toFixed(1), row.average_rejoins.toFixed(1),
       ];
       tr.append(...values.map(value => {
         const td = document.createElement("td"); td.textContent = value; return td;
       }));
       return tr;
     }));
+    document.querySelector("#battle-log").textContent = "";
+    logDetails.open = false;
     logDetails.hidden = true;
+    globalThis.ReplayUI?.setGeneratedReplay("");
     panel.scrollIntoView({ behavior: "smooth", block: "start" });
     return;
   }
@@ -930,7 +953,6 @@ function showResult(result) {
   document.querySelector("#retreats").textContent = result.retreats;
   document.querySelector("#rejoins").textContent = result.rejoins;
   document.querySelector("#catch-tanks").textContent = result.catch_tanks;
-  document.querySelector("#purified-gems-used").textContent = result.purified_gems_used;
   document.querySelector("#result-seed").textContent = `Seed ${result.random_seed}`
     + (result.boss_fast_type ? ` · Hidden Power: ${result.boss_fast_type}` : "");
   document.querySelector("#battle-log").textContent = result.log.join("\n");

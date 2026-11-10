@@ -22,7 +22,6 @@
       <section class="intro">
         <div>
           <h1>Attacker rankings</h1>
-          <p>Compare attackers by their charged attack type, or switch to Anti type to rank them against a defending type.</p>
         </div>
         <a class="raid-link" href="../raids/">Open raid simulator →</a>
       </section>
@@ -95,7 +94,12 @@
             </label>
           </div>
         </div>
+        <p id="primary-type-label" class="filter-label type-bar-label" hidden>First defending type</p>
         <div id="types" class="type-grid" role="group" aria-label="Attack type"></div>
+        <div id="secondary-types-section" hidden>
+          <p class="filter-label type-bar-label">Second defending type</p>
+          <div id="secondary-types" class="type-grid" role="group" aria-label="Second defending type"></div>
+        </div>
         <div class="battle-controls" aria-label="Attacker and party settings">
           <label class="select-control">
             Attacker level
@@ -135,15 +139,18 @@
           </label>
         </div>
         <div class="ranking-tools">
-          <div class="filter-group" role="group" aria-label="Included Pokémon categories">
-            <span class="filter-label">Include</span>
-            <button id="include-megas" class="filter-button" type="button" aria-pressed="true">Megas</button>
-            <button id="include-shadows" class="filter-button" type="button" aria-pressed="true">Shadows</button>
-            <button id="include-legendaries" class="filter-button" type="button" aria-pressed="true">Legendary</button>
-          </div>
-          <div class="filter-group" role="group" aria-label="Legacy moves">
-            <button id="exclude-legacy" class="filter-button" type="button" aria-pressed="false" title="Rank only movesets without Elite or legacy moves">Exclude legacy</button>
-            <button id="split-legacy" class="filter-button" type="button" aria-pressed="false" title="Rank legacy and non-legacy movesets separately. Exclude legacy takes priority.">Split legacy moves</button>
+          <div class="ranking-filters">
+            <div class="filter-group" role="group" aria-label="Include species">
+              <span class="filter-label">Include species</span>
+              <button id="include-megas" class="filter-button" type="button" aria-pressed="true">Megas</button>
+              <button id="include-shadows" class="filter-button" type="button" aria-pressed="true">Shadows</button>
+              <button id="include-legendaries" class="filter-button" type="button" aria-pressed="true">Legendary</button>
+            </div>
+            <div class="filter-group" role="group" aria-label="Move availabilities">
+              <span class="filter-label">Move availabilities</span>
+              <button id="exclude-legacy" class="filter-button" type="button" aria-pressed="false" title="Rank only movesets without Elite or legacy moves">Exclude legacy</button>
+              <button id="split-legacy" class="filter-button" type="button" aria-pressed="false" title="Rank legacy and non-legacy movesets separately. Exclude legacy takes priority.">Split legacy moves</button>
+            </div>
           </div>
           <label class="search-control">
             Find Pokémon
@@ -181,6 +188,41 @@
       </section>
 
     </main>
+
+    <dialog id="pokemon-details" class="pokemon-details" aria-labelledby="pokemon-details-title" aria-describedby="pokemon-details-info pokemon-details-settings">
+      <div class="pokemon-details-heading">
+        <h2 id="pokemon-details-title">Pokémon movesets</h2>
+        <button id="pokemon-details-close" class="filter-button" type="button" autofocus>Close</button>
+      </div>
+      <p id="pokemon-details-info" class="pokemon-details-info"></p>
+      <p id="pokemon-details-settings" class="pokemon-details-copy"></p>
+      <div class="pokemon-details-heading">
+        <p id="pokemon-details-status" class="pokemon-details-copy" role="status"></p>
+        <label class="select-control">Sort movesets by
+          <select id="pokemon-details-sort">
+            <option value="idealDps">Ideal DPS</option>
+            <option value="simpleDps">Simple DPS</option>
+            <option value="effectiveDps">Effective DPS</option>
+          </select>
+        </label>
+      </div>
+      <div id="pokemon-details-error" class="error" role="alert" hidden></div>
+      <div id="pokemon-details-results" class="table-shell" aria-busy="false">
+        <table aria-label="All Pokémon movesets">
+          <thead><tr>
+            <th scope="col">#</th>
+            <th scope="col">Fast move</th>
+            <th scope="col">Charged move</th>
+            <th scope="col">Ideal DPS</th>
+            <th scope="col">Simple DPS</th>
+            <th scope="col">Effective DPS</th>
+            <th scope="col">Availability</th>
+          </tr></thead>
+          <tbody id="pokemon-details-body"></tbody>
+        </table>
+      </div>
+      <p class="pokemon-details-copy">All charged move types are shown. * marks an Elite or legacy move. Movesets below the 10% first-charged cutoff are labeled and remain visible here.</p>
+    </dialog>
 
     <dialog id="strategy-warning" class="strategy-warning" aria-labelledby="strategy-warning-title" aria-describedby="strategy-warning-copy">
       <div class="strategy-warning-heading">

@@ -3,6 +3,11 @@ import * as py from "./compatibility.js";
 import { PythonRandom } from "./random.js";
 import { re } from "./text.js";
 import type { RaidConfig, CalculatorEntry } from "./types.js";
+export function parseAdventureEffectBoostPercent(value: unknown = 10): number {
+    if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 100)
+        throw new Error('Adventure Effect boost must be a percentage from 0 to 100.');
+    return value;
+}
 export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) {
     const config: any = structuredClone(input);
     let TRIALS_PER_MOVESET: any;
@@ -40,6 +45,7 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
     let NORMAL_PARTY_POWER_THRESHOLDS: any;
     let BOOSTED_PARTY_POWER_THRESHOLDS: any;
     let FRIENDSHIP_MULTIPLIERS: any;
+    let ADVENTURE_EFFECT_BOOST_PERCENT: number;
     let ZACIAN_ADVENTURE_EFFECT: any;
     let BEHEMOTH_BASH_ADVENTURE_EFFECT: any;
     let DYNAMIC_PUNCH_ADVENTURE_EFFECT: any;
@@ -155,14 +161,13 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
     NORMAL_PARTY_POWER_THRESHOLDS = py.dict([[2, 18], [3, 8], [4, 6]]);
     BOOSTED_PARTY_POWER_THRESHOLDS = py.dict([[2, 9], [3, 5], [4, 3]]);
     FRIENDSHIP_MULTIPLIERS = [1.0];
+    ADVENTURE_EFFECT_BOOST_PERCENT = 10;
     ZACIAN_ADVENTURE_EFFECT = [false];
     BEHEMOTH_BASH_ADVENTURE_EFFECT = [false];
     DYNAMIC_PUNCH_ADVENTURE_EFFECT = [false];
     WEATHER = null;
     SAME_TYPE_MEGA_ALLY_MULTIPLIER = 1.3;
     OTHER_TYPE_MEGA_ALLY_MULTIPLIER = 1.1;
-    ZACIAN_MULTIPLIER = 1.1;
-    BEHEMOTH_BASH_DEFENSE_MULTIPLIER = 1.1;
     DYNAMIC_PUNCH_ATTACK_MULTIPLIER = 1.15;
     DYNAMIC_PUNCH_RAID_DIFFICULTIES = py.set(new Set<any>(["Tier 4", "Mega", "Mega Legendary", "Super Mega"]));
     WEATHER_MULTIPLIER = 1.2;
@@ -200,6 +205,9 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
     PARTY_POWER_GROUPS = py.get(config, "party_power_groups", PARTY_POWER_GROUPS);
     BOOSTED_PARTY_POWER = py.truth(py.get(config, "boosted_party_power", BOOSTED_PARTY_POWER));
     FRIENDSHIP_MULTIPLIERS = py.get(config, "friendship_multipliers", FRIENDSHIP_MULTIPLIERS);
+    ADVENTURE_EFFECT_BOOST_PERCENT = parseAdventureEffectBoostPercent(py.get(config, "adventure_effect_boost_percent", ADVENTURE_EFFECT_BOOST_PERCENT));
+    ZACIAN_MULTIPLIER = 1 + ADVENTURE_EFFECT_BOOST_PERCENT / 100;
+    BEHEMOTH_BASH_DEFENSE_MULTIPLIER = 1 + ADVENTURE_EFFECT_BOOST_PERCENT / 100;
     ZACIAN_ADVENTURE_EFFECT = py.get(config, "zacian_adventure_effect", ZACIAN_ADVENTURE_EFFECT);
     BEHEMOTH_BASH_ADVENTURE_EFFECT = py.get(config, "behemoth_bash_adventure_effect", py.mul([false], py.len(PLAYER_TEAMS)));
     DYNAMIC_PUNCH_ADVENTURE_EFFECT = py.get(config, "dynamic_punch_adventure_effect", py.mul([false], py.len(PLAYER_TEAMS)));
@@ -1618,6 +1626,7 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
         }
         lines = [`Raid: ${py.str(RAID_DIFFICULTY)}`, `Boss: ${py.str(BOSS_FORM_ID)}; fast=${py.str(simulation.boss_fast.name)}; charged=${py.str(simulation.boss_charged.name)}`, "Teams:"];
         py.extend(lines, py.iter(py.enumerate(PLAYER_TEAMS, 1)).map(([player_id, team]: any) => (`p${py.str(player_id)}: ${py.repr(team)}`)));
+        py.append(lines, `Adventure Effect boost: ${ADVENTURE_EFFECT_BOOST_PERCENT}%`);
         py.extend(lines, ["", py.add("Friendship: ", py.join("; ", py.iter(py.enumerate(FRIENDSHIP_MULTIPLIERS, 1)).map(([player_id, multiplier]: any) => (`p${py.str(player_id)}=${py.format(py.float(multiplier), `g`)}`)))), py.add("Zacian effects: ", py.join("; ", py.iter(py.enumerate(ZACIAN_ADVENTURE_EFFECT, 1)).map(([player_id, enabled]: any) => (`p${py.str(player_id)}=${py.str((py.truth(enabled) ? "true" : "false"))}`)))), py.add("Behemoth Bash effects: ", py.join("; ", py.iter(py.enumerate(BEHEMOTH_BASH_ADVENTURE_EFFECT, 1)).map(([player_id, enabled]: any) => (`p${py.str(player_id)}=${py.str((py.truth(enabled) ? "true" : "false"))}`)))), py.add("Dynamic Punch+ effects: ", py.join("; ", py.iter(py.enumerate(DYNAMIC_PUNCH_ADVENTURE_EFFECT, 1)).map(([player_id, enabled]: any) => (`p${py.str(player_id)}=${py.str((py.truth(enabled) ? "true" : "false"))}`)))), `Weather: ${py.str(py.or(WEATHER, () => "none"))}`, `Dodge: ${py.str(DODGE_STRATEGY)}`, `Swap: ${py.str(PLAYER_STRATEGY)}`, `Purified Gems: ${USE_PURIFIED_GEMS ? "use" : "none"}`, py.add("Catch tanks: ", py.join("; ", py.iter(py.enumerate(CATCH_TANK_TEAM_INDICES, 1)).map(([player_id, indexes]: any) => (py.add(`p${py.str(player_id)}=`, (py.truth(indexes) ? py.join(",", py.iter(indexes).map((index: any) => (py.str(py.add(index, 1))))) : "-"))))))]);
         party_groups = py.or(py.join("|", py.iter(PARTY_POWER_GROUPS).map((group: any) => (py.add("p", py.join(",", py.iter(group).map((player_id: any) => (py.str(py.add(player_id, 1))))))))), () => "-");
         py.extend(lines, [`Party Power: ${py.str((py.truth(BOOSTED_PARTY_POWER) ? "boosted" : "normal"))}; groups=${py.str(party_groups)}`, `Seed: ${py.str(actual_seed)}`, `Result: ${py.str((py.truth(result.won) ? "win" : "loss"))}; time=${py.str(replay_tick_text(py.round(py.mul(result.finish_time, 2))))}; boss_hp=${py.str(result.boss_hp)}`]);
@@ -1958,7 +1967,7 @@ export function createRaidEngine(input: RaidConfig, catalog: CalculatorEntry[]) 
         sim.detailed = options.detailed ?? false;
         return sim;
     }
-    return { createSimulation, type_effectiveness, Move, Species, find_calculator_species, move_from_calculator, register_player_form, register_player_moves, register_new_mega_form, register_configured_player_forms, BattlePokemon, unpack_player_setup, effective_player_move_power, displayed_player_move_name, select_boss_moves, pokemon_go_damage, boss_type_modifier, weather_move_multiplier, DodgeProfile, incoming_damage_for_pokemon, precompute_dodge_profiles, Player, TrialResult, Simulation, replay_tick_text, build_replay_move_codes, render_battle_replay, simulate_moveset_details, simulate_moveset, aggregate_summary, moveset_seed, validate_settings, RAID_DIFFICULTIES, RAID_DIFFICULTY, RAID_SECONDS, BOSS_HP, BOSS_CPM, BOSS_NAME, BOSS_TYPES, BOSS_FAST_MOVES, BOSS_CHARGED_MOVES, BOSS_MAX_ENERGY, FAST_MOVE_DELAY, SWITCH_SECONDS, DODGE_SECONDS, REJOIN_TIMES, RANDOM_SEED, SHADOW_RAID, SUPER_MEGA_ENRAGE, ENRAGE_HP, SHADOW_UNENRAGE_HP, USE_PURIFIED_GEMS, PURIFIED_GEM_COOLDOWN, PURIFIED_GEM_LIMIT_PER_PLAYER, PURIFIED_GEMS_TO_SUBDUE, SHADOW_BOSS_ATTACK_MULTIPLIER, SHADOW_BOSS_DEFENSE_MULTIPLIER, SHADOW_ENRAGE_DEFENSE_BONUS, ZACIAN_ADVENTURE_EFFECT, BEHEMOTH_BASH_ADVENTURE_EFFECT, DYNAMIC_PUNCH_ADVENTURE_EFFECT, HIDDEN_POWER_TYPES, MOVES, SPECIES };
+    return { createSimulation, type_effectiveness, Move, Species, find_calculator_species, move_from_calculator, register_player_form, register_player_moves, register_new_mega_form, register_configured_player_forms, BattlePokemon, unpack_player_setup, effective_player_move_power, displayed_player_move_name, select_boss_moves, pokemon_go_damage, boss_type_modifier, weather_move_multiplier, DodgeProfile, incoming_damage_for_pokemon, precompute_dodge_profiles, Player, TrialResult, Simulation, replay_tick_text, build_replay_move_codes, render_battle_replay, simulate_moveset_details, simulate_moveset, aggregate_summary, moveset_seed, validate_settings, RAID_DIFFICULTIES, RAID_DIFFICULTY, RAID_SECONDS, BOSS_HP, BOSS_CPM, BOSS_NAME, BOSS_TYPES, BOSS_FAST_MOVES, BOSS_CHARGED_MOVES, BOSS_MAX_ENERGY, FAST_MOVE_DELAY, SWITCH_SECONDS, DODGE_SECONDS, REJOIN_TIMES, RANDOM_SEED, SHADOW_RAID, SUPER_MEGA_ENRAGE, ENRAGE_HP, SHADOW_UNENRAGE_HP, USE_PURIFIED_GEMS, PURIFIED_GEM_COOLDOWN, PURIFIED_GEM_LIMIT_PER_PLAYER, PURIFIED_GEMS_TO_SUBDUE, SHADOW_BOSS_ATTACK_MULTIPLIER, SHADOW_BOSS_DEFENSE_MULTIPLIER, SHADOW_ENRAGE_DEFENSE_BONUS, ADVENTURE_EFFECT_BOOST_PERCENT, ZACIAN_ADVENTURE_EFFECT, BEHEMOTH_BASH_ADVENTURE_EFFECT, DYNAMIC_PUNCH_ADVENTURE_EFFECT, HIDDEN_POWER_TYPES, MOVES, SPECIES };
 }
 export type RaidEngine = ReturnType<typeof createRaidEngine>;
 export type Simulation = InstanceType<RaidEngine["Simulation"]>;

@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {once} from 'node:events';
 import {Worker} from 'node:worker_threads';
 import vm from 'node:vm';
-import {calculateRankings} from '../../build/rankings.js';
+import {calculateRankings, calculatePokemonMovesets} from '../../build/rankings.js';
 
 const fast = {id: 'FAST', name: 'Fast', type: 'fire', power: 10, energy: 10, duration_ms: 1000};
 const charged = {id: 'CHARGED', name: 'Charged', type: 'fire', power: 100, energy: -50, duration_ms: 2000};
@@ -92,7 +92,7 @@ test('deployed worker forwards legacy splitting and exclusion settings', async (
 });
 
 // Run the actual UI adapter against a small DOM and an engine-backed worker.
-function createUI(query = '') {
+function createUI(query = '', {deferDetails = false, failDetails = false} = {}) {
   class Element {
     children = [];
     attributes = {};
@@ -104,14 +104,20 @@ function createUI(query = '') {
     replaceChildren(fragment) { this.children = fragment.children; }
     setAttribute(name, value) { this.attributes[name] = value; }
     addEventListener(name, callback) { this.listeners[name] = callback; }
-    emit(name) { this.listeners[name](); }
+    emit(name, event = {}) { this.listeners[name](event); }
+    showModal() { this.open = true; }
+    close() { this.open = false; this.listeners.close?.(); }
+    get selectedOptions() { return [{textContent: {idealDps: 'Ideal DPS', simpleDps: 'Simple DPS', effectiveDps: 'Effective DPS'}[this.value]}]; }
     set innerHTML(value) { this.children = []; }
   }
   const page = readFileSync(new URL('../../apps/rankings/index.html', import.meta.url), 'utf8');
   const elements = new Map([...page.matchAll(/id="([^"]+)"/g)].map(([, id]) => [`#${id}`, new Element()]));
   elements.set('.results', new Element());
-  const location = {href: `https://example.test/rankings/?type=fire${query}`};
+  const initialUrl = new URL('https://example.test/rankings/?type=fire');
+  for (const [key, value] of new URLSearchParams(query.replace(/^&/, ''))) initialUrl.searchParams.set(key, value);
+  const location = {href: String(initialUrl)};
   const requests = [];
+  const deliveries = [];
   const callbacks = new Map();
   const document = {
     documentElement: new Element(),
@@ -125,8 +131,15 @@ function createUI(query = '') {
     addEventListener(name, callback) { callbacks.set(name, callback); }
     postMessage(settings) {
       requests.push(settings);
-      const result = calculateRankings([entry], settings);
-      queueMicrotask(() => callbacks.get('message')({data: {id: settings.id, result}}));
+      const result = settings.kind === 'movesets'
+        ? calculatePokemonMovesets([entry], settings, settings)
+        : calculateRankings([entry], settings);
+      const deliver = () => callbacks.get('message')({data: {
+        id: settings.id, result,
+        ...(failDetails && settings.kind === 'movesets' ? {error: 'Could not load movesets'} : {}),
+      }});
+      if (settings.kind === 'movesets' && deferDetails) deliveries.push(deliver);
+      else queueMicrotask(deliver);
     }
   }
   vm.runInNewContext(readFileSync(new URL('../../apps/rankings/app.js', import.meta.url), 'utf8'), {
@@ -134,7 +147,7 @@ function createUI(query = '') {
     history: {replaceState: (_state, _title, url) => { location.href = String(url); }},
     localStorage: {getItem: () => '1'},
   });
-  return {elements, location, requests};
+  return {elements, location, requests, deliveries};
 }
 const flush = () => new Promise(resolve => setImmediate(resolve));
 
@@ -174,4 +187,207 @@ test('rankings toggles update separate ranks, labels, URL state and cached resul
   assert.equal(restored.elements.get('#split-legacy').attributes['aria-pressed'], 'true');
   assert.equal(restored.elements.get('#exclude-legacy').attributes['aria-pressed'], 'true');
   assert.equal(restored.elements.get('#ranking-body').children.length, 1);
+});
+
+test('clicking entries opens all movesets with the page settings and supports sorting, closing and cached reopening', async () => {
+  const ui = createUI('&level=50&partyPower=4&partySize=3&relobby=6.5&boss=high&bossType=water&megaLevel=4&splitLegacy=1');
+  await flush();
+  const row = ui.elements.get('#ranking-body').children[0];
+  row.emit('click');
+  assert.equal(ui.elements.get('#pokemon-details').open, true);
+  await flush();
+  const settings = ui.requests.at(-1);
+  assert.equal(settings.kind, 'movesets');
+  for (const key of ['attackType', 'mode', 'level', 'partyPowerPlayers', 'partySize', 'relobbySeconds', 'bossAttack', 'bossMoveType', 'megaLevel', 'excludeLegacy', 'splitLegacy']) {
+    assert.equal(settings[key], ui.requests[0][key], key);
+  }
+  assert.equal(settings.formId, 'TEST');
+  assert.equal(settings.shadow, false);
+  const body = ui.elements.get('#pokemon-details-body');
+  assert.equal(body.children.length, 4);
+  const expected = calculatePokemonMovesets([entry], settings, settings).rows.sort((a, b) => b.effectiveDps - a.effectiveDps || b.idealDps - a.idealDps);
+  body.children.forEach((row, index) => {
+    assert.deepEqual(row.children.slice(3, 6).map(cell => cell.textContent),
+      ['idealDps', 'simpleDps', 'effectiveDps'].map(metric => expected[index][metric].toFixed(2)));
+  });
+  const sort = ui.elements.get('#pokemon-details-sort');
+  sort.value = 'simpleDps';
+  sort.emit('change');
+  assert(body.children.every((row, index) => !index || Number(body.children[index - 1].children[4].textContent) >= Number(row.children[4].textContent)));
+  ui.elements.get('#pokemon-details-close').emit('click');
+  assert.equal(ui.elements.get('#pokemon-details').open, false);
+  let stopped = false;
+  row.children[1].children[0].emit('click', {stopPropagation: () => { stopped = true; }});
+  await flush();
+  assert(stopped);
+  assert.equal(body.children.length, 4);
+  assert.equal(ui.requests.length, 2);
+  ui.elements.get('#pokemon-details-close').emit('click');
+  ui.elements.get('#exclude-legacy').emit('click');
+  await flush();
+  ui.elements.get('#ranking-body').children[0].emit('click');
+  await flush();
+  assert.equal(ui.requests.at(-1).excludeLegacy, true);
+  assert.equal(body.children.length, 1);
+});
+
+test('closing a details window ignores pending responses and permits reopening', async () => {
+  const ui = createUI('', {deferDetails: true});
+  await flush();
+  const row = ui.elements.get('#ranking-body').children[0];
+  row.emit('click');
+  ui.elements.get('#pokemon-details').close(); // Native Escape behavior.
+  ui.deliveries.shift()();
+  await flush();
+  assert.equal(ui.elements.get('#pokemon-details').open, false);
+  assert.equal(ui.elements.get('#pokemon-details-body').children.length, 0);
+  row.emit('click');
+  await flush();
+  assert.equal(ui.elements.get('#pokemon-details-body').children.length, 4);
+});
+
+test('moveset errors remain inside the details window and leave rankings usable', async () => {
+  const ui = createUI('', {failDetails: true});
+  await flush();
+  ui.elements.get('#ranking-body').children[0].emit('click');
+  await flush();
+  assert.equal(ui.elements.get('#pokemon-details-error').hidden, false);
+  assert.match(ui.elements.get('#pokemon-details-error').textContent, /Could not load movesets/);
+  assert.equal(ui.elements.get('#pokemon-details-results').attributes['aria-busy'], 'false');
+  assert.equal(ui.elements.get('#ranking-body').children.length, 1);
+});
+
+test('two independent type bars update rankings, details, URL, cache and mode visibility', async () => {
+  const ui = createUI('&mode=anti&type2=steel');
+  await flush();
+  const first = type => ui.elements.get('#types').children.find(button => button.dataset.type === type);
+  const second = type => ui.elements.get('#secondary-types').children.find(button => button.dataset.type === type);
+  assert.equal(ui.elements.get('#secondary-types-section').hidden, false);
+  assert.equal(first('none').hidden, false);
+  assert.equal(first('fire').dataset.selection, 'primary');
+  assert.equal(second('steel').dataset.selection, 'secondary');
+  assert.equal(first('fire').attributes['aria-pressed'], 'true');
+  assert.equal(second('steel').attributes['aria-pressed'], 'true');
+  assert.equal(first('fire').attributes['aria-label'], 'Fire: first defending type');
+  assert.equal(second('steel').attributes['aria-label'], 'Steel: second defending type');
+  assert.equal(first('steel').disabled, true);
+  assert.equal(second('fire').disabled, true);
+  assert.equal(first('none').disabled, false);
+  assert.equal(second('none').disabled, false);
+  assert.equal(ui.requests[0].secondaryType, 'steel');
+  assert.equal(ui.elements.get('#selected-type').textContent, 'Attackers against Fire / Steel');
+  const initialRequests = ui.requests.length;
+  first('steel').emit('click');
+  second('fire').emit('click');
+  await flush();
+  assert.equal(ui.requests.length, initialRequests);
+  second('grass').emit('click');
+  await flush();
+  assert.equal(ui.requests.at(-1).attackType, 'fire');
+  assert.equal(ui.requests.at(-1).secondaryType, 'grass');
+  assert.equal(second('steel').attributes['aria-pressed'], 'false');
+  assert.equal(second('grass').dataset.selection, 'secondary');
+  assert.equal(first('steel').disabled, false);
+  assert.equal(first('grass').disabled, true);
+  assert.equal(new URL(ui.location.href).searchParams.get('type2'), 'grass');
+  assert.equal(ui.elements.get('#selected-type').textContent, 'Attackers against Fire / Grass');
+  ui.elements.get('#ranking-body').children[0].emit('click');
+  await flush();
+  assert.equal(ui.requests.at(-1).kind, 'movesets');
+  assert.equal(ui.requests.at(-1).secondaryType, 'grass');
+  assert.match(ui.elements.get('#pokemon-details-settings').textContent, /^Against Fire \/ Grass/);
+  ui.elements.get('#pokemon-details-close').emit('click');
+  second('steel').emit('click');
+  await flush();
+  assert.equal(ui.requests.length, 3); // First matchup is cached separately.
+  ui.elements.get('#anti-type').emit('click');
+  await flush();
+  assert.equal(ui.elements.get('#secondary-types-section').hidden, true);
+  assert.equal(first('none').hidden, true);
+  assert.equal(first('fire').attributes['aria-pressed'], 'true');
+  assert.equal(first('steel').disabled, false);
+  assert.equal(ui.requests.at(-1).secondaryType, null);
+  assert.equal(ui.elements.get('#selected-type').textContent, 'Fire attackers');
+  ui.elements.get('#anti-type').emit('click');
+  await flush();
+  assert.equal(second('steel').dataset.selection, 'secondary');
+  assert.equal(ui.elements.get('#selected-type').textContent, 'Attackers against Fire / Steel');
+  second('none').emit('click');
+  await flush();
+  assert.equal(ui.requests.at(-1).secondaryType, null);
+  assert.equal(new URL(ui.location.href).searchParams.has('type2'), false);
+  assert.equal(ui.elements.get('#selected-type').textContent, 'Attackers against Fire');
+  assert.equal(second('none').attributes['aria-pressed'], 'true');
+  first('water').emit('click');
+  await flush();
+  assert.equal(ui.requests.at(-1).attackType, 'water');
+  assert.equal(ui.requests.at(-1).secondaryType, null);
+});
+
+test('each anti type bar can independently select None and both None show overall rankings and details', async () => {
+  const ui = createUI('&mode=anti&type2=water');
+  await flush();
+  const first = type => ui.elements.get('#types').children.find(button => button.dataset.type === type);
+  const second = type => ui.elements.get('#secondary-types').children.find(button => button.dataset.type === type);
+  first('none').emit('click');
+  await flush();
+  assert.equal(ui.requests.at(-1).attackType, null);
+  assert.equal(ui.requests.at(-1).secondaryType, 'water');
+  assert.equal(first('none').attributes['aria-pressed'], 'true');
+  assert.equal(second('water').attributes['aria-pressed'], 'true');
+  assert.equal(second('fire').disabled, false);
+  assert.equal(ui.elements.get('#selected-type').textContent, 'Attackers against Water');
+  assert.equal(new URL(ui.location.href).searchParams.get('type'), 'none');
+  second('none').emit('click');
+  await flush();
+  assert.equal(ui.requests.at(-1).attackType, null);
+  assert.equal(ui.requests.at(-1).secondaryType, null);
+  assert.equal(ui.elements.get('#selected-type').textContent, 'Overall rankings');
+  assert.equal(first('none').attributes['aria-pressed'], 'true');
+  assert.equal(second('none').attributes['aria-pressed'], 'true');
+  assert.equal(first('none').disabled, false);
+  assert.equal(second('none').disabled, false);
+  ui.elements.get('#ranking-body').children[0].emit('click');
+  await flush();
+  assert.equal(ui.requests.at(-1).kind, 'movesets');
+  assert.equal(ui.requests.at(-1).attackType, null);
+  assert.equal(ui.requests.at(-1).secondaryType, null);
+  assert.match(ui.elements.get('#pokemon-details-settings').textContent, /^Overall ·/);
+  assert.equal(ui.elements.get('#pokemon-details-body').children.length, 4);
+  ui.elements.get('#pokemon-details-close').emit('click');
+  first('ground').emit('click');
+  await flush();
+  assert.equal(first('ground').dataset.selection, 'primary');
+  assert.equal(second('ground').disabled, true);
+  assert.equal(ui.elements.get('#selected-type').textContent, 'Attackers against Ground');
+});
+
+test('attack type bar remains single-select and invalid or duplicate secondary URLs are sanitized', async () => {
+  const ui = createUI();
+  await flush();
+  const button = type => ui.elements.get('#types').children.find(button => button.dataset.type === type);
+  assert.equal(button('none').hidden, true);
+  button('water').emit('click');
+  await flush();
+  assert.equal(ui.requests.at(-1).attackType, 'water');
+  assert.equal(ui.requests.at(-1).secondaryType, null);
+  assert.equal(button('water').attributes['aria-pressed'], 'true');
+  assert.equal(button('fire').attributes['aria-pressed'], 'false');
+  for (const value of ['fire', 'invalid']) {
+    const restored = createUI(`&mode=anti&type2=${value}`);
+    await flush();
+    assert.equal(restored.requests[0].secondaryType, null);
+    assert.equal(new URL(restored.location.href).searchParams.has('type2'), false);
+  }
+  const overall = createUI('&mode=anti&type=none');
+  await flush();
+  assert.equal(overall.elements.get('#selected-type').textContent, 'Overall rankings');
+  assert.equal(overall.requests[0].attackType, null);
+  overall.elements.get('#anti-type').emit('click');
+  await flush();
+  assert.equal(overall.requests.at(-1).attackType, 'dragon');
+  overall.elements.get('#anti-type').emit('click');
+  await flush();
+  assert.equal(overall.elements.get('#selected-type').textContent, 'Overall rankings');
+  assert.equal(new URL(overall.location.href).searchParams.get('type'), 'none');
 });

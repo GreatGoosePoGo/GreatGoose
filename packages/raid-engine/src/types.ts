@@ -31,6 +31,8 @@ export interface RaidConfig {
     boss_move_display_names?: Record<string, string>;
     player_teams?: TeamMember[][];
     friendship_multipliers?: number[];
+    /** Behemoth Blade Attack / Behemoth Bash Defense boost; 10 means +10%. */
+    adventure_effect_boost_percent?: number;
     zacian_adventure_effect?: boolean[];
     behemoth_bash_adventure_effect?: boolean[];
     dynamic_punch_adventure_effect?: boolean[];
@@ -115,6 +117,8 @@ export interface SimulationRequest {
     team?: PokemonInput[];
     players?: PlayerInput[];
     seasonal_friendship?: boolean;
+    /** Behemoth Blade / Behemoth Bash percentage boost; defaults to 10. */
+    adventure_effect_boost_percent?: number;
     raid_difficulty?: RaidDifficulty;
     weather?: Weather;
     simulation_count?: number;

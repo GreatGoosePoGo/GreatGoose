@@ -152,6 +152,19 @@
                 <option value="double">Double friendship bonus</option>
               </select>
             </label>
+            <label>
+              Adventure Effect boost
+              <select id="adventure-effect-boost">
+                <option value="5">5%</option>
+                <option value="10" selected>10%</option>
+                <option value="15">15%</option>
+                <option value="20">20%</option>
+                <option value="25">25%</option>
+                <option value="30">30%</option>
+                <option value="35">35%</option>
+                <option value="40">40%</option>
+              </select>
+            </label>
             <label id="purified-gems-field">
               Purified Gems
               <select id="purified-gems">
@@ -190,6 +203,7 @@
             </label>
           </div>
           <p class="setting-note">Double friendship bonus doubles only the bonus: +3% becomes +6%, +10% becomes +20%. Leave normal selected unless the event offers this bonus.</p>
+          <p class="setting-note">Adventure Effect boost sets Behemoth Blade's Attack bonus and Behemoth Bash's Defense bonus. Dynamic Punch+ keeps its fixed 15% Attack bonus.</p>
           <p id="strategy-description" class="setting-note"></p>
           <p id="purified-gems-note" class="setting-note"></p>
           <p class="setting-note">
@@ -227,21 +241,28 @@
           <div><strong id="retreats">0</strong><span>Retreats</span></div>
           <div><strong id="rejoins">0</strong><span>Rejoins</span></div>
           <div><strong id="catch-tanks">0</strong><span>Catch tanks used</span></div>
-          <div><strong id="purified-gems-used">0</strong><span>Purified Gems used</span></div>
         </div>
         <div id="batch-result" hidden>
           <div class="result-stats batch-overview">
-            <div><strong id="batch-battles">0</strong><span>Battles</span></div>
-            <div><strong id="batch-movesets">0</strong><span>Boss movesets</span></div>
-            <div><strong id="batch-wins">0</strong><span>Wins</span></div>
             <div><strong id="batch-win-rate">0%</strong><span>Overall win rate</span></div>
+            <div><strong id="batch-wins">0 / 0</strong><span>Wins / battles</span><span id="batch-losses"></span></div>
+            <div><strong id="batch-win-time">—</strong><span>Average win time</span></div>
+            <div><strong id="batch-boss-hp">—</strong><span>Average boss HP left on losses</span></div>
           </div>
+          <div class="result-stats">
+            <div><strong id="batch-faints">0</strong><span>Average faints</span></div>
+            <div><strong id="batch-retreats">0</strong><span>Average retreats</span></div>
+            <div><strong id="batch-rejoins">0</strong><span>Average rejoins</span></div>
+            <div id="batch-catch-tanks-stat" hidden><strong id="batch-catch-tanks">0</strong><span>Average catch tanks used</span></div>
+          </div>
+          <h3>Results by boss moveset</h3>
           <div class="batch-table-wrap">
-            <table class="batch-table">
-              <thead><tr><th>Fast move</th><th>Charged move</th><th>Games</th><th>Win rate</th><th>Average win time</th><th>Boss HP on losses</th></tr></thead>
+            <table class="batch-table" aria-label="Results by boss moveset" aria-describedby="batch-average-note">
+              <thead><tr><th scope="col">Fast move</th><th scope="col">Charged move</th><th scope="col">Wins / battles</th><th scope="col">Win rate</th><th scope="col">Average win time</th><th scope="col">Average boss HP left on losses</th><th scope="col">Average faints</th><th scope="col">Average retreats</th><th scope="col">Average rejoins</th></tr></thead>
               <tbody id="batch-rows"></tbody>
             </table>
           </div>
+          <p id="batch-average-note" class="setting-note">Win times average wins only; boss HP left averages losses only. A dash means there were no matching battles. Faints and other counts are totals across all players, averaged per battle.</p>
         </div>
         <div class="result-actions">
           <button id="simulate-again" class="secondary" type="button">Simulate again</button>

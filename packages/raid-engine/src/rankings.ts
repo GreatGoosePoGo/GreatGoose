@@ -49,7 +49,8 @@ export const RELEASED_MEGA_PLUS_FORM_IDS: ReadonlySet<string> = new Set([
 ]);
 
 export interface RankingSettings {
-    attackType: RankingType;
+    attackType: RankingType | null;
+    secondaryType?: RankingType | null;
     mode?: 'attack' | 'anti';
     level?: RankingLevel;
     partyPowerPlayers?: PartyPowerPlayers;
@@ -83,10 +84,17 @@ export interface RankingRow {
     idealDps: number;
     simpleDps: number;
     effectiveDps: number;
+    belowCutoff?: boolean;
+}
+
+export interface RankingPokemonSelection {
+    formId: string;
+    shadow: boolean;
 }
 
 export interface RankingResult {
-    attackType: RankingType;
+    attackType: RankingType | null;
+    secondaryType: RankingType | null;
     mode: 'attack' | 'anti';
     level: RankingLevel;
     partyPowerPlayers: PartyPowerPlayers;
@@ -239,7 +247,7 @@ function normalizeType(value: string): string {
     return value.trim().toLowerCase();
 }
 
-function bossMoveEffectiveness(moveType: BossMoveType, defenderTypes: string[]): number {
+function bossMoveEffectiveness(moveType: BossMoveType, defenderTypes: readonly string[]): number {
     if (moveType === 'typeless') return 1;
     const relationships = TYPE_RELATIONSHIPS[moveType];
     return defenderTypes.reduce((multiplier, defenderType) => {
@@ -308,22 +316,23 @@ function displayedMoveName(move: CalculatorMove, megaLevel: MegaLevel): string {
 function moveDamage(
     entry: CalculatorEntry,
     move: CalculatorMove,
-    attackType: RankingType,
+    attackType: RankingType | null,
     shadow: boolean,
     targetDefense: number,
     attack: number,
     megaLevel: MegaLevel,
     mode: 'attack' | 'anti' = 'attack',
+    defenderTypes: readonly string[] = [],
 ): number {
     let moveType = normalizeType(move.type);
     // In an ideal type ranking, Hidden Power is the selected legal type. It can
     // never be Normal or Fairy in Pokémon GO.
-    if (mode === 'attack' && move.id === 'HIDDEN_POWER_FAST' && attackType !== 'normal' && attackType !== 'fairy') {
+    if (mode === 'attack' && attackType && move.id === 'HIDDEN_POWER_FAST' && attackType !== 'normal' && attackType !== 'fairy') {
         moveType = attackType;
     }
     const stab = entry.types.some(type => normalizeType(type) === moveType) ? STAB : 1;
     const effectiveness = mode === 'anti'
-        ? bossMoveEffectiveness(moveType as RankingType, [attackType])
+        ? bossMoveEffectiveness(moveType as RankingType, defenderTypes)
         : moveType === attackType ? SUPER_EFFECTIVE : 1;
     const shadowMultiplier = shadow ? SHADOW_OUTGOING_MULTIPLIER : 1;
     return Math.floor(
@@ -335,16 +344,17 @@ function moveDamage(
 function preparedMove(
     entry: CalculatorEntry,
     move: CalculatorMove,
-    attackType: RankingType,
+    attackType: RankingType | null,
     shadow: boolean,
     targetDefense: number,
     attack: number,
     megaLevel: MegaLevel,
     mode: 'attack' | 'anti' = 'attack',
+    defenderTypes: readonly string[] = [],
 ): MoveDamage {
     return {
         move,
-        damage: moveDamage(entry, move, attackType, shadow, targetDefense, attack, megaLevel, mode),
+        damage: moveDamage(entry, move, attackType, shadow, targetDefense, attack, megaLevel, mode, defenderTypes),
         energy: Math.abs(move.energy),
         duration: move.duration_ms / 1000,
     };
@@ -680,10 +690,46 @@ export function calculateRankings(
     shadowFormIds: ReadonlySet<string> = new Set<string>(),
     legendaryDexNumbers: ReadonlySet<number> = new Set<number>(),
 ): RankingResult {
+    return calculateRows(catalog, settings, shadowFormIds, legendaryDexNumbers);
+}
+
+/** All obtainable movesets for one form, using the rankings' damage model. */
+export function calculatePokemonMovesets(
+    catalog: CalculatorEntry[],
+    settings: RankingSettings,
+    selection: RankingPokemonSelection,
+    shadowFormIds: ReadonlySet<string> = new Set<string>(),
+    legendaryDexNumbers: ReadonlySet<number> = new Set<number>(),
+): RankingResult {
+    const entry = catalog.find(entry => entry.form_id === selection.formId && entry.released);
+    if (!entry) throw new Error('This Pokémon form is unavailable.');
+    if (selection.shadow && !shadowFormIds.has(selection.formId)) {
+        throw new Error('This Shadow form is unavailable.');
+    }
+    return calculateRows([entry], settings, shadowFormIds, legendaryDexNumbers, selection);
+}
+
+function calculateRows(
+    catalog: CalculatorEntry[],
+    settings: RankingSettings,
+    shadowFormIds: ReadonlySet<string>,
+    legendaryDexNumbers: ReadonlySet<number>,
+    selection?: RankingPokemonSelection,
+): RankingResult {
     const mode = settings.mode ?? 'attack';
     if (mode !== 'attack' && mode !== 'anti') throw new Error(`Unknown ranking mode: ${mode}`);
-    const attackType = normalizeType(settings.attackType) as RankingType;
-    if (!RANKING_TYPES.includes(attackType)) throw new Error(`Unknown ranking type: ${settings.attackType}`);
+    const attackType = settings.attackType === null ? null : normalizeType(settings.attackType) as RankingType;
+    if (attackType === null ? mode !== 'anti' : !RANKING_TYPES.includes(attackType)) {
+        throw new Error(`Unknown ranking type: ${settings.attackType}`);
+    }
+    const requestedSecondaryType = settings.secondaryType == null
+        ? null : normalizeType(settings.secondaryType) as RankingType;
+    if (requestedSecondaryType !== null && !RANKING_TYPES.includes(requestedSecondaryType)) {
+        throw new Error(`Unknown secondary defending type: ${settings.secondaryType}`);
+    }
+    const secondaryType = mode === 'anti' && requestedSecondaryType !== attackType
+        ? requestedSecondaryType : null;
+    const defenderTypes = [attackType, secondaryType].filter((type): type is RankingType => type !== null);
     const level = settings.level ?? 40;
     if (!RANKING_LEVELS.includes(level)) {
         throw new Error(`Ranking level must be 20 through 50 in increments of 5: ${level}`);
@@ -716,6 +762,7 @@ export function calculateRankings(
     const splitLegacy = Boolean(settings.splitLegacy);
 
     const bestByForm = new Map<string, RankingRow>();
+    const allMovesets: RankingRow[] = [];
     let candidateMovesets = 0;
     let excludedLowQuality = 0;
 
@@ -727,20 +774,28 @@ export function calculateRankings(
         const legendary = legendaryDexNumbers.has(entry.dex_number);
         if (!includeMegas && mega) continue;
         if (!includeLegendaries && legendary) continue;
-        const shadowStates = includeShadows && shadowFormIds.has(entry.form_id)
+        const shadowStates = selection ? [selection.shadow] : includeShadows && shadowFormIds.has(entry.form_id)
             ? [false, true] : [false];
         const stats = effectiveStats(entry, level, megaLevel);
         const typedBossAttackCoefficient = bossAttackCoefficient
             * bossMoveEffectiveness(bossMoveType, entry.types);
         for (const shadow of shadowStates) {
             const chargedMoves = playerChargedMoves(entry, shadow, excludeLegacy)
-                .filter(move => (mode === 'anti' || normalizeType(move.type) === attackType) && move.energy < 0);
-            for (const candidateFast of playerFastMoves(entry, shadow, excludeLegacy).filter(move => move.energy > 0)) {
+                .filter(move => (selection || mode === 'anti' || normalizeType(move.type) === attackType) && move.energy < 0);
+            const fastMoves = playerFastMoves(entry, shadow, excludeLegacy)
+                .filter(move => move.energy > 0)
+                .flatMap(move => selection && move.id === 'HIDDEN_POWER_FAST'
+                    // An explicit type must bypass the ranking's ideal Hidden Power type selection.
+                    ? RANKING_TYPES.filter(type => type !== 'normal' && type !== 'fairy').map(type => ({
+                        ...move, id: `${move.id}:${type}`, type,
+                        name: `Hidden Power (${type.charAt(0).toUpperCase() + type.slice(1)})`,
+                    })) : [move]);
+            for (const candidateFast of fastMoves) {
                 // Hidden Power's timing/energy are type-independent. The legal type
                 // with greatest STAB × effectiveness dominates for every DPS metric.
                 let fastMove = candidateFast;
                 if (mode === 'anti' && candidateFast.id === 'HIDDEN_POWER_FAST') {
-                    const score = (type: RankingType) => bossMoveEffectiveness(type, [attackType])
+                    const score = (type: RankingType) => bossMoveEffectiveness(type, defenderTypes)
                         * (entry.types.some(t => normalizeType(t) === type) ? STAB : 1);
                     const type = RANKING_TYPES.filter(t => t !== 'normal' && t !== 'fairy')
                         .sort((a, b) => score(b) - score(a))[0];
@@ -749,10 +804,10 @@ export function calculateRankings(
                 for (const chargedMove of chargedMoves) {
                     candidateMovesets += 1;
                     const timingFast = preparedMove(
-                        entry, fastMove, attackType, shadow, TARGET_DEFENSES[0], stats.attack, megaLevel, mode,
+                        entry, fastMove, attackType, shadow, TARGET_DEFENSES[0], stats.attack, megaLevel, mode, defenderTypes,
                     );
                     const timingCharged = preparedMove(
-                        entry, chargedMove, attackType, shadow, TARGET_DEFENSES[0], stats.attack, megaLevel, mode,
+                        entry, chargedMove, attackType, shadow, TARGET_DEFENSES[0], stats.attack, megaLevel, mode, defenderTypes,
                     );
                     const appearance = expectedAppearance(
                         stats,
@@ -764,14 +819,14 @@ export function calculateRankings(
                     );
                     if (appearance.firstChargedProbability + EPSILON < MINIMUM_CHARGED_PROBABILITY) {
                         excludedLowQuality += 1;
-                        continue;
+                        if (!selection) continue;
                     }
                     const damageModels = TARGET_DEFENSES.map(targetDefense => ({
                         fast: preparedMove(
-                            entry, fastMove, attackType, shadow, targetDefense, stats.attack, megaLevel, mode,
+                            entry, fastMove, attackType, shadow, targetDefense, stats.attack, megaLevel, mode, defenderTypes,
                         ),
                         charged: preparedMove(
-                            entry, chargedMove, attackType, shadow, targetDefense, stats.attack, megaLevel, mode,
+                            entry, chargedMove, attackType, shadow, targetDefense, stats.attack, megaLevel, mode, defenderTypes,
                         ),
                     }));
                     const appearanceDamage = mean(damageModels.map(({fast, charged}) =>
@@ -783,7 +838,7 @@ export function calculateRankings(
                         name: entry.name,
                         pokemonTypes: entry.types,
                         fastMove: fastMove.name,
-                        fastMoveType: mode === 'attack' && fastMove.id === 'HIDDEN_POWER_FAST'
+                        fastMoveType: mode === 'attack' && attackType && fastMove.id === 'HIDDEN_POWER_FAST'
                             && attackType !== 'normal' && attackType !== 'fairy'
                             ? attackType : normalizeType(fastMove.type),
                         chargedMove: displayedMoveName(chargedMove, megaLevel),
@@ -801,6 +856,11 @@ export function calculateRankings(
                             appearanceDamage, appearance, partySize, relobbySeconds,
                         ),
                     };
+                    if (selection) {
+                        row.belowCutoff = appearance.firstChargedProbability + EPSILON < MINIMUM_CHARGED_PROBABILITY;
+                        allMovesets.push(row);
+                        continue;
+                    }
                     const legacyVariant = splitLegacy
                         ? `:${row.eliteFast || row.eliteCharged ? 'legacy' : 'non-legacy'}` : '';
                     const key = `${entry.form_id}:${shadow ? 'shadow' : 'normal'}${legacyVariant}`;
@@ -811,7 +871,7 @@ export function calculateRankings(
         }
     }
 
-    const rows = [...bestByForm.values()].sort((a, b) =>
+    const rows = (selection ? allMovesets : [...bestByForm.values()]).sort((a, b) =>
         b.idealDps - a.idealDps
         || b.effectiveDps - a.effectiveDps
         || b.simpleDps - a.simpleDps
@@ -820,6 +880,7 @@ export function calculateRankings(
 
     return {
         attackType,
+        secondaryType,
         mode,
         level,
         partyPowerPlayers,
