@@ -242,8 +242,8 @@ test('boss move type applies defensive type effectiveness only to incoming metri
 test('released Shadows are ranked separately with both damage modifiers', () => {
   assert.equal(shadowFormIds.size, shadowAvailability.mapped_form_ids);
   assert.equal(shadowAvailability.released_through, '2026-09-08');
-  assert.equal(shadowAvailability.source_species_released, 458);
-  assert.equal(shadowAvailability.mapped_species, 458);
+  assert.equal(shadowAvailability.source_species_released, 459);
+  assert.equal(shadowAvailability.mapped_species, 459);
   assert(shadowFormIds.has('MAMOSWINE'));
   assert(shadowFormIds.has('DIALGA'));
   assert(shadowFormIds.has('PALKIA'));
@@ -269,7 +269,7 @@ test('released Shadows are ranked separately with both damage modifiers', () => 
   assert(shadowFormIds.has('ZIGZAGOON_GALARIAN'));
   assert(shadowFormIds.has('LINOONE_GALARIAN'));
   assert(!shadowFormIds.has('WIMPOD'));
-  assert(!shadowFormIds.has('ZEKROM'));
+  assert(shadowFormIds.has('ZEKROM'));
   const catalogIds = new Set(catalog.map(entry => entry.form_id));
   for (const formId of shadowFormIds) assert(catalogIds.has(formId), `Missing Shadow catalog form ${formId}`);
 

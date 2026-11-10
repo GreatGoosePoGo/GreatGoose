@@ -15,20 +15,33 @@
       "name": "Leek Duck — Flying Taxi: Taken Over",
       "url": "https://leekduck.com/events/flying-taxi-taken-over-2026/",
       "role": "Independent event cross-check, including leader encounters."
+    },
+    {
+      "name": "Official Pokémon GO — Harvest Festival: Taken Over",
+      "url": "https://pokemongo.com/news/harvest-festival-tgr-2026",
+      "role": "Primary confirmation of Shadow Zekrom's October 2, 2026 release."
     }
   ],
   "released_through": "2026-09-08",
   "retrieved_utc": "2026-09-08",
-  "meaning": "Exact catalog forms obtainable as Shadows at least once on or before the cutoff date, including forms obtainable by evolving a released Shadow Pokémon. This does not mean the form is obtainable in the current rotation.",
+  "supplemental_releases": [
+    {
+      "release_date": "2026-10-02",
+      "verified_utc": "2026-11-05",
+      "form_ids": ["ZEKROM"],
+      "source": "https://pokemongo.com/news/harvest-festival-tgr-2026"
+    }
+  ],
+  "meaning": "Exact catalog forms obtainable as Shadows at least once on or before the cutoff date or listed in supplemental_releases, including forms obtainable by evolving a released Shadow Pokémon. This does not mean the form is obtainable in the current rotation.",
   "mapping_notes": [
     "Availability is curated from dated release records, not inferred from Game Master Shadow templates.",
     "Costume and Apex variants with ordinary combat stats map to the equivalent ordinary catalog form because rankings do not distinguish cosmetics or Apex appearance.",
     "Regional forms remain distinct. The default Giratina and Forces of Nature artwork maps to Altered Forme and Incarnate Forme respectively.",
     "Future-announced releases are excluded until their release date."
   ],
-  "source_species_released": 458,
-  "mapped_species": 458,
-  "mapped_form_ids": 477,
+  "source_species_released": 459,
+  "mapped_species": 459,
+  "mapped_form_ids": 478,
   "unavailable_in_local_catalog": [],
   "form_ids": [
     "ABOMASNOW",
@@ -505,6 +518,7 @@
     "YAMASK",
     "ZAPDOS",
     "ZEBSTRIKA",
+    "ZEKROM",
     "ZIGZAGOON_GALARIAN",
     "ZUBAT",
     "ZWEILOUS"
